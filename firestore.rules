@@ -1,0 +1,74 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ================================================================
+    // LAYER 1 — GLOBAL PLATFORM COLLECTIONS
+    // NO client reads or writes. Service accounts only (via Admin SDK).
+    // ================================================================
+
+    match /master_contacts/{id} {
+      allow read: if false;
+      allow write: if false;
+    }
+    match /master_accounts/{id} {
+      allow read: if false;
+      allow write: if false;
+    }
+    match /master_households/{id} {
+      allow read: if false;
+      allow write: if false;
+    }
+    match /master_leads/{id} {
+      // Clients may read master_lead docs referenced by their assignments
+      allow read: if request.auth != null;
+      allow write: if false;  // writes: service account only
+    }
+    match /lead_assignments/{id} {
+      // Advisors can read and update ONLY their own assignments.
+      // create/delete still locked to service accounts.
+      allow read:   if request.auth != null && resource.data.ownerUid == request.auth.uid;
+      allow update: if request.auth != null && resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['advisorStatus', 'advisorFeedback', 'advisorFeedbackNotes',
+                                   'feedbackAt', 'updatedAt']);
+      allow create, delete: if false;  // service account only
+    }
+    match /routing_queue/{id} {
+      allow read: if false;
+      allow write: if false;
+    }
+    match /routing_logs/{id} {
+      allow read: if false;
+      allow write: if false;
+    }
+    match /routing_policies/{id} {
+      allow read: if false;
+      allow write: if false;
+    }
+    match /suppression_registry/{id} {
+      allow read: if false;
+      allow write: if false;
+    }
+    match /manual_review_queue/{id} {
+      allow read: if false;
+      allow write: if false;
+    }
+
+    // ================================================================
+    // LAYER 3 — ADVISOR WORKSPACE
+    // Authenticated users can only read/write their own documents.
+    // ================================================================
+
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ================================================================
+    // DENY ALL — catch-all for any unmatched paths
+    // ================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

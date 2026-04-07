@@ -1,0 +1,1055 @@
+// =====================================
+// THE AUM ENGINE — PAGE RENDERERS
+// =====================================
+
+function pageCommandCenter() {
+  const top = [...PROSPECTS].sort((a,b)=>b.priorityScore-a.priorityScore).slice(0,8);
+  const M = computeMetrics();
+  const NM = computeNicheMetrics();
+  return `
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Command Center</div>
+      <div class="page-subtitle">Your growth cockpit — ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-secondary" onclick="navigate('prospect-mine')">Mine Prospects</button>
+      <button class="btn btn-primary" onclick="navigate('outreach-studio')">Create Outreach</button>
+    </div>
+  </div>
+  <div class="kpi-strip">
+    <div class="kpi-card" style="--kpi-color:linear-gradient(90deg,#60a5fa,#818cf8)">
+      <div class="kpi-label">Total Prospects</div><div class="kpi-value">${M.total}</div>
+      <div class="kpi-delta up">↑ 6 new this week</div><div class="kpi-icon">💎</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:linear-gradient(90deg,#fb7185,#f43f5e)">
+      <div class="kpi-label">In Pipeline</div><div class="kpi-value">${M.contacted}</div>
+      <div class="kpi-delta up">↑ Active stage</div><div class="kpi-icon">🔥</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:linear-gradient(90deg,#34d399,#10b981)">
+      <div class="kpi-label">Meetings Booked</div><div class="kpi-value">${M.booked}</div>
+      <div class="kpi-delta up">↑ +2 this week</div><div class="kpi-icon">📅</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:linear-gradient(90deg,#fbbf24,#f59e0b)">
+      <div class="kpi-label">Contact Rate</div><div class="kpi-value">${M.contactRate}%</div>
+      <div class="kpi-delta up">↑ +4% vs last mo.</div><div class="kpi-icon">✉️</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:linear-gradient(90deg,#a78bfa,#7c3aed)">
+      <div class="kpi-label">Reply Rate</div><div class="kpi-value">${M.replyRate}%</div>
+      <div class="kpi-delta neutral">Industry avg: 8%</div><div class="kpi-icon">💬</div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="grid-21" style="gap:16px">
+      <div>
+        <div class="section-header">
+          <div class="section-title"><div class="section-title-dot"></div>Top 8 To Work Now</div>
+          <a href="#" onclick="navigate('lead-scoreboard');return false" style="font-size:11px;color:var(--blue);text-decoration:none">View All →</a>
+        </div>
+        <div class="top-queue">
+          ${top.map((p,i)=>`
+          <div class="queue-item" onclick="openDrawer('${p.id}')">
+            <span class="queue-rank">#${i+1}</span>
+            <div class="queue-avatar ${getAvatarClass(p.lastName)}">${getInitials(p.firstName,p.lastName)}</div>
+            <div class="queue-info">
+              <div class="queue-name">${p.firstName} ${p.lastName}</div>
+              <div class="queue-meta">${p.niche} · ${p.city}, ${p.state}</div>
+            </div>
+            ${getStatusPill(p.status)}
+            <span class="queue-score">${p.priorityScore}</span>
+            <span class="queue-action" onclick="event.stopPropagation();setOutreachProspect('${p.id}');navigate('outreach-studio')">Draft</span>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div>
+        <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Alerts</div><span class="tag">${ALERTS.length} new</span></div>
+        <div class="alert-queue">
+          ${ALERTS.map(a=>{
+            const dc={hot:'var(--rose)',reply:'var(--emerald)',booking:'var(--blue)',stale:'var(--amber)',new:'var(--violet)'}[a.type]||'var(--violet)';
+            return `<div class="alert-item" onclick="${a.prospectId?`openDrawer('${a.prospectId}')`:`navigate('prospect-mine')`}">
+              <div class="alert-dot" style="background:${dc};box-shadow:0 0 6px ${dc}"></div>
+              <div class="alert-text"><div class="alert-title">${a.title}</div><div class="alert-sub">${a.sub}</div></div>
+              <div class="alert-time">${a.time}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Niche Performance</div></div>
+    <div class="grid-3">
+      ${NM.slice(0,3).map(n=>`
+      <div class="card" style="cursor:pointer" onclick="navigate('lead-scoreboard')">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:20px">${n.icon}</span>
+          <span class="tag" style="color:${n.color}">${n.total} prospects</span>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:4px">${n.name}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">${n.desc}</div>
+        <div class="perf-bar-wrap">
+          <div class="perf-bar-item">
+            <div class="perf-bar-label"><span class="perf-bar-label-name">Contact Rate</span><span class="perf-bar-label-val">${n.convPct}%</span></div>
+            <div class="perf-bar-track"><div class="perf-bar-fill" style="width:${Math.min(n.convPct*1.5,100)}%;background:${n.color}"></div></div>
+          </div>
+        </div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function pageProspectMine() {
+  return `
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Prospect Mine 💎</div>
+      <div class="page-subtitle">AI-powered niche prospecting — find your next best client</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-secondary" onclick="triggerCSVImport()">⬆ Import CSV</button>
+      <input type="file" id="csv-file-input" accept=".csv" style="display:none" onchange="handleCSVImport(this)">
+      <button class="btn btn-primary" onclick="startMining()">💎 Run Mine Agent</button>
+    </div>
+  </div>
+  <div class="section">
+    <div class="grid-12">
+      <div>
+        <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Select Niche</div></div>
+        <div class="grid-2" style="gap:10px">
+          ${NICHES.map(n=>`
+          <div class="niche-card ${activeNiche===n.id?'active':''}" onclick="selectNiche('${n.id}')" id="niche-${n.id}">
+            <span class="niche-card-icon">${n.icon}</span>
+            <div class="niche-card-name">${n.name}</div>
+            <div class="niche-card-desc">${n.desc}</div>
+            <span class="niche-card-count" style="color:${n.color}">${n.count}</span>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div>
+        <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Mine Parameters</div></div>
+        <div class="card">
+          <div class="form-group"><label class="form-label">Target Geography</label>
+            <input class="form-input" id="mine-geo" value="${ICP_CONFIG.geography}"></div>
+          <div class="form-group"><label class="form-label">Asset Minimum</label>
+            <select class="form-select"><option>$500K+</option><option selected>$1M+</option><option>$2M+</option><option>$5M+</option></select></div>
+          <div class="form-group"><label class="form-label">Age Range</label>
+            <select class="form-select"><option>35–50</option><option selected>50–65</option><option>55–70</option><option>All</option></select></div>
+          <div class="form-group"><label class="form-label">Life Event Signals</label>
+            <div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:4px">
+              ${['Business Sale','Inheritance','Job Change','Home Purchase','Board Appointment','Divorce','Retirement'].map(ev=>
+                `<div class="filter-chip ${['Business Sale','Inheritance','Board Appointment'].includes(ev)?'active':''}" onclick="this.classList.toggle('active')">${ev}</div>`
+              ).join('')}
+            </div>
+          </div>
+          <div class="form-group"><label class="form-label">Exclude Existing Clients</label>
+            <select class="form-select"><option selected>Yes — exclude CRM contacts</option><option>No</option></select></div>
+          <div id="mining-status" style="margin-bottom:10px"></div>
+          <button class="btn btn-primary" style="width:100%" onclick="startMining()">Run Prospect Mine Agent</button>
+        </div>
+        <div style="margin-top:12px">
+          <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Recent Cohorts</div></div>
+          ${[{name:'Phoenix Aircraft Owners',count:47,date:'Apr 4'},{name:'KS Business Owners 50–65',count:89,date:'Mar 28'},{name:'Chicago Charity Boards',count:34,date:'Mar 20'}]
+            .map(c=>`<div class="card" style="margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer">
+              <span style="font-size:18px">💎</span>
+              <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text-primary)">${c.name}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${c.count} prospects · Mined ${c.date}</div></div>
+              <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px">Load</button>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function pageLeadScoreboard() {
+  let list = [...PROSPECTS];
+  if (activeFilters.status !== 'all') list = list.filter(p=>p.status===activeFilters.status);
+  if (activeFilters.niche  !== 'all') list = list.filter(p=>p.nicheId===activeFilters.niche);
+  list.sort((a,b)=>b.priorityScore-a.priorityScore);
+
+  const statuses = ['New','Contacted','Engaged','Nurture','Meeting Requested','Booked','Dead'];
+  return `
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Lead Scoreboard</div>
+      <div class="page-subtitle">${list.length} of ${PROSPECTS.length} prospects ranked by AI fit + timing score</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-secondary" onclick="triggerCSVImport()">⬆ Import CSV</button>
+      <input type="file" id="csv-file-input2" accept=".csv" style="display:none" onchange="handleCSVImport(this)">
+      <button class="btn btn-secondary" onclick="triggerEnrichmentImport()">🔬 Import Enrichment</button>
+      <button class="btn btn-secondary" onclick="exportCSV()">⬇ Export Worked Leads</button>
+      <button class="btn btn-primary" onclick="navigate('outreach-studio')">Batch Outreach</button>
+    </div>
+  </div>
+  <div class="filters-bar">
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L13 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <input class="search-input" placeholder="Search prospects…" id="search-prospects" oninput="filterProspects(this.value)">
+    </div>
+    <div class="filter-chip ${activeFilters.status==='all'?'active':''}" onclick="setFilter('status','all');navigate('lead-scoreboard')">All (${PROSPECTS.length})</div>
+    ${statuses.map(s=>{
+      const c=PROSPECTS.filter(p=>p.status===s).length;
+      return `<div class="filter-chip ${activeFilters.status===s?'active':''}" onclick="setFilter('status','${s}');navigate('lead-scoreboard')">${s} ${c>0?`(${c})`:''}</div>`;
+    }).join('')}
+  </div>
+  <div class="section">
+    ${list.length===0?`
+    <div class="empty-state">
+      <div class="empty-state-icon">💎</div>
+      <div class="empty-state-title">No prospects match this filter</div>
+      <div class="empty-state-sub">Try selecting a different status or import new prospects via CSV.</div>
+      <button class="btn btn-primary" style="margin-top:14px" onclick="setFilter('status','all');navigate('lead-scoreboard')">Clear Filter</button>
+    </div>`:`
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>Rank</th><th>Prospect</th><th>Niche</th><th>Signals</th><th>Fit</th><th>Timing</th><th>Priority</th><th>Status</th><th>Rep</th><th>Last Activity</th><th>Feedback</th><th>Action</th></tr></thead>
+        <tbody id="scoreboard-body">
+          ${list.map((p,i)=>{
+            const e    = getEnrichment(p.id);
+            const sigs = getEnrichmentSignals(e);
+            return `
+          <tr onclick="openDrawer('${p.id}')">
+            <td><span style="font-family:'JetBrains Mono',monospace;font-weight:800;color:var(--text-muted)">#${i+1}</span></td>
+            <td><div style="display:flex;align-items:center;gap:8px">
+              <div class="queue-avatar ${getAvatarClass(p.lastName)}" style="width:28px;height:28px;font-size:10px;border-radius:6px">${getInitials(p.firstName,p.lastName)}</div>
+              <div><div style="font-weight:600;color:var(--text-primary);font-size:12.5px">${p.firstName} ${p.lastName}</div>
+              <div style="font-size:10.5px;color:var(--text-muted)">${p.title}</div></div>
+            </div></td>
+            <td><span class="tag">${p.niche}</span></td>
+            <td onclick="event.stopPropagation();openDrawer('${p.id}')">
+              <div class="esig-grid" title="${sigs.count}/4 signals enriched">
+                <span class="esig-dot-sm ${sigs.wealth    ? 'esig-wealth'    : 'esig-empty'}" title="💰 Wealth Score"></span>
+                <span class="esig-dot-sm ${sigs.liquidity ? 'esig-liquidity' : 'esig-empty'}" title="⚡ Liquidity Event"></span>
+                <span class="esig-dot-sm ${sigs.contact   ? 'esig-contact'   : 'esig-empty'}" title="📧 Personal Contact"></span>
+                <span class="esig-dot-sm ${sigs.court     ? 'esig-court'     : 'esig-empty'}" title="⚖️ Court Signal"></span>
+              </div>
+            </td>
+            <td>${getScoreBar(p.fitScore,'#60a5fa')}</td>
+            <td>${getScoreBar(p.timingScore,'#a78bfa')}</td>
+            <td>${getScoreBar(p.priorityScore,'#34d399')}</td>
+            <td>${getStatusPill(p.status)}</td>
+            <td style="font-size:11px;color:var(--text-muted)">${p.assignedRep}</td>
+            <td style="font-size:11px;color:var(--text-muted)">${p.lastActivity}</td>
+            <td onclick="event.stopPropagation()">
+              <div class="fb-inline">
+                <button class="fb-btn-sm ${(FEEDBACK_STORE[p.id]==='up')?'fb-active-up':''}" id="fb-up-${p.id}"
+                  onclick="saveFeedback('${p.id}','up')" title="Quality lead">👍</button>
+                <button class="fb-btn-sm ${(FEEDBACK_STORE[p.id]==='down')?'fb-active-down':''}" id="fb-down-${p.id}"
+                  onclick="saveFeedback('${p.id}','down')" title="Poor fit">👎</button>
+              </div>
+            </td>
+            <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 9px" onclick="event.stopPropagation();openDrawer('${p.id}')">View</button></td>
+          </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`}
+  </div>`;
+}
+
+function pageOutreachStudio() {
+  const prospect = PROSPECTS.find(p=>p.id===activeOutreachProspectId) || PROSPECTS[0];
+  const types = [{id:'email',icon:'✉️',name:'Email',desc:'Personalized first-touch or follow-up email'},
+                 {id:'call', icon:'📞',name:'Call Opener',desc:'Opening script for cold or warm calls'},
+                 {id:'linkedin',icon:'💼',name:'LinkedIn Note',desc:'Connection request or InMail message'},
+                 {id:'voicemail',icon:'📣',name:'Voicemail Script',desc:'Brief compelling voicemail'}];
+
+  const priority = [...PROSPECTS].sort((a,b)=>b.priorityScore-a.priorityScore).slice(0,8);
+  const curStage = window._outreachState?.stage || 'first_touch';
+
+  // Auto-run agent stack after render
+  setTimeout(() => { if (typeof osRunAgentStack === 'function') osRunAgentStack(); }, 300);
+
+  return `
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Outreach Studio</div>
+      <div class="page-subtitle">AI-drafted, compliance-aware outreach for every prospect</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-secondary">Saved Templates</button>
+      <button class="btn btn-primary" onclick="showToast('Outreach sequence saved!','✅')">Save Sequence</button>
+    </div>
+  </div>
+  <div class="section">
+    <div class="grid-12">
+      <div>
+        <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Select Prospect</div></div>
+        ${priority.map(p=>`
+        <div class="queue-item ${p.id===activeOutreachProspectId?'active-prospect':''}" style="margin-bottom:6px;${p.id===activeOutreachProspectId?'border-color:var(--blue);background:rgba(96,165,250,0.06)':''}" onclick="setOutreachProspect('${p.id}');navigate('outreach-studio')">
+          <div class="queue-avatar ${getAvatarClass(p.lastName)}" style="width:28px;height:28px;font-size:10px;border-radius:6px">${getInitials(p.firstName,p.lastName)}</div>
+          <div class="queue-info"><div class="queue-name">${p.firstName} ${p.lastName}</div>
+          <div class="queue-meta">${p.niche} · Priority ${p.priorityScore}</div></div>
+          ${getStatusPill(p.status)}
+        </div>`).join('')}
+        <div class="section-header" style="margin-top:16px"><div class="section-title"><div class="section-title-dot"></div>Channel</div></div>
+        ${types.map(t=>`
+        <button class="outreach-type-btn ${activeOutreachType===t.id?'active':''}" onclick="osSwitchChannel('${t.id}')">
+          <span class="outreach-type-icon">${t.icon}</span>
+          <div class="outreach-type-info"><div class="outreach-type-name">${t.name}</div><div class="outreach-type-desc">${t.desc}</div></div>
+        </button>`).join('')}
+        <div class="section-header" style="margin-top:16px"><div class="section-title"><div class="section-title-dot"></div>Stage</div></div>
+        ${[['first_touch','\ud83d\udfe2','1st Touch'],['follow_up_1','\ud83d\udfe1','Follow-up 1'],['follow_up_2','\ud83d\udfe1','Follow-up 2'],['follow_up_3','\ud83d\udfe0','Follow-up 3'],['final','\ud83d\udd34','Final']].map(([val,dot,lbl])=>`
+        <button class="outreach-type-btn ${curStage===val?'active':''}" style="padding:7px 10px;margin-bottom:3px" onclick="osSetStage('${val}')">
+          <span class="outreach-type-icon" style="font-size:11px">${dot}</span>
+          <div class="outreach-type-info"><div class="outreach-type-name" style="font-size:11.5px">${lbl}</div></div>
+        </button>`).join('')}
+      </div>
+      <div>
+        <div class="section-header">
+          <div class="section-title"><div class="section-title-dot"></div>Draft — ${prospect.firstName} ${prospect.lastName}</div>
+          <div class="agent-thinking" style="margin:0;padding:6px 10px;font-size:10.5px;gap:5px">
+            <div class="agent-dots"><span>\ud83d\udd2c</span><span>\ud83c\udfaf</span><span>\u270d\ufe0f</span><span>\ud83d\udcc5</span></div>
+            Research · Strategy · Draft · Cadence
+          </div>
+        </div>
+        <!-- Prospect context card -->
+        <div class="card" style="margin-bottom:10px;padding:10px 14px">
+          <div style="display:flex;gap:14px;align-items:flex-start">
+            <div style="flex:1"><div class="form-label">Prospect</div>
+              <div style="font-size:12.5px;font-weight:600;color:var(--text-primary)">${prospect.firstName} ${prospect.lastName}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${prospect.title} \u00b7 ${prospect.city}, ${prospect.state}</div>
+            </div>
+            <div style="flex:1"><div class="form-label">Signals</div>
+              ${(prospect.reasonCodes||[]).slice(0,2).map(r=>`<div class="reason-tag" style="margin:1px 0;font-size:9.5px">${r}</div>`).join('')}
+            </div>
+            <div style="flex:1"><div class="form-label">Trigger Event</div>
+              <div style="font-size:11px;color:var(--amber);font-weight:500">${prospect.signals?.nextEvent||'\u2014'}</div>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${prospect.signals?.relationship||'Cold'}</div>
+            </div>
+          </div>
+        </div>
+        <!-- Agent Action Row -->
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+          <button id="agent-generate-btn" onclick="osRunAgentStack()" style="background:linear-gradient(135deg,var(--blue),#6366f1);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(96,165,250,0.3)">\ud83d\udc8e Generate</button>
+          <button class="editor-tool-btn" onclick="osShiftTone('direct')">\ud83d\udccc Direct</button>
+          <button class="editor-tool-btn" onclick="osShiftTone('soft')">\ud83e\udd1d Soft</button>
+          <button class="editor-tool-btn" onclick="osShiftTone('insight')">\ud83e\udde0 Insight-Led</button>
+          <button class="editor-tool-btn" onclick="osShiftTone('safe')">\ud83d\udd12 Safer</button>
+          <span id="channel-rec" style="margin-left:auto;font-size:10px;color:var(--blue);opacity:0;transition:opacity 0.4s;font-weight:500"></span>
+        </div>
+        <!-- Agent Metadata Bar -->
+        <div class="agent-meta-bar" id="agent-meta-bar" style="margin-bottom:8px;padding:10px 14px;background:var(--card-bg);border:1px solid var(--border);border-radius:10px">
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <div style="min-width:100px"><div style="font-size:9px;font-weight:700;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">ANGLE</div>
+              <div style="font-size:12px;font-weight:600;color:var(--text-secondary)">Press Generate \u2191</div></div>
+            <div style="flex:2;min-width:180px"><div style="font-size:9px;font-weight:700;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">WHY THIS ANGLE</div>
+              <div style="font-size:11px;color:var(--text-muted);line-height:1.4">Research Agent will analyze context and choose best approach</div></div>
+            <div style="min-width:80px"><div style="font-size:9px;font-weight:700;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">WARMTH</div>
+              <div style="font-size:12px;color:var(--text-muted)">\u2014</div></div>
+            <div style="min-width:100px"><div style="font-size:9px;font-weight:700;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px">CTA</div>
+              <div style="font-size:12px;color:var(--text-muted)">\u2014</div></div>
+          </div>
+        </div>
+        <!-- Variant Tabs A/B/C -->
+        <div style="display:flex;gap:6px;margin-bottom:8px" id="variant-tabs">
+          ${['A','B','C'].map((id,i)=>`<button class="variant-tab ${i===0?'active':''}" id="vtab-${id}" onclick="osSelectVariant('${id}')" style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:${i===0?'rgba(96,165,250,0.1)':'var(--card-bg)'};cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;font-weight:600;color:${i===0?'var(--blue)':'var(--text-muted)'}">
+            <span style="width:18px;height:18px;border-radius:50%;background:${i===0?'var(--blue)':'var(--border)'};color:${i===0?'#fff':'var(--text-muted)'};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">${id}</span>
+            ${['Direct','Soft','Insight-Led'][i]}</button>`).join('')}
+        </div>
+        <!-- Message Editor -->
+        <div class="message-editor">
+          <div class="message-editor-toolbar">
+            <span id="draft-subject" style="font-size:10.5px;font-style:italic;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Subject appears after generating\u2026</span>
+            <button class="editor-tool-btn" onclick="copyDraft()">\ud83d\udccb Copy</button>
+            <button class="editor-tool-btn" onclick="showToast('Compliance checked \u2713','\ud83d\udd12')">\ud83d\udd12 Check</button>
+          </div>
+          <div class="message-body" id="draft-body" contenteditable="true">${getDraft(prospect,activeOutreachType)}</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-primary" style="flex:1" onclick="osLogOutcome({sent:true,variant:window._outreachState?.activeVariant});showToast('Queued for ${prospect.firstName} ${prospect.lastName}','📧')">Send Now</button>
+          <button class="btn btn-secondary" onclick="showToast('Added to cadence sequence','📅')">Add to Sequence</button>
+          <button class="btn btn-ghost" onclick="showToast('Template saved','✅')">Save Template</button>
+        </div>
+        <div style="margin-top:20px">
+          <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Agent Cadence \u2014 click Generate to build sequence</div></div>
+          <div id="cadence-sequence">
+            ${[['Day 0','\u2709\ufe0f','First-touch email',true],['Day 3','\ud83d\udcbc','LinkedIn connection',false],
+               ['Day 9','\u2709\ufe0f','Follow-up email \u2014 value add',false],['Day 16','\ud83d\udce3','Voicemail \u2014 brief and low-pressure',false],
+               ['Day 23','\u2709\ufe0f','Final email \u2014 open door',false]]
+             .map(([day,ch,theme,done])=>`<div class="signal-row">
+               <span class="signal-label" style="min-width:52px;font-size:10px">${done?'<span style="color:var(--emerald)">&check;</span>':'\u25cb'} ${day}</span>
+               <span style="flex:1;font-size:11px;color:${done?'var(--text-muted)':'var(--text-secondary)'}">${ch} ${theme}</span>
+             </div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function pageNurtureBooking() {
+  const colMap = {};
+  PIPELINE_COLUMNS.forEach(c=>{colMap[c]=[];});
+  PROSPECTS.forEach(p=>{(colMap[p.status]||colMap['New']).push(p);});
+  const upcoming = PROSPECTS.filter(p=>['Booked','Meeting Requested'].includes(p.status));
+
+  return `
+  <div class="page-header">
+    <div class="page-header-left"><div class="page-title">Nurture & Booking</div>
+      <div class="page-subtitle">Pipeline board — move prospects from contact to booked meeting</div></div>
+    <div class="page-actions">
+      <button class="btn btn-secondary" onclick="showToast('Nurture sequence triggered for ${PROSPECTS.filter(p=>p.status==='Nurture').length} prospects','📧')">Run Nurture Batch</button>
+      <button class="btn btn-primary" onclick="showToast('Booking links sent','📅')">Send Booking Links</button>
+    </div>
+  </div>
+  <div class="section">
+    <div class="scroll-x">
+      <div class="pipeline-board">
+        ${PIPELINE_COLUMNS.map(col=>`
+        <div class="pipeline-col">
+          <div class="pipeline-col-header">${col}<span class="pipeline-col-count">${colMap[col].length}</span></div>
+          ${colMap[col].length===0?`<div style="padding:12px;text-align:center;font-size:10px;color:var(--text-muted)">No prospects</div>`:''}
+          ${colMap[col].map(p=>`
+          <div class="pipeline-item" onclick="openDrawer('${p.id}')">
+            <div class="pipeline-item-name">${p.firstName} ${p.lastName}</div>
+            <div class="pipeline-item-meta">${p.niche}</div>
+            <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:10px;color:var(--text-muted)">${p.lastActivity}</span>
+              <span style="font-size:11px;font-weight:700;color:var(--blue)">${p.priorityScore}</span>
+            </div>
+          </div>`).join('')}
+        </div>`).join('')}
+      </div>
+    </div>
+    <div style="margin-top:20px">
+      <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Upcoming Meetings (${upcoming.length})</div></div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Prospect</th><th>Niche</th><th>Meeting Date</th><th>Rep</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            ${upcoming.map(p=>`<tr onclick="setActiveMeeting('${p.id}');navigate('meeting-prep')">
+              <td><div style="font-weight:600;color:var(--text-primary)">${p.firstName} ${p.lastName}</div>
+              <div style="font-size:10.5px;color:var(--text-muted)">${p.title} · ${p.city} ${p.state}</div></td>
+              <td><span class="tag">${p.niche}</span></td>
+              <td><span style="color:${p.status==='Booked'?'var(--emerald)':'var(--amber)'};font-weight:600">${p.signals.nextEvent}</span></td>
+              <td>${p.assignedRep}</td>
+              <td>${getStatusPill(p.status)}</td>
+              <td><button class="btn btn-ghost" style="font-size:11px;padding:4px 9px" onclick="event.stopPropagation();setActiveMeeting('${p.id}');navigate('meeting-prep')">Prep</button></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
+function pageMeetingPrep() {
+  const p = activeMeetingProspect || PROSPECTS.find(x=>x.status==='Booked') || PROSPECTS[0];
+  const savedNote = NOTES_STORE[p.id] || '';
+  const upcoming = PROSPECTS.filter(x=>['Booked','Meeting Requested'].includes(x.status));
+
+  return `
+  <div class="page-header">
+    <div class="page-header-left"><div class="page-title">Meeting Prep</div>
+      <div class="page-subtitle">AI-generated pre-meeting dossier — show up sharp</div></div>
+    <div class="page-actions">
+      <button class="btn btn-secondary" onclick="showToast('Dossier exported to PDF','📄')">Export PDF</button>
+      <button class="btn btn-primary" onclick="showToast('Dossier sent to your email','✅')">Email to Self</button>
+    </div>
+  </div>
+  <div class="section">
+    <div class="grid-12">
+      <div>
+        <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Select Meeting (${upcoming.length})</div></div>
+        ${upcoming.length===0?`<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-title">No meetings booked yet</div><div class="empty-state-sub">Book meetings in Nurture & Booking to prep here.</div></div>`:''}
+        ${upcoming.map(x=>`
+        <div class="queue-item ${x.id===p.id?'':''}
+        " style="margin-bottom:6px;${x.id===p.id?'border-color:var(--blue);background:rgba(96,165,250,0.06)':''}" onclick="setActiveMeeting('${x.id}')">
+          <div class="queue-avatar ${getAvatarClass(x.lastName)}" style="width:28px;height:28px;font-size:10px;border-radius:6px">${getInitials(x.firstName,x.lastName)}</div>
+          <div class="queue-info"><div class="queue-name">${x.firstName} ${x.lastName}</div><div class="queue-meta">${x.signals.nextEvent}</div></div>
+          ${getStatusPill(x.status)}
+        </div>`).join('')}
+      </div>
+      <div>
+        <div class="agent-thinking" style="margin-bottom:12px">
+          <div class="agent-dots"><span>💎</span><span>💎</span><span>💎</span></div>
+          Meeting Prep Agent · Dossier ready for ${p.firstName} ${p.lastName}
+        </div>
+        <div class="dossier-card">
+          <div class="dossier-header">
+            <div class="dossier-avatar ${getAvatarClass(p.lastName)}">${getInitials(p.firstName,p.lastName)}</div>
+            <div>
+              <div style="font-size:15px;font-weight:800;color:var(--text-primary)">${p.firstName} ${p.lastName}</div>
+              <div style="font-size:12px;color:var(--text-muted)">${p.title} · ${p.company}</div>
+              <div style="font-size:12px;color:var(--blue);margin-top:2px">📅 ${p.signals.nextEvent}</div>
+            </div>
+            <div style="margin-left:auto;text-align:right">
+              <div style="font-size:22px;font-weight:900;color:var(--text-primary)">${p.priorityScore}</div>
+              <div style="font-size:10px;color:var(--text-muted)">Priority Score</div>
+            </div>
+          </div>
+          <div class="dossier-body">
+            <div class="drawer-section-title">Why This Meeting Matters</div>
+            <div style="font-size:12.5px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px">
+              ${p.firstName} is a ${p.niche.toLowerCase()} with estimated ${p.signals.estimatedAssets} in assets. ${p.reasonCodes[0]}. Relationship: ${p.signals.relationship}.
+            </div>
+            <div class="drawer-section-title">Key Signals</div>
+            <div style="margin-bottom:14px">${p.reasonCodes.map(r=>`<span class="reason-tag">${r}</span>`).join('')}</div>
+            <div class="drawer-section-title">Likely Planning Gaps</div>
+            <div style="margin-bottom:14px">
+              ${['No coordinated strategy across all asset classes','Unclear succession or transition timeline','Suboptimal tax positioning at this wealth level','Estate and legacy documentation incomplete']
+                .map((g,i)=>`<div class="signal-row"><span class="signal-label">${i+1}.</span><span class="signal-value">${g}</span></div>`).join('')}
+            </div>
+            <div class="drawer-section-title">Discovery Questions</div>
+            <div style="margin-bottom:14px">
+              ${['Where are you today with financial planning — does anyone coordinate the full picture for you?',
+                 'What does the next 3–5 years look like — any major transitions on the horizon?',
+                 'What would a successful outcome from a relationship like this look like for you?',
+                 `How are you currently thinking about ${p.reasonCodes[0]}?`]
+                .map((q,i)=>`<div style="padding:8px 10px;background:var(--bg-elevated);border-radius:6px;font-size:12px;color:var(--text-secondary);margin-bottom:5px;line-height:1.6">${i+1}. ${q}</div>`).join('')}
+            </div>
+            <div class="drawer-section-title">Pre-Meeting Notes</div>
+            <textarea class="form-textarea" id="meeting-notes-${p.id}" placeholder="Add your notes before the meeting…">${savedNote}</textarea>
+            <div style="display:flex;gap:8px;margin-top:10px">
+              <button class="btn btn-primary" style="flex:1" onclick="saveNotes('${p.id}')">Save Notes</button>
+              <button class="btn btn-secondary" onclick="setOutreachProspect('${p.id}');navigate('outreach-studio')">Post-Meeting Outreach</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function pageManagerConsole() {
+  const M = computeMetrics();
+  const NM = computeNicheMetrics();
+  const sourceData = [
+    {source:'Prospect Mine Agent', count:PROSPECTS.filter(p=>p.source==='Prospect Mine').length, conv:'22%', trend:'↑'},
+    {source:'Referrals',           count:PROSPECTS.filter(p=>p.source.startsWith('Referral')).length, conv:'38%', trend:'↑'},
+    {source:'Events / Forums',     count:PROSPECTS.filter(p=>p.source.startsWith('Event')).length, conv:'29%', trend:'→'},
+    {source:'CSV Import',          count:PROSPECTS.filter(p=>p.source==='CSV Import').length, conv:'14%', trend:'→'},
+    {source:'LinkedIn',            count:PROSPECTS.filter(p=>p.source==='LinkedIn').length, conv:'17%', trend:'↑'},
+  ];
+
+  return `
+  <div class="page-header">
+    <div class="page-header-left"><div class="page-title">Manager Console</div>
+      <div class="page-subtitle">Team performance, pipeline velocity, and niche conversion intelligence</div></div>
+    <div class="page-actions">
+      <div class="tab-bar" id="period-tab">
+        <button class="tab-btn active" onclick="switchTab(this,'period-tab')">This Month</button>
+        <button class="tab-btn" onclick="switchTab(this,'period-tab')">Last 90 Days</button>
+        <button class="tab-btn" onclick="switchTab(this,'period-tab')">YTD</button>
+      </div>
+    </div>
+  </div>
+  <div class="kpi-strip">
+    <div class="gem-metric"><div class="gem-metric-label">Total Prospects</div><div class="gem-metric-value">${M.total}</div><div class="gem-metric-sub">↑ 6 new this week</div></div>
+    <div class="gem-metric"><div class="gem-metric-label">Meetings Booked</div><div class="gem-metric-value">${M.booked}</div><div class="gem-metric-sub">↑ +2 vs last month</div></div>
+    <div class="gem-metric"><div class="gem-metric-label">Contact Rate</div><div class="gem-metric-value">${M.contactRate}%</div><div class="gem-metric-sub">Target: 50%</div></div>
+    <div class="gem-metric"><div class="gem-metric-label">Reply Rate</div><div class="gem-metric-value">${M.replyRate}%</div><div class="gem-metric-sub">Industry avg: 8%</div></div>
+    <div class="gem-metric"><div class="gem-metric-label">Mtg → Conv.</div><div class="gem-metric-value">${M.convRate}%</div><div class="gem-metric-sub">Industry avg: 15%</div></div>
+    ${(()=>{
+      const ups   = Object.values(FEEDBACK_STORE).filter(v=>v==='up').length;
+      const downs = Object.values(FEEDBACK_STORE).filter(v=>v==='down').length;
+      const total = ups + downs;
+      return `<div class="gem-metric" style="border-color:rgba(52,211,153,0.2)">
+        <div class="gem-metric-label">Pilot Quality Ratings</div>
+        <div class="gem-metric-value" style="font-size:18px">👍 ${ups} &nbsp; 👎 ${downs}</div>
+        <div class="gem-metric-sub">${total} of ${M.total} rated</div>
+      </div>`;
+    })()}
+  </div>
+  <div class="section">
+    <div class="grid-2">
+      <div>
+        <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Rep Leaderboard</div></div>
+        <div class="card">
+          ${TEAM_REPS.map(r=>`<div class="rep-row">
+            <div class="rep-row-avatar ${r.color}">${r.initials}</div>
+            <div class="rep-row-info"><div class="rep-row-name">${r.name}</div><div class="rep-row-sub">${r.contacted} contacted · ${r.booked} booked</div></div>
+            <div><div class="rep-row-stat">${r.booked}</div><div class="rep-row-stat-label">Meetings</div></div>
+          </div>`).join('')}
+        </div>
+        <div class="section-header" style="margin-top:16px"><div class="section-title"><div class="section-title-dot"></div>Niche Conversion</div></div>
+        <div class="card">
+          <div class="perf-bar-wrap">
+            ${NM.map(n=>`<div class="perf-bar-item">
+              <div class="perf-bar-label"><span class="perf-bar-label-name">${n.icon} ${n.name}</span><span class="perf-bar-label-val">${n.convPct}%</span></div>
+              <div class="perf-bar-track"><div class="perf-bar-fill" style="width:${Math.min(n.convPct*2,100)}%;background:${n.color}"></div></div>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Pipeline Velocity</div></div>
+        <div class="card" style="margin-bottom:12px">
+          ${PIPELINE_COLUMNS.slice(0,-1).map((col,i)=>{
+            const cnt=PROSPECTS.filter(p=>p.status===col).length;
+            const w=Math.max(10,cnt/PROSPECTS.length*100);
+            return `<div style="margin-bottom:8px">
+              <div class="perf-bar-label"><span class="perf-bar-label-name">${col}</span><span class="perf-bar-label-val">${cnt}</span></div>
+              <div class="perf-bar-track" style="height:10px;border-radius:5px">
+                <div class="perf-bar-fill" style="width:${w}%;background:linear-gradient(90deg,#60a5fa,#a78bfa);height:100%;border-radius:5px"></div>
+              </div></div>`;
+          }).join('')}
+        </div>
+        <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Source Quality</div></div>
+        <div class="card">
+          ${sourceData.filter(s=>s.count>0).map(s=>`<div class="signal-row">
+            <span class="signal-label">${s.source}</span>
+            <span style="font-size:11px;color:var(--text-muted)">${s.count} prospects</span>
+            <span class="signal-value" style="color:${s.trend==='↑'?'var(--emerald)':s.trend==='↓'?'var(--rose)':'var(--amber)'}">${s.trend} ${s.conv}</span>
+          </div>`).join('')}
+        </div>
+        <div class="section-header" style="margin-top:16px"><div class="section-title"><div class="section-title-dot"></div>Pilot Prospect Ratings</div></div>
+        <div class="card">
+          ${(()=>{
+            const rated = PROSPECTS.filter(p => FEEDBACK_STORE[p.id]);
+            if (!rated.length) return `<div style="font-size:12px;color:var(--text-muted);text-align:center;padding:16px 0">
+              No ratings yet — open any prospect and rate quality with 👍/👎</div>`;
+            return rated.map(p => `<div class="signal-row">
+              <span class="signal-label">${p.firstName} ${p.lastName}</span>
+              <span style="font-size:10.5px;color:var(--text-muted)">${p.niche}</span>
+              <span style="font-size:16px">${FEEDBACK_STORE[p.id]==='up'?'👍':'👎'}</span>
+            </div>`).join('');
+          })()}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ==========================================
+// NICHE MAPPING WIZARD — v2.1 (Macro→Preview→Meso→Micro→Results)
+// ==========================================
+
+function pageNicheMapping() {
+  const saved  = loadSavedNicheProfile();
+  const stage  = nicheWizardStage;
+  const path   = nichePath;
+
+  // Stage questions
+  const macroQs = MACRO_QUESTIONS;
+  const mesoQs  = path ? path.meso  : [];
+  const microQs = path ? path.micro : [];
+
+  // stage: 0=macro, 1=preview, 2=meso, 3=micro, 4=results
+  const stageConfigs = [
+    { qs: macroQs,  title: 'Macro Scan',        sub: '8 broad questions to establish your baseline.', pct: 20  },
+    { qs: [],       title: 'Quick Preview',      sub: 'Your early niche read — based on 8 questions.', pct: 40  },
+    { qs: mesoQs,   title: 'Cluster Refinement', sub: 'Adaptive questions narrowing your top niche clusters.', pct: 60  },
+    { qs: microQs,  title: 'Niche Deep Dive',    sub: 'Final calibration — precision questions for your top candidates.', pct: 80  },
+    { qs: [],       title: 'Results',             sub: '', pct: 100 },
+  ];
+  const sc = stageConfigs[Math.min(stage, 4)];
+  const currentQs = sc.qs;
+
+  const totalAnswered = Object.keys(nicheAnswers).length;
+
+  const zoneColors = {
+    fit: 'var(--blue)', focus: 'var(--violet)', market: 'var(--cyan)',
+    access: 'var(--emerald)', service: 'var(--amber)'
+  };
+
+  function renderProgressBar() {
+    const labels = ['Macro Scan','Quick Preview','Cluster Refinement','Niche Deep Dive','Results'];
+    return `
+    <div class="wizard-progress-wrap">
+      <div class="wizard-progress-track">
+        <div class="wizard-progress-fill" style="width:${sc.pct}%"></div>
+      </div>
+      <div class="wizard-progress-labels">
+        ${labels.map((l,i) => `<span class="wizard-progress-label ${stage > i ? 'done' : stage === i ? 'active' : ''}">${l}</span>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  function renderQuestion(q, idx, total) {
+    const answered = nicheAnswers[q.id] !== undefined;
+    return `
+    <div class="wizard-question${answered ? ' answered' : ''}" id="wq-${q.id}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
+        <span class="wizard-question-label">Q${idx + 1} of ${total}</span>
+        <span class="zone-badge zone-${q.zone}">${NICHE_ZONE_CONFIG[q.zone].label}</span>
+      </div>
+      <div class="wizard-question-text">${q.text}</div>
+      <div class="likert-group" id="lg-${q.id}">
+        ${q.options.map((opt, i) => `
+        <button class="likert-btn${nicheAnswers[q.id] === i ? ' selected' : ''}"
+          onclick="selectNicheAnswer('${q.id}',${i})" id="lb-${q.id}-${i}">
+          ${opt}
+        </button>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  function renderResultCards(profile) {
+    const rankLabels = ['#1 Best Fit', '#2 Strong Match', '#3 Good Match'];
+    const rankCls    = ['rank-1','rank-2','rank-3'];
+    return profile.top3.map((n, i) => {
+      const zoneData  = n.zoneBreakdown || {};
+      const zoneOrder = ['fit','focus','market','access','service'];
+      return `
+      <div class="niche-result-card ${rankCls[i]}" style="--niche-color:${n.color}">
+        <div class="nrc-header">
+          <div class="nrc-left">
+            <div class="nrc-icon">${n.icon}</div>
+            <div>
+              <div class="nrc-name">${n.name}</div>
+              <div class="nrc-rank-badge">${rankLabels[i]}</div>
+            </div>
+          </div>
+          <div class="match-ring-wrap">
+            <div class="match-ring" style="--pct:${n.score};--niche-color:${n.color}">
+              <div class="match-ring-val">${n.score}</div>
+            </div>
+            <div class="match-ring-label">Match</div>
+          </div>
+        </div>
+        <div class="zone-breakdown">
+          ${zoneOrder.map(z => `
+          <div class="zone-breakdown-row">
+            <span class="zone-breakdown-label">${NICHE_ZONE_CONFIG[z].label}</span>
+            <div class="zone-breakdown-track">
+              <div class="zone-breakdown-fill" style="width:${zoneData[z] || 0}%;background:${zoneColors[z]}"></div>
+            </div>
+            <span class="zone-breakdown-val">${zoneData[z] || 0}%</span>
+          </div>`).join('')}
+        </div>
+        ${i === 0 ? `
+        <div class="drawer-section-title" style="margin-top:14px">Recommended Messaging Angle</div>
+        <div class="messaging-angle-block" style="--niche-color:${n.color}">${profile.messagingAngle}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  function renderICPPreview(profile) {
+    const icp = profile.icpBlock;
+    return `
+    <div class="icp-preview-block">
+      <div class="icp-preview-title">Generated ICP Profile — Ready to Apply</div>
+      <div class="icp-preview-row"><span class="icp-preview-key">Primary Niche</span><span class="icp-preview-val">${icp.primaryNiche}</span></div>
+      <div class="icp-preview-row"><span class="icp-preview-key">Min Assets</span><span class="icp-preview-val">${icp.minAssets}</span></div>
+      <div class="icp-preview-row"><span class="icp-preview-key">Professions</span><span class="icp-preview-val">${icp.professions}</span></div>
+      <div class="icp-preview-row"><span class="icp-preview-key">Life Event Triggers</span><span class="icp-preview-val">${icp.lifeEventTriggers}</span></div>
+      <div class="icp-preview-row"><span class="icp-preview-key">Messaging Angle</span><span class="icp-preview-val">${icp.messagingAngle.split('.')[0]}.</span></div>
+    </div>`;
+  }
+
+  // ── STAGE 1: QUICK PREVIEW ────────────────────────────────────────────────
+  if (stage === 1 && nichePreviewScores) {
+    const ps = nichePreviewScores;
+    const previewRanked = Object.entries(ps.nicheScores)
+      .sort((a,b) => b[1]-a[1]).slice(0,3)
+      .map(([id,score]) => ({ id, score, ...NICHE_MAP[id] }));
+    const zoneOrder = ['fit','focus','market','access','service'];
+    const totalMesoMicro = (path ? path.meso.length + path.micro.length : 0);
+
+    return `
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="page-title">🧭 Your Early Niche Read</div>
+        <div class="page-subtitle">Preliminary matches based on 8 macro questions — refine with ${totalMesoMicro} more to lock in precision scores</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-ghost" onclick="backNicheWizard()">← Back</button>
+      </div>
+    </div>
+    <div class="wizard-shell" style="max-width:820px">
+      ${renderProgressBar()}
+      <div style="background:rgba(96,165,250,0.07);border:1px solid rgba(96,165,250,0.2);border-radius:14px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:flex-start;gap:14px">
+        <span style="font-size:24px">⚡</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:4px">This is your early signal — not your final score</div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.6">The engine has scored your macro answers across all 12 niches. Complete ${totalMesoMicro} more targeted questions to unlock precision scores, zone-by-zone breakdowns, and your generated ICP profile.</div>
+        </div>
+      </div>
+      <div class="section-header" style="margin-bottom:14px"><div class="section-title"><div class="section-title-dot"></div>Preliminary Top 3 Niche Matches</div></div>
+      ${previewRanked.map((n, i) => {
+        const zs = ps.zoneScores[n.id] || {};
+        const rankLabels = ['#1 Early Lead','#2 Strong Candidate','#3 Possible Fit'];
+        const rankCls = ['rank-1','rank-2','rank-3'];
+        return `
+        <div class="niche-result-card ${rankCls[i]}" style="--niche-color:${n.color};opacity:${i===0?1:i===1?0.9:0.8}">
+          <div class="nrc-header">
+            <div class="nrc-left">
+              <div class="nrc-icon">${n.icon}</div>
+              <div>
+                <div class="nrc-name">${n.name}</div>
+                <div class="nrc-rank-badge">${rankLabels[i]}</div>
+              </div>
+            </div>
+            <div class="match-ring-wrap">
+              <div class="match-ring" style="--pct:${n.score};--niche-color:${n.color}">
+                <div class="match-ring-val">${n.score}</div>
+              </div>
+              <div class="match-ring-label" style="color:var(--text-muted)">Early Est.</div>
+            </div>
+          </div>
+          <div class="zone-breakdown">
+            ${zoneOrder.map(z => `
+            <div class="zone-breakdown-row">
+              <span class="zone-breakdown-label">${NICHE_ZONE_CONFIG[z].label}</span>
+              <div class="zone-breakdown-track">
+                <div class="zone-breakdown-fill" style="width:${zs[z]||0}%;background:${zoneColors[z]};opacity:0.7"></div>
+              </div>
+              <span class="zone-breakdown-val" style="color:var(--text-muted)">${zs[z]||0}%*</span>
+            </div>`).join('')}
+          </div>
+          ${i === 0 ? `<div style="margin-top:10px;font-size:11px;color:var(--text-muted)">* Scores will sharpen after ${totalMesoMicro} more questions</div>` : ''}
+        </div>`;
+      }).join('')}
+      <div class="apply-cta" style="margin-top:20px">
+        <div>
+          <div class="apply-cta-text">Refine your scores to get precision results</div>
+          <div class="apply-cta-sub">${totalMesoMicro} more targeted questions → zone-by-zone breakdown + generated ICP profile ready to apply.</div>
+        </div>
+        <div class="apply-cta-actions">
+          <button class="btn btn-ghost" onclick="_computeAndShowResults()" title="Skip refinement and use these preliminary results">Use Early Results</button>
+          <button class="btn btn-primary" onclick="advanceNicheWizard()">Refine My Results → (${totalMesoMicro} questions)</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ── STAGE 4: RESULTS ──────────────────────────────────────────────────────
+  if (stage === 4 && nicheProfile) {
+    const profile = nicheProfile;
+    const totalQsShown = (path ? path.macro.length + path.meso.length + path.micro.length : macroQs.length);
+    const completedDate = profile.completedAt ? new Date(profile.completedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+    return `
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="page-title">🧭 Your Niche Profile</div>
+        <div class="page-subtitle">Completed ${completedDate} · ${totalQsShown} questions · auto-saved to this device</div>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-ghost" onclick="resetNicheWizard()" title="Clear all answers and start over">↺ Retake</button>
+        <button class="btn btn-ghost" onclick="downloadNicheProfile()" title="Download profile as JSON file">⬇ JSON</button>
+        <button class="btn btn-secondary" onclick="printNicheProfile()">🖨️ Print / PDF</button>
+        <button class="btn btn-primary" onclick="applyProfileToSettings()">✓ Apply to ICP</button>
+      </div>
+    </div>
+    <div class="wizard-shell" style="max-width:820px">
+      ${renderProgressBar()}
+      <div class="results-intro">
+        <div class="results-intro-icon">🏆</div>
+        <div>
+          <div class="results-intro-title">Top Match: ${profile.top3[0].icon} ${profile.top3[0].name}</div>
+          <div class="results-intro-sub">
+            Score: <strong>${profile.top3[0].score}/100</strong> — based on your background, market, access points, and service model.
+            Your results are saved — you won't need to redo this unless you want to change niches.
+          </div>
+        </div>
+      </div>
+      <div class="saved-profile-banner" style="cursor:default;margin-bottom:16px">
+        <span style="font-size:18px">💾</span>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:var(--emerald)">Profile saved to this device</div>
+          <div style="font-size:11px;color:var(--text-muted)">Automatically restored on every visit · Click "Change Niche" to run a new assessment</div>
+        </div>
+        <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="resetNicheWizard()">Change Niche</button>
+      </div>
+      <div class="section-header" style="margin-bottom:14px"><div class="section-title"><div class="section-title-dot"></div>Your Niche Rankings</div></div>
+      ${renderResultCards(profile)}
+      ${renderICPPreview(profile)}
+      <div class="apply-cta">
+        <div>
+          <div class="apply-cta-text">Ready to fire up the Prospect Mine?</div>
+          <div class="apply-cta-sub">Apply your niche profile to Settings & ICP, then let the Mine Agent run your first cohort.</div>
+        </div>
+        <div class="apply-cta-actions">
+          <button class="btn btn-secondary" onclick="navigate('prospect-mine')">Go to Mine →</button>
+          <button class="btn btn-primary" onclick="applyProfileToSettings()">Apply ICP + Go to Settings</button>
+        </div>
+      </div>
+
+    </div>`;
+  }
+
+  // ── STAGES 0, 2, 3: QUESTION STAGES ─────────────────────────────────────────────
+  const answeredCount = currentQs.filter(q => nicheAnswers[q.id] !== undefined).length;
+  const allAnswered   = answeredCount === currentQs.length && currentQs.length > 0;
+  // isLastQStage: stage 3 (micro) OR stage 2 (meso) when no micro questions
+  const isLastQStage  = (stage === 3) || (stage === 2 && (!path || path.micro.length === 0));
+
+  const stagePageTitles = ['🧭 Niche Mapping Engine', '', '🧭 Cluster Refinement', '🧭 Niche Deep Dive'];
+  const nextBtnText     = isLastQStage ? 'See My Results 🎯' : `Next: ${stageConfigs[stage + 1]?.title} →`;
+
+  if (stage === 0) {
+    return `
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="page-title">🧭 Niche Mapping Engine</div>
+        <div class="page-subtitle">Adaptive assessment → top 3 niche matches + generated ICP profile · ~5–7 minutes</div>
+      </div>
+      <div class="page-actions">
+        ${saved ? `<button class="btn btn-ghost" onclick="viewSavedProfile()">View Last Results</button>` : ''}
+      </div>
+    </div>
+    <div class="wizard-shell">
+      ${saved ? `
+      <div class="saved-profile-banner" onclick="viewSavedProfile()">
+        <span style="font-size:20px">📊</span>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700;color:var(--emerald)">Previous results — ${saved.top3[0].icon} ${saved.top3[0].name} (${saved.top3[0].score}/100)</div>
+          <div style="font-size:11px;color:var(--text-muted)">Completed ${new Date(saved.completedAt).toLocaleDateString()} · Click to view</div>
+        </div>
+        <span style="font-size:11px;color:var(--emerald);font-weight:600">View →</span>
+      </div>` : ''}
+      ${renderProgressBar()}
+      <div class="wizard-stage">
+        <div class="wizard-stage-header">
+          <div class="wizard-stage-title">Stage 1 of 3 — Macro Scan</div>
+          <div class="wizard-stage-sub">8 broad questions that calibrate your baseline across all 12 niches. The engine uses these to build your personalised path for Stages 2 and 3.</div>
+        </div>
+        ${macroQs.map((q, i) => renderQuestion(q, i, macroQs.length)).join('')}
+        <div class="wizard-nav">
+          <div class="wizard-nav-meta">${answeredCount} of ${macroQs.length} answered</div>
+          <button class="btn btn-primary" onclick="advanceNicheWizard()" ${allAnswered ? '' : 'disabled style="opacity:0.5;cursor:not-allowed"'}>
+            Next: Cluster Refinement →
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // Stages 1 (meso) and 2 (micro) share same template
+  return `
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">${stagePageTitles[stage] || '🧭 Niche Mapping'}</div>
+      <div class="page-subtitle">${sc.sub}</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-ghost" onclick="backNicheWizard()">← Back</button>
+    </div>
+  </div>
+  <div class="wizard-shell">
+    ${renderProgressBar()}
+    <div class="wizard-stage">
+      <div class="wizard-stage-header">
+        <div class="wizard-stage-title">Stage ${stage + 1} of 3 — ${sc.title}</div>
+        <div class="wizard-stage-sub">${sc.sub} Answer as honestly as possible — the engine rewards accuracy.</div>
+      </div>
+      ${currentQs.length === 0
+        ? `<div style="padding:32px;text-align:center;color:var(--text-muted)">
+             <div style="font-size:32px;margin-bottom:12px">⚡</div>
+             <div style="font-weight:700;color:var(--text-primary)">Skipping this stage</div>
+             <div style="font-size:12px;margin-top:6px">The engine didn't find relevant questions for this cluster based on your macro answers.</div>
+           </div>`
+        : currentQs.map((q, i) => renderQuestion(q, i, currentQs.length)).join('')
+      }
+      <div class="wizard-nav">
+        <div class="wizard-nav-meta">${answeredCount} of ${currentQs.length} answered</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="backNicheWizard()">← Back</button>
+          <button class="btn btn-primary" onclick="${isLastQStage ? 'scoreAndShowResults' : 'advanceNicheWizard'}()"
+            ${(allAnswered || currentQs.length === 0) ? '' : 'disabled style="opacity:0.5;cursor:not-allowed"'}>
+            ${(allAnswered || currentQs.length === 0) ? nextBtnText : `${answeredCount}/${currentQs.length} Answered`}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function pageSettings() {
+  const cfg = ICP_CONFIG;
+  const ap  = window._advisorProfile || {};
+  return `
+  <div class="page-header">
+    <div class="page-header-left"><div class="page-title">Settings &amp; ICP</div>
+      <div class="page-subtitle">Define your ideal client profile and configure agent rules</div></div>
+    <div class="page-actions">
+      <button class="btn btn-secondary" onclick="saveAdvisorProfile()">Save Profile</button>
+      <button class="btn btn-primary" onclick="saveICP()">Save ICP</button>
+    </div>
+  </div>
+  <div class="section">
+    <div class="grid-2">
+      <div>
+        <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Ideal Client Profile</div></div>
+        <div class="card">
+          <div class="form-group"><label class="form-label">Primary Niche Focus</label>
+            <select class="form-select" id="icp-niche">
+              ${NICHES.map(n=>`<option ${cfg.primaryNiche===n.name?'selected':''}>${n.name}</option>`).join('')}
+            </select></div>
+          <div class="form-group"><label class="form-label">Minimum Investable Assets</label>
+            <select class="form-select" id="icp-assets">
+              ${['$500K','$1M','$2M','$5M'].map(v=>`<option ${cfg.minAssets===v?'selected':''}>${v}</option>`).join('')}
+            </select></div>
+          <div class="form-group"><label class="form-label">Target Geography</label>
+            <input class="form-input" id="icp-geo" value="${cfg.geography}"></div>
+          <div class="form-group"><label class="form-label">Professions / Affiliations</label>
+            <input class="form-input" id="icp-prof" value="${cfg.professions}"></div>
+          <div class="form-group"><label class="form-label">Life Event Triggers</label>
+            <input class="form-input" id="icp-events" value="${cfg.lifeEventTriggers}"></div>
+          <div class="form-group"><label class="form-label">Messaging Angle</label>
+            <textarea class="form-textarea" id="icp-message">${cfg.messagingAngle}</textarea></div>
+        </div>
+
+        <div class="section-header" style="margin-top:20px"><div class="section-title"><div class="section-title-dot"></div>Advisor Routing Profile &nbsp;<span style="font-size:10px;color:var(--blue);font-weight:700;letter-spacing:0.06em;background:rgba(96,165,250,0.12);padding:2px 8px;border-radius:20px">PHASE B</span></div></div>
+        <div class="card">
+          <div style="font-size:11px;color:var(--text-muted);line-height:1.6;margin-bottom:16px;padding:10px 12px;background:rgba(96,165,250,0.06);border-radius:8px;border-left:3px solid var(--blue)">
+            This profile powers the lead routing engine — it determines which leads you're eligible to receive based on your niche, geography, licensing, and capacity.
+          </div>
+          <div class="form-group"><label class="form-label">Advisor Type</label>
+            <select class="form-select" id="ap-type">
+              ${['Independent RIA','Wirehouse','Hybrid RIA','Broker-Dealer','Insurance-Based'].map(v=>`<option ${(ap.advisorType||'')===(v)?'selected':''}>${v}</option>`).join('')}
+            </select></div>
+          <div class="form-group"><label class="form-label">Licensed States (comma-separated, e.g. AZ, TX, KS)</label>
+            <input class="form-input" id="ap-states" value="${(ap.licensedStates||[]).join(', ')}" placeholder="AZ, TX, KS"></div>
+          <div class="form-group"><label class="form-label">Service Capabilities</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+              ${[['Retirement Income','retirement_income'],['Business Owner Liquidity','business_owner_liquidity'],['Equity Comp','equity_comp'],['Inheritance Planning','inheritance_planning'],['Estate Planning','estate_planning'],['Tax Planning','tax_planning']].map(([label,key])=>{
+                const active = (ap.serviceCapabilities||[]).includes(key);
+                return `<div class="filter-chip ${active?'active':''}" onclick="this.classList.toggle('active')" data-cap="${key}">${label}</div>`;
+              }).join('')}
+            </div></div>
+          <div class="form-group"><label class="form-label">Target AUM Bands</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
+              ${[['<500k','Under $500K'],['500k-1m','$500K–$1M'],['1m-5m','$1M–$5M'],['5m+','$5M+']].map(([key,label])=>{
+                const active = (ap.targetAUMBands||[]).includes(key);
+                return `<div class="filter-chip ${active?'active':''}" onclick="this.classList.toggle('active')" data-band="${key}">${label}</div>`;
+              }).join('')}
+            </div></div>
+          <div class="grid-2" style="gap:12px">
+            <div class="form-group"><label class="form-label">Max Active Leads</label>
+              <input class="form-input" id="ap-lead-cap" type="number" value="${ap.activeLeadCap||25}" min="1" max="100"></div>
+            <div class="form-group"><label class="form-label">Meetings/Week Available</label>
+              <input class="form-input" id="ap-calendar" type="number" value="${ap.calendarCapacity||8}" min="1" max="40"></div>
+          </div>
+          <div class="form-group"><label class="form-label">Firm Name</label>
+            <input class="form-input" id="ap-firm" value="${ap.firmName||''}"></div>
+          <div class="form-group"><label class="form-label">Primary Office (City, State)</label>
+            <input class="form-input" id="ap-office" value="${ap.officeLocations&&ap.officeLocations[0]?ap.officeLocations[0].city+', '+ap.officeLocations[0].state:''}" placeholder="Phoenix, AZ"></div>
+          <button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="saveAdvisorProfile()">💾 Save Routing Profile</button>
+        </div>
+      </div>
+      <div>
+        <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Agent Configuration</div></div>
+        <div class="card" style="margin-bottom:12px">
+          ${[{name:'ICP Agent',desc:'Refines ideal client profile rules',status:'Active'},
+             {name:'Prospect Miner Agent',desc:'Generates candidate lists from niche parameters',status:'Active'},
+             {name:'Enrichment Agent',desc:'Appends context, relationship hints, timing signals',status:'Active'},
+             {name:'Fit Score Agent',desc:'Creates priority score with reason codes',status:'Active'},
+             {name:'Outreach Agent',desc:'Drafts personalized messaging per prospect',status:'Active'},
+             {name:'Nurture Agent',desc:'Manages unready leads and reactivation logic',status:'Beta'},
+             {name:'Meeting Prep Agent',desc:'Generates pre-meeting dossiers',status:'Active'},
+             {name:'Manager Agent',desc:'Summarizes team performance and conversion insights',status:'Active'},
+             {name:'Identity Resolution Agent',desc:'Dedupes and matches contacts to global master record',status:'Building'},
+             {name:'Routing Orchestrator',desc:'Assigns leads exclusively by niche fit + ICP + capacity',status:'Building'}]
+            .map(a=>`<div class="signal-row">
+              <div><div class="signal-value" style="font-size:12px;font-weight:600">${a.name}</div>
+              <div style="font-size:10.5px;color:var(--text-muted)">${a.desc}</div></div>
+              <span class="status-pill ${a.status==='Active'?'pill-booked':a.status==='Building'?'pill-nurture':'pill-new'}">${a.status}</span>
+            </div>`).join('')}
+        </div>
+        <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Team Members</div></div>
+        <div class="card">
+          ${TEAM_REPS.map(r=>`<div class="rep-row">
+            <div class="rep-row-avatar ${r.color}">${r.initials}</div>
+            <div class="rep-row-info"><div class="rep-row-name">${r.name}</div><div class="rep-row-sub">${r.role}</div></div>
+            <button class="btn btn-ghost" style="font-size:11px;padding:4px 9px" onclick="showToast('Edit coming in Phase 2','💎')">Edit</button>
+          </div>`).join('')}
+          <button class="btn btn-secondary" style="width:100%;margin-top:10px" onclick="showToast('Team invite sent','✅')">+ Add Team Member</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}

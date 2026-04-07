@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The AUM Engine — More right-fit first meetings in your niche</title>
+  <meta name="description" content="The AUM Engine is a niche prospecting cockpit for independent Financial Professionals at the $50M–$250M AUM plateau. Get exclusive, scored, niche-qualified prospects every month." />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://theaumengine.web.app" />
+  <meta property="og:title" content="The AUM Engine — More right-fit first meetings in your niche" />
+  <meta property="og:description" content="Niche prospecting cockpit for independent Financial Professionals. Exclusive households, AI-drafted outreach, and a system that runs on your behalf." />
+  <meta property="og:image" content="https://theaumengine.web.app/assets/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:site_name" content="The AUM Engine" />
+
+  <!-- Twitter / X Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="The AUM Engine — More right-fit first meetings in your niche" />
+  <meta name="twitter:description" content="Niche prospecting cockpit for independent Financial Professionals." />
+  <meta name="twitter:image" content="https://theaumengine.web.app/assets/og-image.png" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/assets/og-image.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+
+<!-- ============================================================
+     PUBLIC SHELL — Landing page, visible to unauthenticated visitors
+     ============================================================ -->
+<div id="public-shell">
+
+  <!-- ── Public Header ── -->
+  <header class="pub-header" id="pub-header">
+    <div class="pub-header-inner">
+      <a href="#" class="pub-logo" onclick="return false">
+        <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
+          <polygon points="14,2 26,9 26,19 14,26 2,19 2,9" fill="none" stroke="url(#phGrad)" stroke-width="1.5"/>
+          <polygon points="14,2 26,9 14,14" fill="url(#phGrad1)" opacity="0.8"/>
+          <polygon points="14,2 2,9 14,14"  fill="url(#phGrad2)" opacity="0.6"/>
+          <polygon points="2,9 14,14 2,19"  fill="url(#phGrad3)" opacity="0.5"/>
+          <polygon points="26,9 14,14 26,19" fill="url(#phGrad4)" opacity="0.7"/>
+          <polygon points="14,14 26,19 14,26" fill="url(#phGrad5)" opacity="0.6"/>
+          <polygon points="14,14 2,19 14,26"  fill="url(#phGrad6)" opacity="0.4"/>
+          <defs>
+            <linearGradient id="phGrad"  x1="2" y1="2" x2="26" y2="26" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient>
+            <linearGradient id="phGrad1" x1="2" y1="2" x2="26" y2="14" gradientUnits="userSpaceOnUse"><stop stop-color="#93c5fd"/><stop offset="1" stop-color="#60a5fa"/></linearGradient>
+            <linearGradient id="phGrad2" x1="14" y1="2" x2="2" y2="14"  gradientUnits="userSpaceOnUse"><stop stop-color="#a78bfa"/><stop offset="1" stop-color="#7c3aed"/></linearGradient>
+            <linearGradient id="phGrad3" x1="2" y1="9" x2="14" y2="19"  gradientUnits="userSpaceOnUse"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#4f46e5"/></linearGradient>
+            <linearGradient id="phGrad4" x1="26" y1="9" x2="14" y2="19" gradientUnits="userSpaceOnUse"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#0284c7"/></linearGradient>
+            <linearGradient id="phGrad5" x1="14" y1="14" x2="26" y2="26" gradientUnits="userSpaceOnUse"><stop stop-color="#60a5fa"/><stop offset="1" stop-color="#3b82f6"/></linearGradient>
+            <linearGradient id="phGrad6" x1="14" y1="14" x2="2" y2="26"  gradientUnits="userSpaceOnUse"><stop stop-color="#818cf8"/><stop offset="1" stop-color="#6366f1"/></linearGradient>
+          </defs>
+        </svg>
+        <span>The AUM Engine</span>
+      </a>
+      <nav class="pub-nav">
+        <a href="#why" class="pub-nav-link">Why It Exists</a>
+        <a href="#how" class="pub-nav-link">How It Works</a>
+        <a href="#offer" class="pub-nav-link">Founding Offer</a>
+        <button class="pub-theme-btn" id="pub-theme-btn" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode">
+          <span id="pub-theme-icon">🌙</span>
+        </button>
+        <button class="pub-demo-btn" id="nav-demo-btn" onclick="window.openAuthModal()">Book Demo</button>
+        <button class="pub-login-btn" id="login-btn">Pilot Login</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ── Hero ── -->
+  <div class="hero-wrapper" id="hero">
+    <div class="hero-bg-glow"></div>
+    <div class="hero-grid-overlay"></div>
+
+    <section class="hero-section" aria-label="Hero">
+      <div class="hero-content">
+        <div class="pilot-badge">
+          <span class="pilot-dot"></span>
+          Founding Cohort — Limited Access
+        </div>
+        <h1 class="hero-headline">
+          More right-fit first meetings<br>in your niche.<br>
+          <span class="hero-headline-accent">Every month.</span>
+        </h1>
+        <p class="hero-subhead">
+          The AUM Engine is a niche prospecting cockpit for independent Financial Professionals at the $50M–$250M AUM plateau. Instead of renting shared internet leads, you get a monthly stream of exclusive households in your exact niche — already scored, enriched, and paired with outreach drafts you approve.
+        </p>
+        <div class="hero-ctas">
+          <button class="hero-cta-primary" id="hero-login-cta">Book a 20-minute demo</button>
+          <button class="hero-cta-pilot" id="hero-pilot-cta" onclick="window.openAuthModal()">Pilot Login →</button>
+        </div>
+        <ul class="hero-trust-bullets">
+          <li>Built for Financial Professionals at the $50M–$250M AUM growth plateau.</li>
+          <li>Exclusive, niche-qualified prospect discovery — not shared internet leads.</li>
+          <li>Outreach drafts in your voice, always approved by you before sending.</li>
+        </ul>
+        <div class="trust-strip">
+          Created by people in the field who know how hard it is to find qualified prospects — after years of trying SmartAsset, seminars, SEO, and generic lead vendors.
+        </div>
+        <!-- Pill cloud: 30px below trust strip — 3-col grid, 4×3 = 12 niches -->
+        <div class="hero-pills" aria-hidden="true">
+          <span class="niche-pill" style="--delay:0s">✈️ Aircraft Owners</span>
+          <span class="niche-pill" style="--delay:0.1s">👩‍⚕️ Physicians</span>
+          <span class="niche-pill" style="--delay:0.2s">🏢 Business Owners</span>
+          <span class="niche-pill" style="--delay:0.3s">⚖️ Law Partners</span>
+          <span class="niche-pill" style="--delay:0.4s">💸 HENRYs</span>
+          <span class="niche-pill" style="--delay:0.5s">💼 C-Suite Executives</span>
+          <span class="niche-pill" style="--delay:0.6s">🤖 AI-Displaced Execs</span>
+          <span class="niche-pill" style="--delay:0.7s">🦷 Dentists & Specialists</span>
+          <span class="niche-pill" style="--delay:0.8s">🔧 High Earning Tradesman</span>
+          <span class="niche-pill" style="--delay:0.9s">💰 Inheritance Recipients</span>
+          <span class="niche-pill" style="--delay:1.0s">🏗️ Real Estate Developers</span>
+          <span class="niche-pill" style="--delay:1.1s">🎗️ Charity Boards</span>
+        </div>
+      </div>
+    </section>
+  </div><!-- end .hero-wrapper -->
+
+  <!-- ── Why This Exists ── -->
+  <section class="lp-section" id="why">
+    <div class="lp-container">
+      <div class="lp-section-label">Why this exists</div>
+      <h2 class="lp-section-title">Built by advisors and operators<br>who hit the same wall.</h2>
+      <div class="lp-prose">
+        <p>Most Financial Professionals don't stall out because they lack skill; they stall because they cannot consistently find right-fit households who match their specialized planning work. The usual playbook — SmartAsset, SEO, dinner seminars, generic "AI tools" — produces sporadic wins but no reliable, niche-aligned prospect flow.</p>
+        <p>The AUM Engine was built after living that frustration inside real advisory businesses: the goal is to give growth-minded Financial Professionals a governed, repeatable system for finding and engaging exactly the households they're best suited to serve.</p>
+      </div>
+      <div class="comparison-strip">
+        <div class="comparison-col comparison-col-bad">
+          <div class="comparison-col-label">The old playbook</div>
+          <ul>
+            <li>❌ SmartAsset shared leads — competing with 5+ firms</li>
+            <li>❌ Dinner seminars — expensive, unpredictable, low conversion</li>
+            <li>❌ SEO / content — 12+ months with no guaranteed ROI</li>
+            <li>❌ Generic AI tools — no niche targeting, no enrichment</li>
+            <li>❌ No system — depends entirely on your energy and memory</li>
+          </ul>
+        </div>
+        <div class="comparison-divider">vs</div>
+        <div class="comparison-col comparison-col-good">
+          <div class="comparison-col-label">The AUM Engine</div>
+          <ul>
+            <li>✅ Exclusive niche households — not shared with other firms</li>
+            <li>✅ Pre-scored and enriched with wealth signals & timing data</li>
+            <li>✅ Outreach drafted in your voice, approved before sending</li>
+            <li>✅ Niche mapping first — know where you'll win before you mine</li>
+            <li>✅ A governed system — runs alongside you, not instead of you</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── What Makes It Different ── -->
+  <section class="lp-section lp-section-alt" id="different">
+    <div class="lp-container">
+      <div class="lp-section-label">What makes it different</div>
+      <h2 class="lp-section-title">Not a lead list.<br>A niche growth engine.</h2>
+      <div class="value-prop-grid">
+        <div class="value-prop-card">
+          <div class="vp-icon">🧭</div>
+          <h3 class="vp-title">Niche-first intelligence</h3>
+          <p class="vp-body">Before any list is built, you run through a short niche mapping intake that scores Fit, Focus, Market, Access, and Service Match across key segments like physicians, business owners, inheritance recipients, and more. You see which niches are most aligned with your background and access so you don't spend the next year chasing the wrong market.</p>
+        </div>
+        <div class="value-prop-card">
+          <div class="vp-icon">💎</div>
+          <h3 class="vp-title">Prospect mining, not just scoring</h3>
+          <p class="vp-body">Alfred's mining engine assembles curated households that match your niche filters from multiple sources, instead of reselling shared internet leads in your ZIP code. You get exclusive, niche-specific prospects each month — like "private practice physicians within 10 years of retirement" or "post-exit business owners in your metro."</p>
+        </div>
+        <div class="value-prop-card">
+          <div class="vp-icon">✍️</div>
+          <h3 class="vp-title">Governed AI outreach in your voice</h3>
+          <p class="vp-body">The Engine learns from your best emails and talking points, then drafts email and LinkedIn outreach for each prospect for you to review. Nothing sends without your approval, so you get leverage from AI without ever handing the keys to a black box.</p>
+        </div>
+      </div>
+
+      <div class="social-proof-block">
+        <blockquote class="social-proof-quote">
+          “This is the first prospecting tool that actually feels like it understands how an independent advisor grows. The niche scoring alone saved us months of chasing the wrong market.”
+        </blockquote>
+        <div class="social-proof-attribution">
+          <span class="social-proof-badge">Pilot Advisor</span>
+          <span class="social-proof-meta">Independent Financial Professional &middot; $180M AUM &middot; Midwest</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── How It Works ── -->
+  <section class="lp-section" id="how">
+    <div class="lp-container">
+      <div class="lp-section-label">How it works</div>
+      <h2 class="lp-section-title">From niche idea to booked meetings —<br>in weeks, not quarters.</h2>
+      <div class="how-steps">
+        <div class="how-step">
+          <div class="how-step-number">01</div>
+          <div class="how-step-content">
+            <h3 class="how-step-title">Lock your niche</h3>
+            <p class="how-step-body">You complete a 20–30 question niche mapping assessment that scores where you're most likely to win: physicians, business owners, inheritance recipients, HENRYs, AI-displaced executives, and more. The AUM Engine recommends your top niches and auto-configures your initial ICP settings.</p>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-step-number">02</div>
+          <div class="how-step-content">
+            <h3 class="how-step-title">Mine and score prospects</h3>
+            <p class="how-step-body">Our miner assembles 25–50+ right-fit households per month in your chosen niche and scores them for fit and urgency using wealth signals, role changes, geography, and other triggers. You see everything in an advisor-friendly board: New → Contacted → Engaged → Nurture → Meeting Requested → Booked → Dead.</p>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-step-number">03</div>
+          <div class="how-step-content">
+            <h3 class="how-step-title">Draft outreach in your voice</h3>
+            <p class="how-step-body">You plug in a few of your best-performing emails and talking points; the Engine drafts tailored email and LinkedIn outreach for each prospect that sounds like you, not a template. You edit, approve, and send — keeping full control over compliance and tone.</p>
+          </div>
+        </div>
+        <div class="how-step">
+          <div class="how-step-number">04</div>
+          <div class="how-step-content">
+            <h3 class="how-step-title">Approve, book, refine</h3>
+            <p class="how-step-body">You track responses and meetings inside the cockpit and refine messaging and targeting niche by niche. Over time, you build reusable playbooks that can be rolled out across your team and into new niches without starting from scratch.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Founding Cohort Offer ── -->
+  <section class="lp-section lp-section-offer" id="offer">
+    <div class="lp-container">
+      <div class="lp-section-label">Founding cohort</div>
+      <h2 class="lp-section-title">Founding cohort: unfairly weighted<br>in your favor.</h2>
+      <div class="offer-block">
+        <div class="offer-copy">
+          <p class="offer-intro">For the first group of Financial Professionals on The AUM Engine, the offer is intentionally simple — and far more generous than traditional lead vendors.</p>
+          <p class="offer-intro">You get:</p>
+          <ul class="offer-list">
+            <li>
+              <span class="offer-bullet">💎</span>
+              <span><strong>$297/month founding rate, locked for life</strong> (public pricing will start at $497+ per month).</span>
+            </li>
+            <li>
+              <span class="offer-bullet">💎</span>
+              <span><strong>One primary niche configured</strong>, with 25+ exclusive, niche-qualified households per month, mined and scored.</span>
+            </li>
+            <li>
+              <span class="offer-bullet">💎</span>
+              <span><strong>AI-drafted email and LinkedIn outreach</strong> based on your voice and best messaging, always approved by you before it goes out.</span>
+            </li>
+            <li>
+              <span class="offer-bullet">💎</span>
+              <span><strong>CSV import/export bridge</strong> so we plug into your existing CRM and email tools during pilot — no tech overhaul required.</span>
+            </li>
+            <li>
+              <span class="offer-bullet">💎</span>
+              <span><strong>A 30-day "first-meetings or we comp month two" guarantee</strong> when you engage with the system as designed.</span>
+            </li>
+          </ul>
+          <button class="offer-cta-btn" id="founding-cta-btn">Apply for the founding cohort</button>
+
+          <!-- ── Lead Capture — HubSpot Embed ── -->
+          <!-- TO ACTIVATE: swap YOUR_PORTAL_ID and YOUR_FORM_ID below -->
+          <div class="lead-capture-wrap" id="lead-capture-wrap">
+            <p class="lead-capture-label">Not ready to apply yet? Get founding cohort details sent to your inbox.</p>
+            <div id="hubspot-form-target"></div>
+            <p class="lead-capture-note">No account created. We'll reach out personally.</p>
+          </div>
+          <script charset="utf-8" type="text/javascript" src="//js.hsforms.net/forms/embed/v2.js"></script>
+          <script>
+            document.addEventListener('DOMContentLoaded', function() {
+              if (window.hbspt) {
+                hbspt.forms.create({
+                  region: "na1",
+                  portalId: "YOUR_PORTAL_ID",
+                  formId: "YOUR_FORM_ID",
+                  target: "#hubspot-form-target"
+                });
+              }
+            });
+          </script>
+
+          <p class="offer-subtext">We're limiting this first phase to a small number of Financial Professionals so we can be in the trenches with each team and harden the Engine around real-world use.</p>
+        </div>
+        <div class="offer-pricing-card">
+          <div class="opc-label">Founding Rate</div>
+          <div class="opc-price">$297<span>/mo</span></div>
+          <div class="opc-locked">Locked for life</div>
+          <div class="opc-divider"></div>
+          <div class="opc-compare-label">vs. public pricing</div>
+          <div class="opc-compare-price">$497+<span>/mo</span></div>
+          <div class="opc-savings">You save $200+/mo</div>
+          <div class="opc-divider"></div>
+          <div class="opc-guarantee">
+            <span class="opc-g-icon">🛡️</span>
+            30-day meeting guarantee
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FAQ ── -->
+  <section class="lp-section" id="faq">
+    <div class="lp-container lp-container-narrow">
+      <div class="lp-section-label">FAQ</div>
+      <h2 class="lp-section-title">Answers to the questions growth-minded<br>Financial Professionals actually ask.</h2>
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-question" type="button">
+            <span>How is this different from SmartAsset or other lead services?</span>
+            <span class="faq-chevron">›</span>
+          </button>
+          <div class="faq-answer">
+            Traditional lead vendors sell you access to a shared pool of people who happened to click a calculator and may be getting calls from multiple firms. The AUM Engine helps you define a niche, mine exclusive households in that niche, score them, and engage them in your own voice — you own the strategy, the system, and the relationships.
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" type="button">
+            <span>Is this compliant?</span>
+            <span class="faq-chevron">›</span>
+          </button>
+          <div class="faq-answer">
+            Yes — The AUM Engine drafts, you decide. Every email and LinkedIn message is presented as a draft for your review; nothing sends automatically, and you can lock approved language with your compliance team before scaling it.
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" type="button">
+            <span>Do I need to change my CRM or marketing stack?</span>
+            <span class="faq-chevron">›</span>
+          </button>
+          <div class="faq-answer">
+            No. In the founding cohort, we use simple CSV imports/exports to plug into the CRM and email tools you already use. Deeper integrations and automation come later, after we've proven consistent value in your pilot.
+          </div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-question" type="button">
+            <span>Who is The AUM Engine for?</span>
+            <span class="faq-chevron">›</span>
+          </button>
+          <div class="faq-answer">
+            Independent Financial Professionals and teams roughly in the $50M–$250M AUM range who want more right-fit first meetings in a defined niche — and who are ready to move past generic marketing and shared internet leads.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer class="pub-footer">
+    <div class="lp-container">
+      <div class="pub-footer-inner">
+        <div class="pub-footer-brand">
+          <span class="pub-footer-name">The AUM Engine</span>
+          <span class="pub-footer-sub">Advisor Growth Cockpit — Pilot Phase</span>
+        </div>
+        <div class="pub-footer-links">
+          <a href="#" onclick="openAuthModal();return false">Pilot Login</a>
+          <a href="#offer">Founding Offer</a>
+          <a href="#faq">FAQ</a>
+        </div>
+        <div class="pub-footer-copy">
+          © 2026 The AUM Engine. Pilot access only.
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ── Auth Modal ── -->
+  <div class="auth-modal-overlay" id="auth-modal-overlay" role="dialog" aria-modal="true" aria-label="Sign in to your account">
+    <div class="auth-modal" id="auth-modal">
+      <button class="auth-modal-close" onclick="closeAuthModal()" aria-label="Close">&times;</button>
+      <div class="auth-modal-logo">
+        <svg width="32" height="32" viewBox="0 0 28 28" fill="none">
+          <polygon points="14,2 26,9 26,19 14,26 2,19 2,9" fill="none" stroke="url(#amGrad)" stroke-width="1.5"/>
+          <polygon points="14,2 26,9 14,14" fill="url(#amGrad)" opacity="0.6"/>
+          <polygon points="14,2 2,9 14,14"  fill="url(#amGrad)" opacity="0.4"/>
+          <defs><linearGradient id="amGrad" x1="2" y1="2" x2="26" y2="26" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs>
+        </svg>
+      </div>
+      <h2 class="auth-modal-title">Pilot Access</h2>
+      <p class="auth-modal-sub">Sign in to access your prospecting cockpit.</p>
+
+      <!-- Google Sign-In -->
+      <button class="auth-google-btn" id="auth-google-btn" type="button">
+        <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+          <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+          <path d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.175 0 7.55 0 9s.348 2.825.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+          <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div class="auth-divider"><span>or</span></div>
+
+      <form class="auth-form" id="auth-form" autocomplete="off" novalidate>
+        <div class="auth-field">
+          <label class="auth-label" for="auth-email">Email address</label>
+          <input class="auth-input" type="email" id="auth-email" name="email" placeholder="you@yourfirm.com" autocomplete="email" required />
+        </div>
+        <div class="auth-field">
+          <label class="auth-label" for="auth-password">Password</label>
+          <input class="auth-input" type="password" id="auth-password" name="password" placeholder="••••••••" autocomplete="current-password" required />
+        </div>
+        <div class="auth-error" id="auth-error" role="alert" style="display:none"></div>
+        <button class="auth-submit-btn" type="submit" id="auth-submit-btn">Sign In</button>
+        <div class="auth-footer-links">
+          <button class="auth-forgot-link" type="button" id="forgot-password-btn">Forgot password?</button>
+          <a href="mailto:kosal@fin-tegration.com" class="auth-forgot-link">Need access?</a>
+        </div>
+        <div class="auth-pilot-note">
+          <span>🔒</span> Pilot access — sign in with Google or your email credentials.
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div><!-- end #public-shell -->
+
+
+<!-- ============================================================
+     APP SHELL — Cockpit, visible only to authenticated users
+     ============================================================ -->
+<div id="app-shell" style="display:none">
+
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-gem">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="14,2 26,9 26,19 14,26 2,19 2,9" fill="none" stroke="url(#gemGrad)" stroke-width="1.5"/>
+          <polygon points="14,2 26,9 14,14" fill="url(#gemGrad1)" opacity="0.8"/>
+          <polygon points="14,2 2,9 14,14" fill="url(#gemGrad2)" opacity="0.6"/>
+          <polygon points="2,9 14,14 2,19" fill="url(#gemGrad3)" opacity="0.5"/>
+          <polygon points="26,9 14,14 26,19" fill="url(#gemGrad4)" opacity="0.7"/>
+          <polygon points="14,14 26,19 14,26" fill="url(#gemGrad5)" opacity="0.6"/>
+          <polygon points="14,14 2,19 14,26" fill="url(#gemGrad6)" opacity="0.4"/>
+          <defs>
+            <linearGradient id="gemGrad" x1="2" y1="2" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#a78bfa"/>
+            </linearGradient>
+            <linearGradient id="gemGrad1" x1="2" y1="2" x2="26" y2="14" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#93c5fd"/><stop offset="1" stop-color="#60a5fa"/>
+            </linearGradient>
+            <linearGradient id="gemGrad2" x1="14" y1="2" x2="2" y2="14" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#a78bfa"/><stop offset="1" stop-color="#7c3aed"/>
+            </linearGradient>
+            <linearGradient id="gemGrad3" x1="2" y1="9" x2="14" y2="19" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#6366f1"/><stop offset="1" stop-color="#4f46e5"/>
+            </linearGradient>
+            <linearGradient id="gemGrad4" x1="26" y1="9" x2="14" y2="19" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#38bdf8"/><stop offset="1" stop-color="#0284c7"/>
+            </linearGradient>
+            <linearGradient id="gemGrad5" x1="14" y1="14" x2="26" y2="26" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#60a5fa"/><stop offset="1" stop-color="#3b82f6"/>
+            </linearGradient>
+            <linearGradient id="gemGrad6" x1="14" y1="14" x2="2" y2="26" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#818cf8"/><stop offset="1" stop-color="#6366f1"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-name">The AUM Engine</span>
+        <span class="logo-sub">Advisor Growth Cockpit</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">COCKPIT</div>
+      <a href="#" class="nav-item active" data-page="command-center" id="nav-command-center">
+        <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.9"/><rect x="11" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.5"/><rect x="2" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.5"/><rect x="11" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.3"/></svg>
+        Command Center
+        <span class="nav-badge">3</span>
+      </a>
+      <a href="#" class="nav-item" data-page="prospect-mine" id="nav-prospect-mine">
+        <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="10" r="2" fill="currentColor" opacity="0.4"/></svg>
+        Prospect Mine
+      </a>
+      <a href="#" class="nav-item" data-page="lead-scoreboard" id="nav-lead-scoreboard">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M4 14l4-4 3 3 5-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="2" y="2" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.2" opacity="0.4"/></svg>
+        Lead Scoreboard
+      </a>
+
+      <a href="#" class="nav-item" data-page="niche-mapping" id="nav-niche-mapping">
+        <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/><path d="M10 3l1.5 2.6M10 3l-1.5 2.6" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.5"/></svg>
+        Niche Mapping
+        <span class="nav-badge" style="background:var(--emerald)">New</span>
+      </a>
+
+      <div class="nav-section-label" style="margin-top:16px">OUTREACH</div>
+      <a href="#" class="nav-item" data-page="outreach-studio" id="nav-outreach-studio">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M3 5h14M3 10h9M3 15h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="16" cy="14" r="3" fill="currentColor" opacity="0.5"/><path d="M16 12v2l1 1" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+        Outreach Studio
+      </a>
+      <a href="#" class="nav-item" data-page="nurture-booking" id="nav-nurture-booking">
+        <svg viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 2v4M13 2v4M3 9h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="13" r="1.5" fill="currentColor" opacity="0.6"/></svg>
+        Nurture &amp; Booking
+      </a>
+      <a href="#" class="nav-item" data-page="meeting-prep" id="nav-meeting-prep">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M10 2a6 6 0 100 12A6 6 0 0010 2z" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v3l2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M4 17c1.5-2 9.5-2 12 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Meeting Prep
+      </a>
+
+      <div class="nav-section-label" style="margin-top:16px">INTELLIGENCE</div>
+      <a href="#" class="nav-item" data-page="manager-console" id="nav-manager-console">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M2 16l4-8 3 4 3-6 4 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Manager Console
+      </a>
+      <a href="#" class="nav-item" data-page="settings" id="nav-settings">
+        <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.7"/></svg>
+        Settings &amp; ICP
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="rep-card">
+        <div class="rep-avatar" id="user-avatar">BN</div>
+        <div class="rep-info">
+          <span class="rep-name" id="user-display-name">Pilot User</span>
+          <span class="rep-role" id="user-display-email">Loading…</span>
+        </div>
+        <div class="rep-status"></div>
+      </div>
+      <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()">
+        <span class="theme-toggle-icon" id="theme-icon">☀️</span>
+        <span id="theme-label">Light Mode</span>
+      </button>
+      <button class="logout-btn" id="logout-btn">
+        <svg viewBox="0 0 20 20" fill="none" width="14" height="14"><path d="M13 3h4v14h-4M9 13l4-3-4-3M3 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Sign Out
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content" id="main-content">
+    <!-- Pages are injected here by JS -->
+  </main>
+
+  <!-- Prospect Detail Drawer -->
+  <div class="drawer-overlay" id="drawer-overlay"></div>
+  <aside class="prospect-drawer" id="prospect-drawer">
+    <div id="drawer-content"></div>
+  </aside>
+
+</div><!-- end #app-shell -->
+
+<!-- Toast Notifications (outside both shells — always accessible) -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ── Firebase SDK (compat) ── -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<!-- ── App Scripts ── -->
+<script src="js/data.js?v=20260407e"></script>
+<script src="js/niche_engine.js?v=20260407e"></script>
+<script src="js/db.js?v=20260407e"></script>
+<script src="js/outreach_agent.js?v=20260407e"></script>
+<script src="js/outreach_controller.js?v=20260407e"></script>
+<script src="js/pages.js?v=20260407e"></script>
+<script src="js/app.js?v=20260407e"></script>
+<script src="js/auth.js?v=20260407e"></script>
+</body>
+</html>

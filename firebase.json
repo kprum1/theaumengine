@@ -1,0 +1,44 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "VERA_HANDOFF.md",
+      "VERA_HANDOFF_v2.md",
+      "VERA_HANDOFF_v3.md",
+      "VERA_HANDOFF_v4.md",
+      "VERA_HANDOFF_v5.md",
+      "VERA_HANDOFF_v5_FINAL.md",
+      "PILOT_LAUNCH_PLAN.md",
+      "scripts/**",
+      "functions/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|css)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "max-age=86400"
+          }
+        ]
+      }
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20"
+  }
+}
