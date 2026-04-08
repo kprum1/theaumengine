@@ -2634,11 +2634,9 @@ body.app-mode {
   margin: 0 auto;
   padding: 110px 56px 90px;
   box-sizing: border-box;
-  display: -webkit-grid;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 56px;
-  -webkit-align-items: center;
   align-items: center;
 }
 
