@@ -60,8 +60,8 @@
         <button class="pub-theme-btn" id="pub-theme-btn" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode">
           <span id="pub-theme-icon">🌙</span>
         </button>
-        <button class="pub-demo-btn" id="nav-demo-btn" onclick="window.openAuthModal()">Book Demo</button>
-        <button class="pub-login-btn" id="login-btn">Pilot Login</button>
+        <button class="pub-demo-btn" id="nav-demo-btn" onclick="openDemoEmail()">Book Demo</button>
+        <button class="pub-login-btn" id="login-btn" onclick="window.openAuthModal()">Pilot Login</button>
       </nav>
 
       <!-- Mobile right: theme + hamburger -->
@@ -81,8 +81,8 @@
       <a href="#how"   class="pub-mobile-link" onclick="closeMobileNav()">How It Works</a>
       <a href="#offer" class="pub-mobile-link" onclick="closeMobileNav()">Founding Offer</a>
       <div class="pub-mobile-ctas">
-        <button class="pub-demo-btn pub-mobile-demo" onclick="closeMobileNav(); window.openAuthModal()">Book Demo</button>
-        <button class="pub-login-btn pub-mobile-login" id="login-btn-mobile" onclick="closeMobileNav()">Pilot Login</button>
+        <button class="pub-demo-btn pub-mobile-demo" onclick="closeMobileNav(); openDemoEmail()">Book Demo</button>
+        <button class="pub-login-btn pub-mobile-login" id="login-btn-mobile" onclick="closeMobileNav(); window.openAuthModal()">Pilot Login</button>
       </div>
     </div>
   </header>
@@ -101,7 +101,7 @@
           The AUM Engine is an advisor growth cockpit for independent Financial Professionals at the $50M–$250M AUM plateau. Exclusive households in your niche, scored and ready — plus planning briefs you control.
         </p>
         <div class="hero-ctas">
-          <button class="hero-cta-primary" id="hero-login-cta" onclick="document.getElementById('lead-capture-wrap').scrollIntoView({behavior:'smooth',block:'center'})">Book a 20-minute demo</button>
+          <button class="hero-cta-primary" id="hero-login-cta" onclick="openDemoEmail()">Book a 20-minute demo</button>
           <button class="hero-cta-pilot" id="hero-pilot-cta" onclick="window.openAuthModal()">Pilot Login →</button>
         </div>
         <ul class="hero-trust-bullets">

@@ -1002,3 +1002,20 @@ function closeMobileNav() {
   if (drawer) drawer.classList.remove('is-open');
   if (btn)    { btn.classList.remove('is-open'); btn.setAttribute('aria-expanded','false'); }
 }
+
+// ===== BOOK DEMO EMAIL =====
+function openDemoEmail() {
+  const to      = 'hello@theaumengine.com';
+  const subject = encodeURIComponent("I'd like to discuss The AUM Engine");
+  const body    = encodeURIComponent(
+    "Hi,\n\n" +
+    "I'm a Financial Advisor and I'd like to learn more about the AUM Engine pilot program and schedule a 20-minute walkthrough.\n\n" +
+    "Name: \n" +
+    "Firm: \n" +
+    "Approximate AUM: $\n" +
+    "Primary Niche: \n" +
+    "Best time to connect: \n\n" +
+    "Looking forward to the conversation!"
+  );
+  window.open(`mailto:${to}?subject=${subject}&body=${body}`, '_self');
+}
