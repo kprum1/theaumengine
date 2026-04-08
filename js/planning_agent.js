@@ -282,10 +282,10 @@ window.alGenerateBrief = function(situationId) {
   if (!profile) { showToast('Situation not found', '⚠️'); return; }
 
   const brief = generatePlanningBrief(profile);
-  _alCurrentBrief              = brief;
-  window._alCurrentBrief      = brief;
+  _alCurrentBrief = brief;
+  _alActiveSituationId = situationId;
+  window._alCurrentBrief = brief;
   window._alActiveSituationId = situationId;
-  _alActiveSituationId        = situationId;
 
   // Persist to sessionStorage so brief survives navigate() + page reload
   // (mirrors the save in edAdvance() for the auto-generate path)
@@ -313,9 +313,9 @@ window.alAcceptSituation = async function(situationId) {
   });
   // Clear sessionStorage so approved brief doesn't ghost back
   try { sessionStorage.removeItem('alCurrentBrief'); } catch(e) {}
-  _alCurrentBrief              = null;
-  _alActiveSituationId         = null;
-  window._alCurrentBrief      = null;   // ← clear panel read path in pages.js
+  _alCurrentBrief = null;
+  _alActiveSituationId = null;
+  window._alCurrentBrief = null;
   window._alActiveSituationId = null;
   showToast('Client accepted — added to your planning queue', '✅');
   if (typeof refreshEdSituations === 'function') {
@@ -327,9 +327,9 @@ window.alAcceptSituation = async function(situationId) {
 window.alDeclineSituation = async function(situationId) {
   if (!situationId) return;
   await updateEdSituationStatus(situationId, 'al_declined', currentUID);
-  _alActiveSituationId         = null;
-  _alCurrentBrief              = null;
-  window._alCurrentBrief      = null;   // ← clear panel read path in pages.js
+  _alCurrentBrief = null;
+  _alActiveSituationId = null;
+  window._alCurrentBrief = null;
   window._alActiveSituationId = null;
   // Clear sessionStorage so declined brief doesn't ghost back
   try { sessionStorage.removeItem('alCurrentBrief'); } catch(e) {}
