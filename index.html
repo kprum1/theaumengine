@@ -51,7 +51,9 @@
         </svg>
         <span>The AUM Engine</span>
       </a>
-      <nav class="pub-nav">
+
+      <!-- Desktop nav -->
+      <nav class="pub-nav" id="pub-nav-desktop">
         <a href="#why" class="pub-nav-link">Why It Exists</a>
         <a href="#how" class="pub-nav-link">How It Works</a>
         <a href="#offer" class="pub-nav-link">Founding Offer</a>
@@ -61,6 +63,27 @@
         <button class="pub-demo-btn" id="nav-demo-btn" onclick="window.openAuthModal()">Book Demo</button>
         <button class="pub-login-btn" id="login-btn">Pilot Login</button>
       </nav>
+
+      <!-- Mobile right: theme + hamburger -->
+      <div class="pub-nav-mobile-right">
+        <button class="pub-theme-btn pub-theme-btn-mobile" onclick="toggleTheme()" aria-label="Toggle theme">
+          <span class="pub-theme-icon-mobile">🌙</span>
+        </button>
+        <button class="pub-hamburger" id="pub-hamburger" aria-label="Open menu" aria-expanded="false" onclick="toggleMobileNav()">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile dropdown drawer -->
+    <div class="pub-mobile-drawer" id="pub-mobile-drawer" aria-hidden="true">
+      <a href="#why"   class="pub-mobile-link" onclick="closeMobileNav()">Why It Exists</a>
+      <a href="#how"   class="pub-mobile-link" onclick="closeMobileNav()">How It Works</a>
+      <a href="#offer" class="pub-mobile-link" onclick="closeMobileNav()">Founding Offer</a>
+      <div class="pub-mobile-ctas">
+        <button class="pub-demo-btn pub-mobile-demo" onclick="closeMobileNav(); window.openAuthModal()">Book Demo</button>
+        <button class="pub-login-btn pub-mobile-login" id="login-btn-mobile" onclick="closeMobileNav()">Pilot Login</button>
+      </div>
     </div>
   </header>
 

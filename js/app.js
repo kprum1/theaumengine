@@ -978,3 +978,27 @@ function bindPageEvents() {
 // syncThemeButton() and navigate() are now called by auth.js
 // inside onAuthStateChanged() after confirming a valid user session.
 // This prevents the app from rendering any cockpit data for unauthenticated visitors.
+
+// ===== MOBILE NAV =====
+function toggleMobileNav() {
+  const drawer = document.getElementById('pub-mobile-drawer');
+  const btn    = document.getElementById('pub-hamburger');
+  if (!drawer || !btn) return;
+  const isOpen = drawer.classList.contains('is-open');
+  if (isOpen) {
+    drawer.classList.remove('is-open');
+    btn.classList.remove('is-open');
+    btn.setAttribute('aria-expanded', 'false');
+  } else {
+    drawer.classList.add('is-open');
+    btn.classList.add('is-open');
+    btn.setAttribute('aria-expanded', 'true');
+  }
+}
+
+function closeMobileNav() {
+  const drawer = document.getElementById('pub-mobile-drawer');
+  const btn    = document.getElementById('pub-hamburger');
+  if (drawer) drawer.classList.remove('is-open');
+  if (btn)    { btn.classList.remove('is-open'); btn.setAttribute('aria-expanded','false'); }
+}

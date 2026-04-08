@@ -2254,7 +2254,94 @@ body.app-mode {
   border-color: var(--border-accent);
   background: rgba(96,165,250,0.06);
 }
-/* Pilot Login — ghost secondary in hero */
+
+/* ── Mobile Nav ── */
+.pub-nav-mobile-right { display: none; align-items: center; gap: 8px; }
+.pub-theme-btn-mobile {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px;
+  line-height: 1;
+}
+
+/* Hamburger button */
+.pub-hamburger {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.2s;
+}
+.pub-hamburger span {
+  display: block;
+  height: 2px;
+  background: var(--text-primary);
+  border-radius: 2px;
+  transition: all 0.25s ease;
+  transform-origin: center;
+}
+.pub-hamburger.is-open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.pub-hamburger.is-open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.pub-hamburger.is-open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* Mobile drawer */
+.pub-mobile-drawer {
+  display: none;
+  flex-direction: column;
+  background: rgba(8, 12, 20, 0.98);
+  border-top: 1px solid var(--border-subtle);
+  padding: 8px 0 16px;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.32s ease, padding 0.32s ease;
+}
+.pub-mobile-drawer.is-open {
+  max-height: 400px;
+  padding: 8px 0 20px;
+}
+.pub-mobile-link {
+  display: block;
+  padding: 14px 24px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: color 0.2s, background 0.2s;
+}
+.pub-mobile-link:hover { color: var(--text-primary); background: rgba(96,165,250,0.05); }
+.pub-mobile-ctas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 24px 0;
+}
+.pub-mobile-demo, .pub-mobile-login {
+  width: 100%;
+  padding: 13px 20px;
+  font-size: 15px;
+  margin-left: 0;
+}
+
+/* Mobile breakpoint — swap desktop nav for hamburger */
+@media (max-width: 768px) {
+  .pub-nav { display: none !important; }
+  .pub-nav-mobile-right { display: flex; }
+  .pub-mobile-drawer { display: flex; }
+  .pub-header-inner { padding: 0 20px; }
+}
+
+
 .hero-cta-pilot {
   padding: 14px 24px;
   background: transparent;
