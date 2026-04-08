@@ -2625,6 +2625,19 @@ body.app-mode {
 .hero-bg-glow  { display: none; }
 .hero-grid-overlay { display: none; }
 
+/* Giant ghost diamond watermark */
+.hero-diamond-bg {
+  position: absolute;
+  width: 820px;
+  height: 820px;
+  top: 50%;
+  right: -80px;
+  transform: translateY(-50%);
+  opacity: 0.032;
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* Section: two-column grid */
 .hero-section {
   position: relative;
