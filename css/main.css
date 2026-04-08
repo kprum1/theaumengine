@@ -2688,7 +2688,7 @@ body.app-mode {
 }
 .hero-cta-primary {
   padding: 14px 28px;
-  background: #2563eb;
+  background: #60a5fa;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -2701,7 +2701,7 @@ body.app-mode {
   -webkit-tap-highlight-color: transparent;
 }
 .hero-cta-primary:hover {
-  background: #1d4ed8;
+  background: #3b82f6;
   transform: translateY(-1px);
 }
 .hero-cta-secondary {
