@@ -2939,12 +2939,12 @@ body.app-mode {
 @media (max-width: 900px) {
   .hero-section {
     grid-template-columns: 1fr;
-    padding: 90px 28px 60px;
+    padding: 120px 28px 60px;
     gap: 40px;
   }
 }
 @media (max-width: 767px) {
-  .hero-section { padding: 80px 20px 48px; }
+  .hero-section { padding: 110px 20px 48px; }
   .hero-subhead { font-size: 15px; }
   .hero-ctas {
     -webkit-flex-direction: column; flex-direction: column;
