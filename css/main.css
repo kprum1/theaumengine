@@ -3179,12 +3179,16 @@ body.app-mode {
   border: 1px solid var(--border-subtle);
   border-radius: 12px;
   max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
 }
 .lead-capture-label {
   font-size: 13.5px;
   color: var(--text-secondary);
   margin: 0 0 14px;
   line-height: 1.5;
+  text-align: center;
 }
 .lead-capture-row {
   display: -webkit-flex;
@@ -3224,6 +3228,7 @@ body.app-mode {
   font-size: 11.5px;
   color: var(--text-muted);
   font-style: italic;
+  text-align: center;
 }
 .lead-capture-success {
   padding: 12px 0 4px;
