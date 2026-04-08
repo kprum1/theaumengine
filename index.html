@@ -41,22 +41,13 @@
     <div class="pub-header-inner">
       <a href="#" class="pub-logo" onclick="return false">
         <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
-          <polygon points="14,2 26,9 26,19 14,26 2,19 2,9" fill="none" stroke="url(#phGrad)" stroke-width="1.5"/>
-          <polygon points="14,2 26,9 14,14" fill="url(#phGrad1)" opacity="0.8"/>
-          <polygon points="14,2 2,9 14,14"  fill="url(#phGrad2)" opacity="0.6"/>
-          <polygon points="2,9 14,14 2,19"  fill="url(#phGrad3)" opacity="0.5"/>
-          <polygon points="26,9 14,14 26,19" fill="url(#phGrad4)" opacity="0.7"/>
-          <polygon points="14,14 26,19 14,26" fill="url(#phGrad5)" opacity="0.6"/>
-          <polygon points="14,14 2,19 14,26"  fill="url(#phGrad6)" opacity="0.4"/>
-          <defs>
-            <linearGradient id="phGrad"  x1="2" y1="2" x2="26" y2="26" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#60a5fa"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient>
-            <linearGradient id="phGrad1" x1="2" y1="2" x2="26" y2="14" gradientUnits="userSpaceOnUse"><stop stop-color="#93c5fd"/><stop offset="1" stop-color="#60a5fa"/></linearGradient>
-            <linearGradient id="phGrad2" x1="14" y1="2" x2="2" y2="14"  gradientUnits="userSpaceOnUse"><stop stop-color="#a78bfa"/><stop offset="1" stop-color="#7c3aed"/></linearGradient>
-            <linearGradient id="phGrad3" x1="2" y1="9" x2="14" y2="19"  gradientUnits="userSpaceOnUse"><stop stop-color="#6366f1"/><stop offset="1" stop-color="#4f46e5"/></linearGradient>
-            <linearGradient id="phGrad4" x1="26" y1="9" x2="14" y2="19" gradientUnits="userSpaceOnUse"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#0284c7"/></linearGradient>
-            <linearGradient id="phGrad5" x1="14" y1="14" x2="26" y2="26" gradientUnits="userSpaceOnUse"><stop stop-color="#60a5fa"/><stop offset="1" stop-color="#3b82f6"/></linearGradient>
-            <linearGradient id="phGrad6" x1="14" y1="14" x2="2" y2="26"  gradientUnits="userSpaceOnUse"><stop stop-color="#818cf8"/><stop offset="1" stop-color="#6366f1"/></linearGradient>
-          </defs>
+          <polygon points="14,2 26,9 26,19 14,26 2,19 2,9" fill="none" stroke="#60a5fa" stroke-width="1.5"/>
+          <polygon points="14,2 26,9 14,14" fill="#60a5fa" opacity="0.9"/>
+          <polygon points="14,2 2,9 14,14"  fill="#60a5fa" opacity="0.65"/>
+          <polygon points="2,9 14,14 2,19"  fill="#60a5fa" opacity="0.45"/>
+          <polygon points="26,9 14,14 26,19" fill="#60a5fa" opacity="0.8"/>
+          <polygon points="14,14 26,19 14,26" fill="#60a5fa" opacity="0.55"/>
+          <polygon points="14,14 2,19 14,26"  fill="#60a5fa" opacity="0.35"/>
         </svg>
         <span>The AUM Engine</span>
       </a>
@@ -75,21 +66,16 @@
 
   <!-- ── Hero ── -->
   <div class="hero-wrapper" id="hero">
-    <div class="hero-bg-glow"></div>
-    <div class="hero-grid-overlay"></div>
-
     <section class="hero-section" aria-label="Hero">
+
+      <!-- LEFT: copy -->
       <div class="hero-content">
-        <div class="pilot-badge">
-          <span class="pilot-dot"></span>
-          Founding Cohort — Limited Access
-        </div>
+        <p class="hero-pilot-line">Pilot access · Founding-cohort pricing</p>
         <h1 class="hero-headline">
-          More right-fit first meetings<br>with real planning opportunities.<br>
-          <span class="hero-headline-accent">Every month.</span>
+          More right-fit first meetings<br>with real planning opportunities.<br>Every month.
         </h1>
         <p class="hero-subhead">
-          The AUM Engine is an advisor growth cockpit for independent Financial Professionals at the $50M–$250M AUM plateau. Instead of renting shared internet leads, you get exclusive households in your niche plus client intake and planning briefs you control.
+          The AUM Engine is an advisor growth cockpit for independent Financial Professionals at the $50M–$250M AUM plateau. Exclusive households in your niche, scored and ready — plus planning briefs you control.
         </p>
         <div class="hero-ctas">
           <button class="hero-cta-primary" id="hero-login-cta" onclick="document.getElementById('lead-capture-wrap').scrollIntoView({behavior:'smooth',block:'center'})">Book a 20-minute demo</button>
@@ -104,22 +90,64 @@
         <div class="trust-strip">
           Created by people in the field who know how hard it is to find qualified prospects — after years of trying SmartAsset, seminars, SEO, and generic lead vendors.
         </div>
-        <!-- Pill cloud: 30px below trust strip — 3-col grid, 4×3 = 12 niches -->
-        <div class="hero-pills" aria-hidden="true">
-          <span class="niche-pill" style="--delay:0s">✈️ Aircraft Owners</span>
-          <span class="niche-pill" style="--delay:0.1s">👩‍⚕️ Physicians</span>
-          <span class="niche-pill" style="--delay:0.2s">🏢 Business Owners</span>
-          <span class="niche-pill" style="--delay:0.3s">⚖️ Law Partners</span>
-          <span class="niche-pill" style="--delay:0.4s">💸 HENRYs</span>
-          <span class="niche-pill" style="--delay:0.5s">💼 C-Suite Executives</span>
-          <span class="niche-pill" style="--delay:0.6s">🤖 AI-Displaced Execs</span>
-          <span class="niche-pill" style="--delay:0.7s">🦷 Dentists & Specialists</span>
-          <span class="niche-pill" style="--delay:0.8s">🔧 High Earning Tradesman</span>
-          <span class="niche-pill" style="--delay:0.9s">💰 Inheritance Recipients</span>
-          <span class="niche-pill" style="--delay:1.0s">🏗️ Real Estate Developers</span>
-          <span class="niche-pill" style="--delay:1.1s">🎗️ Charity Boards</span>
+        <div class="hero-niche-grid" aria-label="Example niches served">
+          <span>Physicians</span><span>Business Owners</span><span>Executives</span>
+          <span>Law Partners</span><span>HENRYs</span><span>AI-Displaced Execs</span>
+          <span>Dentists</span><span>Inheritance Recipients</span><span>Charity Boards</span>
         </div>
       </div>
+
+      <!-- RIGHT: cockpit preview -->
+      <div class="hero-cockpit" aria-hidden="true">
+        <div class="hc-bar">
+          <div class="hc-bar-left">
+            <span class="hc-title">Command Center</span>
+            <span class="hc-sub">Advisor Growth Cockpit</span>
+          </div>
+          <span class="hc-live"><span class="hc-dot"></span>Live</span>
+        </div>
+        <div class="hc-stats">
+          <div class="hc-stat"><span class="hc-stat-n">139</span><span class="hc-stat-l">Prospects</span></div>
+          <div class="hc-stat"><span class="hc-stat-n">16</span><span class="hc-stat-l">In Pipeline</span></div>
+          <div class="hc-stat"><span class="hc-stat-n">2</span><span class="hc-stat-l">Meetings</span></div>
+          <div class="hc-stat"><span class="hc-stat-n hc-stat-green">50%</span><span class="hc-stat-l">Reply Rate</span></div>
+        </div>
+        <div class="hc-section-label">Top Prospects To Work Now</div>
+        <div class="hc-rows">
+          <div class="hc-row">
+            <span class="hc-avatar" style="background:#6366f1">NM</span>
+            <div class="hc-info"><span class="hc-name">Nuria Molina</span><span class="hc-niche">AI-Displaced Exec · Miami FL</span></div>
+            <span class="hc-status hc-new">NEW</span>
+            <span class="hc-score">99</span>
+          </div>
+          <div class="hc-row">
+            <span class="hc-avatar" style="background:#0284c7">KM</span>
+            <div class="hc-info"><span class="hc-name">Kirk McDonald</span><span class="hc-niche">AI-Displaced Exec · Bend OR</span></div>
+            <span class="hc-status hc-new">NEW</span>
+            <span class="hc-score">97</span>
+          </div>
+          <div class="hc-row">
+            <span class="hc-avatar" style="background:#d97706">DH</span>
+            <div class="hc-info"><span class="hc-name">David Harrington</span><span class="hc-niche">Aircraft Owner · Scottsdale AZ</span></div>
+            <span class="hc-status hc-contacted">CONTACTED</span>
+            <span class="hc-score">92</span>
+          </div>
+          <div class="hc-row">
+            <span class="hc-avatar" style="background:#059669">CS</span>
+            <div class="hc-info"><span class="hc-name">Corinne Sklar</span><span class="hc-niche">AI-Displaced Exec · New York NY</span></div>
+            <span class="hc-status hc-new">NEW</span>
+            <span class="hc-score">92</span>
+          </div>
+        </div>
+        <div class="hc-alert">
+          <span class="hc-alert-dot"></span>
+          <div>
+            <span class="hc-alert-name">Sandra Westhoff replied!</span>
+            <span class="hc-alert-meta">Business Owner · Overland Park KS · 5h ago</span>
+          </div>
+        </div>
+      </div>
+
     </section>
   </div><!-- end .hero-wrapper -->
 
