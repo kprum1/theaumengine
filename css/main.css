@@ -2867,7 +2867,6 @@ body.app-mode {
     padding: 90px 28px 60px;
     gap: 40px;
   }
-  .hero-cockpit { order: -1; } /* cockpit above copy on mobile */
 }
 @media (max-width: 767px) {
   .hero-section { padding: 80px 20px 48px; }
