@@ -2625,26 +2625,6 @@ body.app-mode {
 .hero-bg-glow  { display: none; }
 .hero-grid-overlay { display: none; }
 
-/* Global ghost diamond watermark — body::before, FaithAgent pattern */
-body::before {
-  content: "";
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 1200px;
-  height: 1200px;
-  background-image: url("/assets/diamond-watermark.png");
-  background-size: contain;
-  background-position: center;
-  background-repeat: no-repeat;
-  opacity: 0.15;
-  pointer-events: none;
-  z-index: 0;
-}
-[data-theme="light"] body::before {
-  opacity: 0;
-}
 
 /* Section: two-column grid */
 .hero-section {
