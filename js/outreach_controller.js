@@ -468,13 +468,13 @@ function _buildMetaBar(result, strategy) {
 }
 
 function _buildVariantTabs(result, activeId) {
-  if (!result?.variants?.length) return '<div id="variant-tabs"></div>';
+  if (!result?.variants?.length) return '<div class="variant-tabs" id="variant-tabs"></div>';
   return `
   <div class="variant-tabs" id="variant-tabs">
     ${result.variants.map(v => `
     <button class="variant-tab ${v.id === activeId ? 'active' : ''}"
             id="vtab-${v.id}" onclick="osSelectVariant('${v.id}')">
-      <span class="variant-tab-id">${v.id}</span>
+      <span class="variant-tab-badge">${v.id}</span>
       <span class="variant-tab-label">${v.label}</span>
     </button>`).join('')}
   </div>`;
@@ -524,7 +524,13 @@ function _applyVariantToEditor(id) {
   const bodyEl = document.getElementById('draft-body');
   if (!bodyEl) return;
   bodyEl.style.opacity = '0.4';
-  setTimeout(() => { bodyEl.textContent = v.body; bodyEl.style.opacity = '1'; }, 120);
+  setTimeout(() => {
+    const rendered = typeof _injectAdvisorSignature === 'function'
+      ? _injectAdvisorSignature(v.body)
+      : v.body;
+    bodyEl.textContent = rendered;
+    bodyEl.style.opacity = '1';
+  }, 120);
 }
 
 // ── PUBLIC: Trigger agent run ─────────────────────────────────
@@ -571,25 +577,129 @@ function osInitForProspect(prospectId) {
   osRunAgentStack();
 }
 
-// ── Outcome logger (pilot feedback loop) ─────────────────────
-function osLogOutcome(outcome) {
+// ── Outcome logger (Phase C1 — dual-write: Firestore primary + localStorage fallback) ──
+async function osLogOutcome(outcome) {
   // outcome: { variant, channel, angle, edited, sent }
-  const state = window._outreachState;
+  const state    = window._outreachState;
+  const prospect = PROSPECTS.find(p => p.id === state.prospectId);
+
   const log = {
-    prospectId:     state.prospectId,
-    channel:        state.channel,
-    stage:          state.stage,
-    angle:          state.draftResult?.angle,
-    variantChosen:  outcome.variant || state.activeVariant,
-    editedBeforeSend: outcome.edited || false,
-    sent:           outcome.sent || false,
-    timestamp:      new Date().toISOString(),
+    prospectId:       state.prospectId,
+    nicheId:          prospect?.nicheId || state.enrichedContext?.nicheId || null,
+    channel:          state.channel,
+    stage:            state.stage,
+    angle:            state.draftResult?.angle       || null,
+    variantChosen:    outcome.variant || state.activeVariant,
+    editedBeforeSend: outcome.edited                 || false,
+    sent:             outcome.sent                   || false,
+    outcome:          outcome.outcome                || null,   // set later via osLogReply()
+    timestamp:        new Date().toISOString(),
+    firestoreDocId:   null,  // stamped after Firestore write
   };
-  // Persist in localStorage for now, Firestore in Phase 2
+
+  // PRIMARY: Firestore (async — we await to get the doc ID)
+  const uid = window._currentUser?.uid || null;
+  if (uid && typeof saveOutcomeToFirestore === 'function') {
+    try {
+      const docId = await saveOutcomeToFirestore(uid, log);
+      if (docId) log.firestoreDocId = docId;
+    } catch(e) {
+      // Firestore write failed — localStorage fallback still runs below
+    }
+  }
+
+  // FALLBACK / local cache: always write localStorage (last 100 events)
   try {
     const existing = JSON.parse(localStorage.getItem('aumOutreachLog') || '[]');
     existing.push(log);
-    localStorage.setItem('aumOutreachLog', JSON.stringify(existing.slice(-100))); // keep last 100
+    localStorage.setItem('aumOutreachLog', JSON.stringify(existing.slice(-100)));
   } catch(e) {}
+
+  // Store docId for reply tapper
+  if (window._outreachState) window._outreachState.lastDocId = log.firestoreDocId || null;
+
   console.info('[OutreachController] Outcome logged:', log);
 }
+
+// ── [Your Name] / [Firm] injection — called after draft body is rendered ──
+function _injectAdvisorSignature(bodyText) {
+  if (!bodyText) return bodyText;
+  const user   = window._currentUser;
+  const profile = window._advisorProfile || {};
+  const name   = user?.displayName || profile.displayName || user?.email?.split('@')[0] || '[Your Name]';
+  const firm   = profile.firmName  || '[Firm]';
+  return bodyText
+    .replace(/\[Your Name\]/g, name)
+    .replace(/\[Firm\]/g, firm)
+    .replace(/\[number\]/g, '[your number]');
+}
+
+// ── Reply outcome updater (called when advisor taps a reply outcome button) ──
+// outcome: 'reply' | 'positive' | 'meeting' | 'dead' | 'objection' | 'not_now' | 'unsubscribe'
+async function osLogReply(firestoreDocId, outcome) {
+  const uid = window._currentUser?.uid || null;
+  if (!uid || !firestoreDocId) return;
+  try {
+    const db = firebase.firestore();
+    await db.collection('outreach_outcomes').doc(firestoreDocId).update({
+      outcome,
+      replyLoggedAt: new Date().toISOString(),
+    });
+    showToast(`Outcome logged: ${outcome}`, '📊');
+  } catch(e) {
+    console.warn('[OutreachController] osLogReply failed:', e);
+  }
+}
+
+// ── Reply Tapper UI (Phase C2) ────────────────────────────────
+// Renders a one-tap outcome strip below Send Now immediately after sending.
+// Reads firestoreDocId from window._outreachState.lastDocId.
+function _showReplyTapper() {
+  const container = document.getElementById('reply-tapper-zone');
+  if (!container) return;
+
+  const outcomes = [
+    { label: '✉️ They Replied',   value: 'reply',    color: 'var(--blue)' },
+    { label: '📅 Meeting Booked', value: 'meeting',  color: 'var(--emerald)' },
+    { label: '⏳ Not Now',         value: 'not_now',  color: 'var(--amber)' },
+    { label: '👎 Wrong Fit',       value: 'dead',     color: 'var(--text-muted)' },
+  ];
+
+  container.innerHTML = `
+    <div class="reply-tapper" id="reply-tapper-inner">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px">
+        📊 Did they respond? Log the outcome now
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${outcomes.map(o => `
+          <button class="btn btn-ghost" style="font-size:11px;padding:5px 12px;border:1px solid ${o.color}30;color:${o.color}"
+            onclick="_tapReplyOutcome('${o.value}')">
+            ${o.label}
+          </button>`).join('')}
+        <button class="btn btn-ghost" style="font-size:10px;padding:5px 8px;color:var(--text-muted);margin-left:auto"
+          onclick="document.getElementById('reply-tapper-zone').innerHTML=''">✕</button>
+      </div>
+    </div>`;
+}
+
+// Called by the tapper buttons in the DOM
+async function _tapReplyOutcome(outcome) {
+  const docId = window._outreachState?.lastDocId || null;
+  // Also check localStorage for the most recent entry with a firestoreDocId
+  if (!docId) {
+    try {
+      const log = JSON.parse(localStorage.getItem('aumOutreachLog') || '[]');
+      const last = [...log].reverse().find(e => e.firestoreDocId);
+      if (last?.firestoreDocId) {
+        await osLogReply(last.firestoreDocId, outcome);
+        document.getElementById('reply-tapper-zone').innerHTML = '';
+        return;
+      }
+    } catch(e) {}
+    showToast('No send record found to attach reply to', '⚠️');
+    return;
+  }
+  await osLogReply(docId, outcome);
+  document.getElementById('reply-tapper-zone').innerHTML = '';
+}
+

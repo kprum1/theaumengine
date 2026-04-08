@@ -1231,6 +1231,127 @@ body.app-mode {
 .outreach-type-name { font-size: 12.5px; font-weight: 700; color: var(--text-primary); }
 .outreach-type-desc { font-size: 11px; color: var(--text-muted); }
 
+/* ===== Variant A / B / C Tabs ===== */
+.variant-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.variant-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--transition);
+  color: var(--text-muted);
+}
+.variant-tab:hover {
+  border-color: var(--border-accent);
+  background: var(--bg-card-hover);
+  color: var(--text-secondary);
+}
+.variant-tab.active {
+  border-color: var(--blue);
+  background: rgba(96, 165, 250, 0.08);
+  color: var(--blue);
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.2);
+}
+.variant-tab-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--border-default);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0;
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+.variant-tab.active .variant-tab-badge {
+  background: var(--blue);
+  color: #fff;
+}
+.variant-tab-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* ===== Agent Meta Bar (post-Generate: Angle / Why / Warmth / CTA) ===== */
+.agent-meta-bar {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+.agent-meta-grid {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.agent-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 80px;
+}
+.agent-meta-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.agent-meta-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+.agent-meta-why {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ── Compliance + channel pills ── */
+.risk-pill,
+.clean-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.risk-pill {
+  background: rgba(251, 113, 133, 0.12);
+  color: var(--rose);
+  border: 1px solid rgba(251, 113, 133, 0.25);
+}
+.clean-pill {
+  background: rgba(52, 211, 153, 0.1);
+  color: var(--emerald);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
 /* ===== Message editor ===== */
 .message-editor {
   background: var(--bg-card);
@@ -3490,3 +3611,71 @@ body.app-mode {
 }
 
 /* ── Public header scroll JS hook ── */
+
+/* ================================================================
+   CLIENT INTELLIGENCE — ED / Al UI Styles
+   Merged from EdAlTim — 2026-04-08 per Vera compliance plan
+   ================================================================ */
+
+:root {
+  /* ED accent — amber/gold to distinguish intake from cockpit blue */
+  --color-ed: #d97706;
+  --color-ed-light: rgba(217, 119, 6, 0.12);
+  --color-ed-border: rgba(217, 119, 6, 0.25);
+}
+
+/* ── ED intake option buttons ──────────────────────────────── */
+.ed-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition);
+  line-height: 1.5;
+}
+.ed-option:hover {
+  border-color: var(--color-ed-border);
+  background: var(--color-ed-light);
+  color: var(--text-primary);
+  transform: translateX(2px);
+}
+.ed-option--selected {
+  border-color: var(--color-ed);
+  background: var(--color-ed-light);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ── ED text/email/tel inputs ──────────────────────────────── */
+.form-input {
+  width: 100%;
+  background: var(--bg-input, var(--bg-elevated));
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 12px 16px;
+  outline: none;
+  transition: border-color var(--transition);
+}
+.form-input:focus {
+  border-color: var(--color-ed);
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+}
+.form-input::placeholder { color: var(--text-muted); }
+
+/* ── Light mode overrides ──────────────────────────────────── */
+[data-theme="light"] {
+  --color-ed: #b45309;
+  --color-ed-light: rgba(180, 83, 9, 0.08);
+  --color-ed-border: rgba(180, 83, 9, 0.22);
+}

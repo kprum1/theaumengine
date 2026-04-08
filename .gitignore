@@ -11,6 +11,10 @@ scripts/serviceAccountKey.json
 serviceAccountKey.json
 *firebase-adminsdk*.json
 
+# Function environment variables — API keys, NEVER commit
+functions/.env
+functions/.env.*
+
 # OS artifacts
 .DS_Store
 Thumbs.db

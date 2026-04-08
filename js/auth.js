@@ -108,6 +108,7 @@ let currentUID = null; // global — used by db.js helpers throughout the app
 auth.onAuthStateChanged(async (user) => {
   if (user) {
     currentUID = user.uid;
+    window._currentUser = user; // ← shared with admin.js + outreach_controller.js
     // ✅ Authenticated — show cockpit immediately, then hydrate from Firestore
     showAppShell();
     updateUserDisplay(user);
@@ -119,10 +120,43 @@ auth.onAuthStateChanged(async (user) => {
       if (typeof initWithUserData === 'function') initWithUserData(data);
     }
 
+    // Start presence tracking (non-blocking)
+    if (typeof initPresence === 'function') initPresence(user);
+
+    // Show admin nav item if operator
+    const adminNavItem    = document.getElementById('nav-admin-dashboard');
+    const adminNavSection = document.getElementById('admin-nav-section');
+    const isOp = user.email === 'kosal@fin-tegration.com';
+    if (adminNavItem)    adminNavItem.style.display    = isOp ? 'flex'  : 'none';
+    if (adminNavSection) adminNavSection.style.display = isOp ? 'block' : 'none';
+
     if (typeof navigate === 'function') navigate('command-center');
     if (typeof bindPageEvents === 'function') bindPageEvents();
+
+    // Load Alfred's Firestore prospects and merge into the live PROSPECTS array
+    if (typeof loadProspectsFromFirestore === 'function') {
+      loadProspectsFromFirestore().then(firestoreProspects => {
+        if (!firestoreProspects.length) return;
+        // Deduplicate by id — Firestore docs use alfred_* IDs, demo uses p1/p2 etc.
+        const existingIds = new Set(PROSPECTS.map(p => p.id));
+        const newOnes = firestoreProspects.filter(p => !existingIds.has(p.id));
+        if (newOnes.length) {
+          PROSPECTS.push(...newOnes);
+          // Re-sort by priority score descending
+          PROSPECTS.sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0));
+          console.info(`[auth.js] Loaded ${newOnes.length} Firestore prospects (total: ${PROSPECTS.length})`);
+          // Refresh the current page so the scoreboard shows new leads
+          if (typeof navigate === 'function') {
+            const currentPage = document.querySelector('.nav-item.active')?.dataset?.page || 'command-center';
+            navigate(currentPage);
+          }
+        }
+      }).catch(e => console.warn('[auth.js] Prospect load failed (non-blocking):', e));
+    }
+
   } else {
     currentUID = null;
+    window._currentUser = null;
     // ❌ Not authenticated — show public landing page
     _resetAuthButtons(); // ← guarantee clean modal state on every signout
     showPublicShell();
@@ -223,6 +257,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
+      // Clear presence before signing out
+      if (typeof clearPresence === 'function' && window._currentUser) {
+        await clearPresence(window._currentUser.uid);
+      }
+      // Clear active Al brief — prevents ghost brief persisting across advisor sessions
+      try { sessionStorage.removeItem('alCurrentBrief'); } catch(e) {}
+      window._alCurrentBrief      = null;
+      window._alActiveSituationId = null;
+      window._edSituations        = null;
+      window._alAssignments       = null;
       // Reset all auth UI state before signout so modal is clean on next open
       setAuthLoading(false);
       resetGoogleBtn();

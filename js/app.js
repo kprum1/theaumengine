@@ -101,11 +101,25 @@ function initWithUserData(data) {
     const existingIds = new Set(PROSPECTS.map(p => p.masterLeadId).filter(Boolean));
     const fresh = data.assignedLeads.filter(l => !existingIds.has(l.masterLeadId));
     if (fresh.length > 0) {
-      PROSPECTS.unshift(...fresh); // live leads appear at the top
+      PROSPECTS.unshift(...fresh);
       console.info(`[AUM] Loaded ${fresh.length} assigned lead(s) from Firestore.`);
     }
-    // Fix the initial outreach prospect ID to point to first available
     activeOutreachProspectId = PROSPECTS[0]?.id || activeOutreachProspectId;
+  }
+
+  // ── CLIENT INTELLIGENCE: load ED situations + Al assignments (non-blocking) ──
+  const _uid = typeof currentUID !== 'undefined' ? currentUID : null;
+  if (_uid && typeof loadEdSituationsForAdvisor === 'function') {
+    loadEdSituationsForAdvisor(_uid).then(sits => {
+      window._edSituations = sits;
+      console.info(`[AUM] Loaded ${sits.length} ED situation(s).`);
+    }).catch(e => console.warn('[AUM] ED situations load failed:', e));
+  }
+  if (_uid && typeof loadAlAssignmentsForAdvisor === 'function') {
+    loadAlAssignmentsForAdvisor(_uid).then(assigns => {
+      window._alAssignments = assigns;
+      console.info(`[AUM] Loaded ${assigns.length} Al assignment(s).`);
+    }).catch(e => console.warn('[AUM] Al assignments load failed:', e));
   }
 }
 
@@ -115,6 +129,18 @@ function navigate(page) {
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const el = document.getElementById('nav-'+page);
   if (el) el.classList.add('active');
+
+  // Reset ED intake state when leaving the intake flow
+  if (!['ed-disclosure','ed-intake'].includes(page)) {
+    try { localStorage.removeItem('edConsentGiven'); } catch(e){}
+    window._edIntakeInitialized = false;
+    if (window.EdIntakeEngine?.reset) window.EdIntakeEngine.reset();
+  }
+
+  // Update presence with current page (non-blocking)
+  if (typeof updatePresencePage === 'function' && window._currentUser) {
+    updatePresencePage(window._currentUser.uid, page);
+  }
 
   // Auto-restore niche state on every visit to niche-mapping
   if (page === 'niche-mapping' && nicheWizardStage === 0) {
@@ -148,10 +174,19 @@ function renderPage() {
     'meeting-prep'   : pageMeetingPrep,
     'manager-console': pageManagerConsole,
     'settings'       : pageSettings,
+    'admin-dashboard': typeof pageAdminDashboard === 'function' ? pageAdminDashboard : pageCommandCenter,
+    // ── CLIENT INTELLIGENCE (ED/Al) ───────────────────────────────
+    'ed-disclosure'  : typeof pageEdDisclosure  === 'function' ? pageEdDisclosure  : pageCommandCenter,
+    'ed-intake'      : typeof pageEdIntake      === 'function' ? pageEdIntake      : pageCommandCenter,
+    'privacy'        : typeof pagePrivacyPolicy  === 'function' ? pagePrivacyPolicy  : pageCommandCenter,
   };
   div.innerHTML = (pageMap[currentPage] || pageCommandCenter)();
   main.appendChild(div);
   bindPageEvents();
+  // After DOM is ready, load admin data if on admin page
+  if (currentPage === 'admin-dashboard' && typeof renderAdminDashboard === 'function') {
+    renderAdminDashboard();
+  }
 }
 
 // ===== PROSPECT MINE =====

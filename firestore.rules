@@ -65,6 +65,118 @@ service cloud.firestore {
     }
 
     // ================================================================
+    // OUTREACH OUTCOMES (Phase C1 — Measurement)
+    // Advisors can create and read their own outcome events.
+    // advisorUid on the document must match the authenticated user.
+    // ================================================================
+    match /outreach_outcomes/{docId} {
+      // Create: anyone auth'd, but advisorUid must equal their UID
+      allow create: if request.auth != null
+                    && request.resource.data.advisorUid == request.auth.uid;
+      // Read own outcomes only
+      allow read:   if request.auth != null
+                    && resource.data.advisorUid == request.auth.uid;
+      // Update own outcomes (for reply classification write-back)
+      allow update: if request.auth != null
+                    && resource.data.advisorUid == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['outcome', 'replyClassification', 'replyLoggedAt']);
+      allow delete: if false;
+    }
+
+    // ================================================================
+    // OPERATOR PRESENCE (Phase C1 — Admin Dashboard)
+    // Each advisor writes their own presence doc.
+    // Only the operator email can read the full collection.
+    // ================================================================
+    match /operator_presence/{uid} {
+      allow write: if request.auth != null && request.auth.uid == uid;
+      allow read:  if request.auth != null
+                   && request.auth.token.email == 'kosal@fin-tegration.com';
+    }
+
+    // ================================================================
+    // ADVISOR POOL (routing engine eligibility)
+    // Each advisor writes their own doc; operator can read all.
+    // ================================================================
+    match /advisor_pool/{uid} {
+      allow write: if request.auth != null && request.auth.uid == uid;
+      allow read:  if request.auth != null
+                   && (request.auth.uid == uid
+                       || request.auth.token.email == 'kosal@fin-tegration.com');
+    }
+
+    // ================================================================
+    // PROSPECTS (Alfred-imported shared pool)
+    // Any authenticated advisor can read.
+    // Writes only from Admin SDK (import script) — not from browser.
+    // ================================================================
+    match /prospects/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false;   // Admin SDK only (bypasses rules)
+    }
+
+    // ================================================================
+    // CLIENT INTELLIGENCE — ED / Al Collections
+    // Merged from EdAlTim — 2026-04-08 per Vera compliance plan
+    //
+    // PHASE 1 (PILOT): All writes require request.auth != null.
+    // Ed intake is advisor-entered from the authenticated cockpit only.
+    // Public client-facing intake requires a Cloud Function gateway
+    // before enabling unauthenticated writes — see VERA_HANDOFF Phase 2.
+    // ================================================================
+
+    // isOperator() — reusable helper (email matches operator account)
+    function isOperator() {
+      return request.auth != null
+          && request.auth.token.email == 'kosal@fin-tegration.com';
+    }
+
+    // ED CONSENT LOG — write-once audit trail
+    // Phase 1: Only authenticated users (advisor or operator) can create.
+    // Phase 2: Move to Cloud Function gateway for public intake.
+    match /ed_consent_log/{docId} {
+      allow create: if request.auth != null;
+      // Never allow update or delete — immutable audit record
+      allow update, delete: if false;
+      // Operator reads all; referring advisor reads their own
+      allow read: if isOperator()
+               || (request.auth != null
+                   && request.auth.uid == resource.data.referringAdvisorUid);
+    }
+
+    // ED SITUATIONS — scoped to referringAdvisorUid or assignedAdvisorUid
+    // Phase 1: Authenticated write only (advisor enters on behalf of client).
+    // Phase 2: Cloud Function gateway accepts public POST, writes via Admin SDK.
+    match /ed_situations/{docId} {
+      allow create: if request.auth != null;
+      // Read: assigned advisor or operator only
+      allow read: if isOperator()
+               || (request.auth != null
+                   && (request.auth.uid == resource.data.referringAdvisorUid
+                    || request.auth.uid == resource.data.assignedAdvisorUid));
+      // Status updates: assigned advisor only, restricted fields
+      allow update: if request.auth != null
+                    && request.auth.uid == resource.data.assignedAdvisorUid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'assignedAdvisorUid', 'statusUpdatedAt']);
+      allow delete: if false;
+    }
+
+    // AL ASSIGNMENTS — advisor-scoped; authenticated create only
+    match /al_assignments/{docId} {
+      allow create: if request.auth != null;
+      allow read: if isOperator()
+               || (request.auth != null
+                   && request.auth.uid == resource.data.advisorUid);
+      allow update: if request.auth != null
+                    && request.auth.uid == resource.data.advisorUid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['status', 'outcome', 'outcomeAt', 'notes']);
+      allow delete: if false;
+    }
+
+    // ================================================================
     // DENY ALL — catch-all for any unmatched paths
     // ================================================================
     match /{document=**} {

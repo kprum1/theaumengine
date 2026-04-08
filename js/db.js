@@ -253,3 +253,220 @@ async function bootstrapUserData(uid) {
     return { nicheProfile: null, nicheAnswers: {}, icpConfig: null, advisorProfile: null, assignedLeads: [] };
   }
 }
+
+// ── Outreach Outcome Logging (Phase C1 — Measurement) ────────────────────────
+// Writes one outcome event to outreach_outcomes/{auto-id}
+// Schema mirrors osLogOutcome() in outreach_controller.js
+async function saveOutcomeToFirestore(uid, outcome) {
+  if (!uid || !outcome) return null;
+  try {
+    const db = _getDB();
+    if (!db) throw new Error('Firestore not available');
+    const docRef = await db.collection('outreach_outcomes').add({
+      advisorUid:       uid,
+      prospectId:       outcome.prospectId       || null,
+      nicheId:          outcome.nicheId          || null,
+      channel:          outcome.channel          || null,
+      stage:            outcome.stage            || null,
+      angle:            outcome.angle            || null,
+      variantChosen:    outcome.variantChosen    || null,
+      editedBeforeSend: outcome.editedBeforeSend || false,
+      sent:             outcome.sent             || false,
+      outcome:          outcome.outcome          || null,
+      replyClassification: null,
+      timestamp:        outcome.timestamp        || new Date().toISOString(),
+      createdAt:        new Date().toISOString(),
+    });
+    console.info('[db.js] outreach outcome saved to Firestore — id:', docRef.id);
+    return docRef.id;   // ← returned so caller can enable reply write-backs
+  } catch(e) {
+    console.warn('[db.js] saveOutcomeToFirestore failed (falling back to localStorage):', e);
+    throw e;
+  }
+}
+
+// Reads the advisor's own outcome log for the measurement dashboard
+async function loadOutcomesFromFirestore(uid, limitN) {
+  if (!uid) return [];
+  try {
+    const db = _getDB();
+    if (!db) return [];
+    let q = db.collection('outreach_outcomes')
+               .where('advisorUid', '==', uid)
+               .orderBy('createdAt', 'desc');
+    if (limitN) q = q.limit(limitN);
+    const snap = await q.get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) {
+    console.warn('[db.js] loadOutcomesFromFirestore failed:', e);
+    return [];
+  }
+}
+
+// Reads ALL outcomes across all advisors — operator only
+async function loadOperatorOutcomes(limitN) {
+  try {
+    const db = _getDB();
+    if (!db) return [];
+    let q = db.collection('outreach_outcomes').orderBy('createdAt', 'desc');
+    if (limitN) q = q.limit(limitN);
+    const snap = await q.get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) {
+    console.warn('[db.js] loadOperatorOutcomes failed:', e);
+    return [];
+  }
+}
+
+// Reads ALL prospects from the top-level 'prospects' collection (Alfred-imported leads)
+// This is NOT user-scoped — it's a shared operator-managed pool
+async function loadProspectsFromFirestore() {
+  try {
+    const db = _getDB();
+    if (!db) return [];
+    const snap = await db.collection('prospects').orderBy('priorityScore', 'desc').limit(500).get();
+    return snap.docs.map(d => ({ id: d.id, _fromFirestore: true, ...d.data() }));
+  } catch(e) {
+    console.warn('[db.js] loadProspectsFromFirestore failed:', e);
+    return [];
+  }
+}
+
+// ================================================================
+// CLIENT INTELLIGENCE — ED / Al Functions
+// Merged from EdAlTim — 2026-04-08 per Vera compliance plan
+//
+// COMPLIANCE NOTE: All reads are scoped per referringAdvisorUid
+// or assignedAdvisorUid. No "read all" allowed. Operator-only
+// override via isOperator() in firestore.rules.
+// ================================================================
+
+// ── ED CONSENT LOG — immutable audit trail ───────────────────
+async function saveConsentToFirestore(consentRecord) {
+  try {
+    const db = _getDB();
+    if (!db) { console.warn('[db.js] saveConsent skipped — Firestore unavailable'); return null; }
+    const docId = consentRecord.situationId || `consent_${Date.now()}`;
+    await db.collection('ed_consent_log').doc(docId).set({
+      situationId:         consentRecord.situationId         || docId,
+      consentTimestamp:    consentRecord.consentTimestamp     || new Date().toISOString(),
+      disclosureVersion:   consentRecord.disclosureVersion    || 'v1.0',
+      referringAdvisorUid: consentRecord.referringAdvisorUid || null,
+      intakeMode:          consentRecord.intakeMode           || 'lite',
+      consentGiven:        true,
+      userAgent:           consentRecord.userAgent            || (navigator?.userAgent || ''),
+      savedAt:             firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    console.info('[db.js] Consent recorded — id:', docId);
+    return docId;
+  } catch(e) { console.warn('[db.js] saveConsent failed:', e); return null; }
+}
+
+// ── ED SITUATIONS — client intake profiles ───────────────────
+// Dual-query: Firestore doesn't support OR across different fields,
+// so we query by referringAdvisorUid AND assignedAdvisorUid separately,
+// then merge and deduplicate by doc ID. This handles Phase 1 (both same UID)
+// and future multi-advisor routing (different UIDs).
+async function loadEdSituationsForAdvisor(uid) {
+  if (!uid) return [];
+  try {
+    const db = _getDB();
+    if (!db) return [];
+
+    const [referringSnap, assignedSnap] = await Promise.all([
+      db.collection('ed_situations')
+        .where('referringAdvisorUid', '==', uid)
+        .orderBy('savedAt', 'desc')
+        .limit(50)
+        .get(),
+      db.collection('ed_situations')
+        .where('assignedAdvisorUid', '==', uid)
+        .orderBy('savedAt', 'desc')
+        .limit(50)
+        .get(),
+    ]);
+
+    // Merge and deduplicate by Firestore doc ID
+    const seen = new Set();
+    const results = [];
+    for (const snap of [referringSnap, assignedSnap]) {
+      for (const d of snap.docs) {
+        if (!seen.has(d.id)) {
+          seen.add(d.id);
+          results.push({ _firestoreId: d.id, ...d.data() });
+        }
+      }
+    }
+    // Sort by savedAt descending (best effort — already ordered per query)
+    results.sort((a, b) => {
+      const aTime = a.savedAt?.toMillis ? a.savedAt.toMillis() : (a.savedAt ? new Date(a.savedAt).getTime() : 0);
+      const bTime = b.savedAt?.toMillis ? b.savedAt.toMillis() : (b.savedAt ? new Date(b.savedAt).getTime() : 0);
+      return bTime - aTime;
+    });
+    return results.slice(0, 50);
+
+  } catch(e) { console.warn('[db.js] loadEdSituations failed:', e); return []; }
+}
+
+async function saveEdSituationToFirestore(profile) {
+  if (!profile?.id) return null;
+  try {
+    const db = _getDB();
+    if (!db) throw new Error('Firestore unavailable');
+    await db.collection('ed_situations').doc(profile.id).set({
+      ...profile,
+      savedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status: profile.status || 'new',
+    }, { merge: true });
+    return profile.id;
+  } catch(e) { console.warn('[db.js] saveEdSituation failed:', e); return null; }
+}
+
+async function updateEdSituationStatus(situationId, status, advisorUid) {
+  if (!situationId) return;
+  try {
+    const db = _getDB();
+    if (!db) return;
+    await db.collection('ed_situations').doc(situationId).update({
+      status,
+      assignedAdvisorUid: advisorUid || null,
+      statusUpdatedAt: new Date().toISOString(),
+    });
+  } catch(e) { console.warn('[db.js] updateEdSituationStatus failed:', e); }
+}
+
+// ── AL ASSIGNMENTS — advisor accepted briefs ─────────────────
+async function saveAlAssignment(assignment) {
+  try {
+    const db = _getDB();
+    if (!db) return null;
+    const docRef = await db.collection('al_assignments').add({
+      ...assignment,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'pending_review',
+    });
+    return docRef.id;
+  } catch(e) { console.warn('[db.js] saveAlAssignment failed:', e); return null; }
+}
+
+async function loadAlAssignmentsForAdvisor(uid) {
+  if (!uid) return [];
+  try {
+    const db = _getDB();
+    if (!db) return [];
+    const snap = await db.collection('al_assignments')
+      .where('advisorUid', '==', uid)
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) { console.warn('[db.js] loadAlAssignments failed:', e); return []; }
+}
+
+// ── Refresh helper (non-blocking, called from planning_agent.js) ──
+window.refreshEdSituations = async function() {
+  const uid = typeof currentUID !== 'undefined' ? currentUID : null;
+  const situations = await loadEdSituationsForAdvisor(uid);
+  window._edSituations = situations;
+  return situations;
+};

@@ -91,6 +91,8 @@ AdvDiamondMining/
 │   ├── niche_engine.js          → 85Q adaptive wizard, scoring, profile generator
 │   ├── outreach_agent.js        → Angle selection, 3-variant draft generation, compliance filter
 │   ├── outreach_controller.js   → Orchestrator: ResearchAgent, StrategyAgent, CadenceAgent
+│   ├── ed_intake_engine.js      → ED Lite 10Q intake, profile generator, Firestore save
+│   ├── planning_agent.js        → Al brief generator, opportunity scoring, approve/decline actions
 │   └── pages.js                 → Page renderers (Command Center → Meeting Prep)
 ├── functions/
 │   └── index.js                 → Cloud Functions: ingest, routing, governance
@@ -180,6 +182,45 @@ firestore/
         └── timestamp
 ```
 
+### ED / Al Collections (Client Intelligence Layer)
+
+These three collections power the ED intake and Al planning brief system. They are **separate from the lead pipeline** — no Cloud Function changes required.
+
+```
+├── ed_consent_log/             → Write-once audit trail per intake session
+│   └── {consentId}/
+│       ├── referringAdvisorUid → advisor UID from ?ref= param
+│       ├── edSessionId         → matches ed_situations doc id
+│       ├── accepted: true
+│       ├── acceptedAt          → serverTimestamp
+│       └── disclosureVersion   → 'v1.0'
+│
+├── ed_situations/              → Client intake profiles (one per ED session)
+│   └── {situationId}/
+│       ├── id                  → ed_[timestamp]_[rand]
+│       ├── referringAdvisorUid → advisor UID (from ?ref= or logged-in advisor)
+│       ├── assignedAdvisorUid  → same as referring in Phase 1; may differ in Phase 2
+│       ├── opportunityScore, urgencyScore, complexityScore, fitScore
+│       ├── scoreLabel          → 'Critical' | 'Urgent' | 'Priority' | 'Standard' | 'Developing'
+│       ├── fullName, email
+│       ├── wealthTier, wealthSource, lifeStage
+│       ├── primaryChallenges[], topPriority, urgencyTiming
+│       ├── meetingIntent
+│       ├── status              → 'pending' | 'al_accepted' | 'al_declined'
+│       ├── savedAt             → serverTimestamp
+│       └── intakeMode          → 'lite'
+│
+└── al_assignments/             → Advisor-accepted briefs (one per approved situation)
+    └── {assignmentId}/
+        ├── situationId         → docId of ed_situations
+        ├── advisorUid          → Firebase UID of accepting advisor
+        ├── brief               → PlanningAgent.generateBrief() snapshot (JSON)
+        ├── acceptedAt          → ISO string
+        ├── outcome             → 'Meeting scheduled' | 'Will follow up' | 'Not responsive' | null
+        ├── outcomeLoggedAt
+        └── status              → 'pending_review' | 'active' | 'closed'
+```
+
 ### Nested User Data Pattern
 
 ```javascript
@@ -224,6 +265,8 @@ db.collection('users').doc(uid).collection('data').doc('advisorProfile').set(dat
 | **Cadence Agent** | `js/outreach_controller.js` | Produces persona-specific 5-touch sequence |
 | **Outreach Controller** | `js/outreach_controller.js` | Orchestrator — routes through all 4 agents, renders results |
 | **Firestore Data Layer** | `js/db.js` | All Firestore reads/writes for the client |
+| **ED Intake Engine** | `js/ed_intake_engine.js` | 10-question "ED Lite" intake for complex business-owner / liquidity-event prospects. Generates ED profile and writes to `ed_situations`. |
+| **Al Planning Agent** | `js/planning_agent.js` | Reads ED profile → generates 4-section planning brief (summary, hypotheses, discovery Qs, next actions) + opportunity score. Writes to `al_assignments` on advisor approval. |
 
 ---
 
@@ -584,6 +627,11 @@ Remote: https://github.com/kprum1/theaumengine
 ### Priority Next Steps
 
 **P0 — Immediate (before pilot week)**
+- [x] `loadEdSituationsForAdvisor()` dual-query merge (referringAdvisorUid OR assignedAdvisorUid) — implemented in `db.js`
+- [x] Composite Firestore indexes for `ed_situations` (referringAdvisorUid+savedAt, assignedAdvisorUid+savedAt) — added to `firestore.indexes.json`
+- [x] Persist active Al brief to `sessionStorage` on both intake completion AND manual "Generate Brief" click — fixed in `planning_agent.js`
+- [x] Hard guard in `EdIntakeEngine.complete()` — profile.id always set before save; fallback id generated if blank — fixed in `ed_intake_engine.js`
+- [x] Clear Al brief from `sessionStorage` + global state on sign-out — fixed in `auth.js`
 - [ ] Send pilot credentials to all 5 firms with login URL + first-touch instructions
 - [ ] Verify each pilot can log in and see their assigned leads in Lead Scoreboard
 - [ ] Confirm "Apply to ICP" niche wizard flow works for each pilot login
@@ -593,6 +641,8 @@ Remote: https://github.com/kprum1/theaumengine
 - [ ] Add 6th pilot advisor with `real-estate-developers` niche
 - [ ] Build pilot dashboard for operator view (all 5 firms, lead counts, activity)
 - [ ] Add Firestore `advisor_notes` collection for cross-device note persistence
+- [ ] Define `ed-human.md` and `handoff.md` server-side export schema for Alfred and future Tim use
+- [ ] Build operator analytics panel for ED/Al (intakes, briefs, outcomes per advisor)
 
 **P2 — Next Sprint**
 - [ ] Wire alfredIngest to real enrichment data source (FAA, business registrations)

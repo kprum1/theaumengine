@@ -6,6 +6,148 @@ function pageCommandCenter() {
   const top = [...PROSPECTS].sort((a,b)=>b.priorityScore-a.priorityScore).slice(0,8);
   const M = computeMetrics();
   const NM = computeNicheMetrics();
+
+  // ── CLIENT BRIEFS panel (ED/Al) ──────────────────────────────
+  // Restore brief from sessionStorage if cleared by page reload
+  if (!window._alCurrentBrief) {
+    try {
+      const stored = sessionStorage.getItem('alCurrentBrief');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        window._alCurrentBrief      = parsed.brief      || null;
+        window._alActiveSituationId = parsed.situationId || null;
+      }
+    } catch(e) {}
+  }
+  const situations  = window._edSituations  || [];
+  const assignments = window._alAssignments || [];
+
+  // Pending = situations with no brief yet
+  const pending = situations.filter(s =>
+    s.status === 'new' || s.status === 'pending'
+  );
+
+  // Active brief (currently selected)
+  const activeBrief = window._alCurrentBrief || null;
+  const activeSitId = window._alActiveSituationId || null;
+
+  // Approved assignments (already accepted by advisor)
+  const approved = assignments.filter(a => a.status === 'approved' || a.status === 'pending_review').slice(0, 5);
+
+  const briefPanelHTML = (() => {
+    // No situations at all
+    if (!pending.length && !activeBrief && !approved.length) {
+      return `
+      <div class="card" style="padding:28px 24px;text-align:center;border:1px dashed var(--border-default)">
+        <div style="font-size:32px;margin-bottom:12px">🧠</div>
+        <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:6px">No client briefs yet</div>
+        <div style="font-size:12px;color:var(--text-muted);line-height:1.7;margin-bottom:16px">Use Client Intake (ED) to capture a client's situation.<br>Al will generate a planning brief automatically.</div>
+        <button class="btn btn-primary" onclick="navigate('ed-disclosure')" style="background:var(--color-ed);border-color:var(--color-ed);font-size:12px">
+          + Start Client Intake
+        </button>
+      </div>`;
+    }
+
+    let html = '';
+
+    // ── Active brief waiting for review ──────────────────────────
+    if (activeBrief) {
+      const band = activeBrief.band || { emoji: '🔵', label: 'Priority', color: 'var(--blue)' };
+      html += `
+      <div class="card" style="padding:20px 24px;margin-bottom:14px;border:1px solid var(--color-ed);background:rgba(217,119,6,0.04)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--color-ed);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:4px">🧠 Al Planning Brief — Ready for Review</div>
+            <div style="font-size:15px;font-weight:800;color:var(--text-primary)">${activeBrief.clientName}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${activeBrief.wealthTier} · ${activeBrief.lifeStage} · ${activeBrief.state || ''}</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+            <div style="font-size:20px;font-weight:900;color:${band.color}">${activeBrief.score}</div>
+            <div style="font-size:10px;color:${band.color};font-weight:700">${band.emoji} ${band.label}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px;padding:12px 14px;background:var(--bg-elevated);border-radius:8px;border-left:3px solid var(--color-ed)">
+          ${activeBrief.brief}
+        </div>
+        ${activeBrief.questions?.length ? `
+        <div style="margin-bottom:12px">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">💬 Al Discovery Questions</div>
+          ${activeBrief.questions.slice(0,3).map(q => `<div style="font-size:11.5px;color:var(--text-secondary);padding:6px 0;border-bottom:1px solid var(--border-subtle);line-height:1.5">→ ${q}</div>`).join('')}
+        </div>` : ''}
+        ${activeBrief.nextActions?.length ? `
+        <div style="margin-bottom:14px">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">⚡ Next Actions</div>
+          ${activeBrief.nextActions.map(a => `<div style="font-size:11.5px;color:var(--text-secondary);padding:4px 0;line-height:1.5">• ${a}</div>`).join('')}
+        </div>` : ''}
+        <div style="font-size:9.5px;color:var(--text-muted);margin-bottom:12px;font-style:italic">${activeBrief.disclaimer}</div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-primary" onclick="alAcceptSituation('${activeSitId}')"
+            style="background:var(--color-ed);border-color:var(--color-ed);flex:1;font-size:12px">
+            ✅ Approve & Add to Planning Queue
+          </button>
+          <button class="btn btn-ghost" onclick="alDeclineSituation('${activeSitId}')"
+            style="font-size:12px">
+            ↩ Return
+          </button>
+        </div>
+      </div>`;
+    }
+
+    // ── Pending situations (need brief generated) ─────────────────
+    if (pending.length) {
+      html += `
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">
+          📋 Pending Intakes — ${pending.length} waiting
+        </div>
+        ${pending.map(s => {
+          const name = s.fullName || [s.firstName, s.lastName].filter(Boolean).join(' ') || 'Client';
+          const score = s.situationScore || s.opportunityScore || 0;
+          const band = PlanningAgent.getBand(score);
+          const date = s.savedAt?.toDate ? s.savedAt.toDate().toLocaleDateString('en-US',{month:'short',day:'numeric'}) : 'Today';
+          return `
+          <div class="card" style="padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:14px">
+            <div style="font-size:22px;font-weight:900;color:${band.color};min-width:36px;text-align:center">${score}</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:700;color:var(--text-primary)">${name}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${(s.lifeStage||'').replace(/_/g,' ')} · ${PlanningAgent.WEALTH_LABELS[s.wealthTier]||s.wealthTier||'—'} · ${date}</div>
+            </div>
+            <button class="btn btn-primary" onclick="alGenerateBrief('${s.id || s._firestoreId}')"
+              style="background:var(--color-ed);border-color:var(--color-ed);font-size:11px;padding:6px 14px">
+              Generate Brief →
+            </button>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+
+    // ── Approved/saved briefs ─────────────────────────────────────
+    if (approved.length) {
+      html += `
+      <div>
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px">
+          ✅ Planning Queue — ${approved.length} active
+        </div>
+        ${approved.map(a => {
+          const brief = a.brief || {};
+          const band = brief.band || PlanningAgent.getBand(brief.score || 0);
+          const date = a.acceptedAt ? new Date(a.acceptedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+          return `
+          <div class="card" style="padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;opacity:0.85">
+            <div style="font-size:18px;font-weight:900;color:${band.color};min-width:32px;text-align:center">${brief.score||'—'}</div>
+            <div style="flex:1">
+              <div style="font-size:12.5px;font-weight:700;color:var(--text-primary)">${brief.clientName||'Client'}</div>
+              <div style="font-size:10.5px;color:var(--text-muted)">${brief.wealthTier||''} · Approved ${date}</div>
+            </div>
+            <span style="font-size:10px;padding:3px 8px;background:rgba(16,185,129,0.12);color:var(--emerald);border-radius:20px;font-weight:700">In Queue</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+
+    return html;
+  })();
+
   return `
   <div class="page-header">
     <div class="page-header-left">
@@ -95,6 +237,13 @@ function pageCommandCenter() {
         </div>
       </div>`).join('')}
     </div>
+  </div>
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title"><div class="section-title-dot" style="background:var(--color-ed)"></div>🧠 Client Intelligence — Al Briefs</div>
+      <button class="btn btn-ghost" onclick="navigate('ed-disclosure')" style="font-size:11px;padding:5px 12px">+ New Intake</button>
+    </div>
+    ${briefPanelHTML}
   </div>`;
 }
 
@@ -321,12 +470,8 @@ function pageOutreachStudio() {
           </div>
         </div>
         <!-- Agent Action Row -->
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
           <button id="agent-generate-btn" onclick="osRunAgentStack()" style="background:linear-gradient(135deg,var(--blue),#6366f1);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(96,165,250,0.3)">\ud83d\udc8e Generate</button>
-          <button class="editor-tool-btn" onclick="osShiftTone('direct')">\ud83d\udccc Direct</button>
-          <button class="editor-tool-btn" onclick="osShiftTone('soft')">\ud83e\udd1d Soft</button>
-          <button class="editor-tool-btn" onclick="osShiftTone('insight')">\ud83e\udde0 Insight-Led</button>
-          <button class="editor-tool-btn" onclick="osShiftTone('safe')">\ud83d\udd12 Safer</button>
           <span id="channel-rec" style="margin-left:auto;font-size:10px;color:var(--blue);opacity:0;transition:opacity 0.4s;font-weight:500"></span>
         </div>
         <!-- Agent Metadata Bar -->
@@ -343,10 +488,12 @@ function pageOutreachStudio() {
           </div>
         </div>
         <!-- Variant Tabs A/B/C -->
-        <div style="display:flex;gap:6px;margin-bottom:8px" id="variant-tabs">
-          ${['A','B','C'].map((id,i)=>`<button class="variant-tab ${i===0?'active':''}" id="vtab-${id}" onclick="osSelectVariant('${id}')" style="flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:${i===0?'rgba(96,165,250,0.1)':'var(--card-bg)'};cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;font-weight:600;color:${i===0?'var(--blue)':'var(--text-muted)'}">
-            <span style="width:18px;height:18px;border-radius:50%;background:${i===0?'var(--blue)':'var(--border)'};color:${i===0?'#fff':'var(--text-muted)'};display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700">${id}</span>
-            ${['Direct','Soft','Insight-Led'][i]}</button>`).join('')}
+        <div class="variant-tabs" id="variant-tabs">
+          ${[['A','Direct'],['B','Soft'],['C','Insight-Led']].map(([id,label],i)=>`
+          <button class="variant-tab ${i===0?'active':''}" id="vtab-${id}" onclick="osSelectVariant('${id}')">
+            <span class="variant-tab-badge">${id}</span>
+            <span class="variant-tab-label">${label}</span>
+          </button>`).join('')}
         </div>
         <!-- Message Editor -->
         <div class="message-editor">
@@ -358,10 +505,11 @@ function pageOutreachStudio() {
           <div class="message-body" id="draft-body" contenteditable="true">${getDraft(prospect,activeOutreachType)}</div>
         </div>
         <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn btn-primary" style="flex:1" onclick="osLogOutcome({sent:true,variant:window._outreachState?.activeVariant});showToast('Queued for ${prospect.firstName} ${prospect.lastName}','📧')">Send Now</button>
-          <button class="btn btn-secondary" onclick="showToast('Added to cadence sequence','📅')">Add to Sequence</button>
+          <button class="btn btn-primary" style="flex:1" onclick="osLogOutcome({sent:true,variant:window._outreachState?.activeVariant}).then(()=>_showReplyTapper());const draftText=document.getElementById('draft-body')?.innerText||'';navigator.clipboard?.writeText(draftText).catch(()=>{});showToast('Draft copied — paste into your email client to send','📋')">Send Now</button>
+          <button class="btn btn-secondary" onclick="showToast('Added to cadence — follow up on schedule','📅')">Add to Sequence</button>
           <button class="btn btn-ghost" onclick="showToast('Template saved','✅')">Save Template</button>
         </div>
+        <div id="reply-tapper-zone" style="margin-top:10px"></div>
         <div style="margin-top:20px">
           <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Agent Cadence \u2014 click Generate to build sequence</div></div>
           <div id="cadence-sequence">
@@ -1050,6 +1198,270 @@ function pageSettings() {
           <button class="btn btn-secondary" style="width:100%;margin-top:10px" onclick="showToast('Team invite sent','✅')">+ Add Team Member</button>
         </div>
       </div>
+    </div>
+  </div>`;
+}
+
+// ================================================================
+// CLIENT INTELLIGENCE — ED / Al Page Renderers
+// Merged from EdAlTim — 2026-04-08 per Vera compliance plan
+// ================================================================
+
+// Expose on window so app.js navigate() can reset it when leaving the intake flow
+window._edIntakeInitialized = false;
+
+function pageEdDisclosure() {
+  const ref = (() => { try { return new URLSearchParams(window.location.search).get('ref'); } catch(e){return null;} })();
+  return `
+  <div class="page-header" style="border-bottom:1px solid var(--border-subtle);margin-bottom:0;padding-bottom:20px">
+    <div class="page-header-left">
+      <div class="page-title">🧠 Client Intake — ED</div>
+      <div class="page-subtitle">Before we begin — a quick note on how your client's information is used</div>
+    </div>
+  </div>
+  <div style="max-width:620px;margin:32px auto;padding:0 16px">
+    <div class="card" style="padding:28px 32px;margin-bottom:20px">
+      <div style="font-size:15px;font-weight:800;color:var(--text-primary);margin-bottom:16px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">🔒</span> How Your Client's Information Is Used
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:24px">
+        <div style="display:flex;gap:14px;align-items:flex-start"><span style="font-size:18px;flex-shrink:0">📋</span><div>
+          <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:3px">What we collect</div>
+          <div style="font-size:12.5px;color:var(--text-secondary);line-height:1.7">Name, general wealth situation, planning priorities, and advisor preference. No SSN, account numbers, or sensitive documents.</div>
+        </div></div>
+        <div style="display:flex;gap:14px;align-items:flex-start"><span style="font-size:18px;flex-shrink:0">👤</span><div>
+          <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:3px">Who sees it</div>
+          <div style="font-size:12.5px;color:var(--text-secondary);line-height:1.7">Only the advisor whose intake link is shared, and the platform operator (Fin-Tegration). Not shared with third parties or other advisors.</div>
+        </div></div>
+        <div style="display:flex;gap:14px;align-items:flex-start"><span style="font-size:18px;flex-shrink:0">🤖</span><div>
+          <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:3px">How AI is used</div>
+          <div style="font-size:12.5px;color:var(--text-secondary);line-height:1.7">The platform generates a <strong>draft planning brief</strong> from answers for the advisor to review. This is a planning support tool — not financial advice.</div>
+        </div></div>
+        <div style="display:flex;gap:14px;align-items:flex-start"><span style="font-size:18px;flex-shrink:0">🗑️</span><div>
+          <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:3px">Client rights</div>
+          <div style="font-size:12.5px;color:var(--text-secondary);line-height:1.7">Clients may request deletion at any time by emailing <a href="mailto:kosal@fin-tegration.com" style="color:var(--blue)">kosal@fin-tegration.com</a>. Profiles are retained 90 days then purged.</div>
+        </div></div>
+      </div>
+      <div style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:10px;padding:16px;margin-bottom:20px">
+        <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer">
+          <input type="checkbox" id="ed-consent-checkbox" onchange="edToggleConsentBtn(this)"
+            style="margin-top:3px;width:18px;height:18px;cursor:pointer;accent-color:var(--color-ed)">
+          <span style="font-size:12.5px;color:var(--text-primary);line-height:1.6">
+            <strong>Client understands and agrees</strong> that their answers will be shared with their matched financial advisor to prepare for a first conversation.
+          </span>
+        </label>
+      </div>
+      <button id="ed-consent-btn" onclick="edGrantConsentAndStart('${ref || ''}')" disabled
+        style="width:100%;padding:14px 20px;background:var(--color-ed);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;opacity:0.4;transition:opacity 0.2s">
+        Start Client Profile — 10 Questions (~3 min) →
+      </button>
+      <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text-muted)">
+        <a href="#" onclick="navigate('privacy');return false" style="color:var(--text-muted);text-decoration:underline">Privacy Policy</a>
+        &nbsp;·&nbsp; Responses are encrypted and stored securely.
+      </div>
+    </div>
+    <div style="padding:12px 16px;background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.2);border-radius:10px;font-size:11.5px;color:var(--text-secondary);line-height:1.6">
+      <strong style="color:var(--amber)">🔗 Advisor intake link:</strong> Share
+      <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px;font-size:10.5px">theaumengine.com#ed-disclosure?ref=YOUR_UID</code>
+      with prospects. Replace <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px;font-size:10.5px">YOUR_UID</code> with your Firebase UID.
+    </div>
+  </div>`;
+}
+
+window.edToggleConsentBtn = function(checkbox) {
+  const btn = document.getElementById('ed-consent-btn');
+  if (!btn) return;
+  btn.disabled = !checkbox.checked;
+  btn.style.opacity = checkbox.checked ? '1' : '0.4';
+  btn.style.cursor  = checkbox.checked ? 'pointer' : 'not-allowed';
+};
+
+window.edGrantConsentAndStart = async function(refUid) {
+  if (!window._edIntakeInitialized) { EdIntakeEngine.init('lite'); window._edIntakeInitialized = true; }
+  const sessionId = EdIntakeEngine._sessionId || `consent_${Date.now()}`;
+  const consentRecord = {
+    situationId:          sessionId,
+    consentTimestamp:     new Date().toISOString(),
+    disclosureVersion:    'v1.0',
+    referringAdvisorUid:  refUid || EdIntakeEngine._referringAdvisorUid || (typeof currentUID !== 'undefined' ? currentUID : null),
+    intakeMode:           'lite',
+    consentGiven:         true,
+    userAgent:            navigator?.userAgent || '',
+  };
+  if (typeof saveConsentToFirestore === 'function') {
+    saveConsentToFirestore(consentRecord).catch(e => console.warn('consent log failed:', e));
+  }
+  try { localStorage.setItem('edConsentGiven', 'true'); } catch(e) {}
+  navigate('ed-intake');
+};
+
+function pageEdIntake() {
+  const consentGiven = (() => { try { return localStorage.getItem('edConsentGiven') === 'true'; } catch(e){return false;} })();
+  if (!consentGiven) { navigate('ed-disclosure'); return '<div style="padding:40px;text-align:center;color:var(--text-muted)">Redirecting\u2026</div>'; }
+  if (!window._edIntakeInitialized) { EdIntakeEngine.init('lite'); window._edIntakeInitialized = true; }
+  if (EdIntakeEngine.isComplete && EdIntakeEngine._profile) return _renderEdCompletionScreen(EdIntakeEngine._profile);
+
+  const engine = EdIntakeEngine, q = engine.currentQ, qIdx = engine._currentIdx;
+  const total = engine.questions.length, pct = engine.progress, phase = q?.phaseLabel || 'Your Profile';
+  if (!q) return '<div style="padding:40px;text-align:center;color:var(--text-muted)">Loading\u2026</div>';
+
+  const renderOptions = (q) => {
+    if (q.type === 'single') {
+      const cur = engine._answers[q.field];
+      return q.options.map((opt, i) => `<button class="ed-option ${cur === opt.value ? 'ed-option--selected' : ''}" id="ed-opt-${q.id}-${i}" onclick="edSelectAnswer('${q.id}','${opt.value}','single')">${opt.label}</button>`).join('');
+    }
+    if (q.type === 'multi') {
+      const cur = engine._answers[q.field] || [];
+      return `<div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Select up to ${q.maxSelect}</div>${q.options.map((opt,i) => `<button class="ed-option ${cur.includes(opt.value)?'ed-option--selected':''}" id="ed-opt-${q.id}-${i}" onclick="edSelectAnswer('${q.id}','${opt.value}','multi',${q.maxSelect})">${opt.label}</button>`).join('')}`;
+    }
+    if (q.type === 'text' || q.type === 'email' || q.type === 'tel') {
+      const cur = engine._answers[q.field] || '';
+      return `<input class="form-input" id="ed-text-${q.id}" type="${q.type}" value="${cur}" placeholder="${q.placeholder||''}" oninput="edUpdateText('${q.id}','${q.field}')" style="width:100%;font-size:14px;padding:14px 16px;margin-top:4px"><div id="ed-text-err-${q.id}" style="font-size:11px;color:var(--rose);margin-top:6px;display:none">Please enter your ${q.field==='fullName'?'name':'answer'} to continue.</div>`;
+    }
+    return '';
+  };
+
+  const hasAnswer = (() => {
+    const ans = engine._answers[q.field];
+    if (q.type === 'multi') return Array.isArray(ans) && ans.length > 0;
+    return ans !== undefined && ans !== null && ans !== '';
+  })();
+
+  return `
+  <div style="max-width:600px;margin:0 auto;padding:24px 16px">
+    <div style="margin-bottom:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--color-ed);text-transform:uppercase;letter-spacing:0.08em">${phase}</span>
+        <span style="font-size:11px;color:var(--text-muted)">Question ${qIdx+1} of ${total}</span>
+      </div>
+      <div style="height:4px;background:var(--border-subtle);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:var(--color-ed);border-radius:2px;transition:width 0.4s ease"></div>
+      </div>
+    </div>
+    <div class="card" style="padding:28px 28px 24px">
+      <div style="font-size:16px;font-weight:700;color:var(--text-primary);line-height:1.5;margin-bottom:20px">${q.text}</div>
+      <div id="ed-options-wrap" style="display:flex;flex-direction:column;gap:10px">${renderOptions(q)}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:20px">
+      <button class="btn btn-ghost" onclick="edGoBack()" style="font-size:12px" ${qIdx===0?'disabled style="opacity:0.3"':''}>← Back</button>
+      <button id="ed-next-btn" class="btn btn-primary" onclick="edAdvance('${q.id}','${q.type}','${q.field}')"
+        style="background:var(--color-ed);border-color:var(--color-ed);min-width:120px;${hasAnswer?'':'opacity:0.5'}"
+        ${(q.type==='single'||q.type==='multi')&&!hasAnswer?'disabled':''}>
+        ${qIdx===total-1?'Submit \u2192':'Next \u2192'}
+      </button>
+    </div>
+    <div style="text-align:center;margin-top:16px;font-size:10px;color:var(--text-muted)">🔒 Answers are encrypted. Only the matched advisor sees this profile.</div>
+  </div>`;
+}
+
+window.edSelectAnswer = function(qId, value, type, maxSelect) {
+  const engine = EdIntakeEngine, q = engine.questions.find(q => q.id === qId);
+  if (!q) return;
+  if (type === 'single') {
+    engine._answers[q.field] = value;
+    q.options.forEach((opt,i) => { const btn = document.getElementById(`ed-opt-${qId}-${i}`); if (btn) btn.classList.toggle('ed-option--selected', opt.value === value); });
+    const nb = document.getElementById('ed-next-btn'); if (nb) { nb.disabled = false; nb.style.opacity = '1'; }
+    engine._save();
+  } else if (type === 'multi') {
+    let cur = engine._answers[q.field] || []; if (typeof cur === 'string') cur = [cur];
+    const idx = cur.indexOf(value);
+    if (idx > -1) { cur = cur.filter(v => v !== value); } else { if (maxSelect && cur.length >= maxSelect) return; cur = [...cur, value]; }
+    engine._answers[q.field] = cur;
+    q.options.forEach((opt,i) => { const btn = document.getElementById(`ed-opt-${qId}-${i}`); if (btn) btn.classList.toggle('ed-option--selected', cur.includes(opt.value)); });
+    const nb = document.getElementById('ed-next-btn'); if (nb) { nb.disabled = cur.length === 0; nb.style.opacity = cur.length > 0 ? '1' : '0.5'; }
+    engine._save();
+  }
+};
+
+window.edUpdateText = function(qId, field) {
+  const val = document.getElementById('ed-text-' + qId)?.value || '';
+  EdIntakeEngine._answers[field] = val;
+  const nb = document.getElementById('ed-next-btn'); if (nb) { nb.disabled = !val.trim(); nb.style.opacity = val.trim() ? '1' : '0.5'; }
+  EdIntakeEngine._save();
+};
+
+window.edAdvance = async function(qId, type, field) {
+  const engine = EdIntakeEngine;
+  if (type === 'text' || type === 'email' || type === 'tel') {
+    const val = document.getElementById('ed-text-' + qId)?.value?.trim() || '';
+    if (!val && field === 'fullName') { const err = document.getElementById('ed-text-err-' + qId); if (err) err.style.display = 'block'; return; }
+    engine._answers[field] = document.getElementById('ed-text-' + qId)?.value || '';
+    engine._save();
+  }
+  const result = engine.advance();
+  if (result.done) {
+    const profile = result.profile;
+    // 1. Save situation to Firestore
+    try { if (typeof saveEdSituationToFirestore === 'function') await saveEdSituationToFirestore({ ...profile, status: 'pending', savedAt: new Date().toISOString() }); } catch(e) {}
+    // 2. Auto-generate Al brief and store globally + sessionStorage for Command Center
+    try {
+      if (window.PlanningAgent?.generateBrief) {
+        const brief = window.PlanningAgent.generateBrief(profile);
+        window._alCurrentBrief      = brief;
+        window._alActiveSituationId = profile.id || profile._firestoreId;
+        window._edSituations = window._edSituations || [];
+        if (!window._edSituations.find(s => (s.id || s._firestoreId) === profile.id)) {
+          window._edSituations.unshift({ ...profile, status: 'pending' });
+        }
+        // Persist to sessionStorage so brief survives navigate() + page reload
+        try {
+          sessionStorage.setItem('alCurrentBrief', JSON.stringify({
+            brief,
+            situationId: profile.id || profile._firestoreId,
+            savedAt: new Date().toISOString(),
+          }));
+        } catch(ssErr) { console.warn('[edAdvance] sessionStorage write failed:', ssErr); }
+        if (typeof showToast === 'function') showToast(`Al brief ready — Score: ${brief.score}`, '🧠');
+      }
+    } catch(e) { console.warn('[edAdvance] brief gen failed:', e); }
+  }
+  navigate('ed-intake');
+};
+
+window.edGoBack = function() { EdIntakeEngine.back(); navigate('ed-intake'); };
+
+function _renderEdCompletionScreen(profile) {
+  return `
+  <div style="max-width:540px;margin:48px auto;padding:0 16px;text-align:center">
+    <div style="font-size:52px;margin-bottom:16px">✅</div>
+    <div style="font-size:22px;font-weight:900;color:var(--text-primary);margin-bottom:12px">Client profile ready.</div>
+    <div style="font-size:14px;color:var(--text-secondary);line-height:1.8;margin-bottom:28px;max-width:400px;margin-left:auto;margin-right:auto">
+      The planning brief is in your Command Center.<br>
+      <strong>${profile.firstName || 'The client'}</strong> will hear from their advisor within <strong>24\u201348 hours</strong>.
+    </div>
+    <div class="card" style="padding:20px 24px;margin-bottom:20px;text-align:left;background:var(--bg-elevated)">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px">What happens next</div>
+      ${[['📬','Planning brief is ready','Al has analyzed the intake and generated advisor-ready notes.'],['📞','Advisor reviews and reaches out','Typically within 1\u20132 business days.'],['🤝','Informed first conversation','No rehashing the situation from scratch.']].map(([icon,title,sub]) => `
+        <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:12px"><span style="font-size:18px">${icon}</span><div><div style="font-size:12.5px;font-weight:700;color:var(--text-primary)">${title}</div><div style="font-size:11.5px;color:var(--text-muted);margin-top:2px">${sub}</div></div></div>`).join('')}
+    </div>
+    <button class="btn btn-primary" onclick="navigate('command-center')" style="min-width:180px">View in Command Center \u2192</button>
+    <div style="font-size:10.5px;color:var(--text-muted);line-height:1.6;padding:12px 8px 0">
+      Questions? <a href="mailto:kosal@fin-tegration.com" style="color:var(--blue)">kosal@fin-tegration.com</a>
+    </div>
+  </div>`;
+}
+
+function pagePrivacyPolicy() {
+  return `
+  <div class="page-header"><div class="page-header-left">
+    <div class="page-title">🔒 Privacy Policy</div>
+    <div class="page-subtitle">The AUM Engine \u00b7 A Fin-Tegration platform \u00b7 Last updated April 8, 2026</div>
+  </div><div class="page-actions"><button class="btn btn-ghost" onclick="history.back()">← Back</button></div></div>
+  <div style="max-width:720px;margin:0 auto;padding:0 0 48px">
+    <div class="card" style="padding:32px 36px">
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.8;margin-bottom:24px;padding:14px 18px;background:var(--bg-elevated);border-radius:8px;border-left:3px solid var(--color-ed)">
+        The AUM Engine is a planning support platform. This policy explains what we collect during an ED intake, how we use it, and client rights.
+      </div>
+      ${[
+        ['1. What We Collect','Name, general wealth tier, wealth source, life stage, planning priorities, advisor preference, and stated urgency. <strong>We do not collect</strong> SSNs, tax IDs, account numbers, passwords, or financial documents.'],
+        ['2. How We Use It','Answers are used exclusively to generate a <strong>draft planning brief</strong> for the referring advisor. All advice is the advisor\'s sole responsibility.'],
+        ['3. Who Can See It','Only the matched advisor (identified by <code>?ref=</code> URL) and the platform operator (Fin-Tegration). Not shared with third parties, advertisers, or other advisors.'],
+        ['4. Consent Logging','When a prospect consents, we record the timestamp, disclosure version, and referring advisor UID. This record is write-once and cannot be altered.'],
+        ['5. Data Retention','Profiles and consent logs are retained for <strong>90 days</strong> from submission, then permanently deleted.'],
+        ['6. Client Rights','Clients may request <strong>deletion</strong> by emailing <a href="mailto:kosal@fin-tegration.com" style="color:var(--blue)">kosal@fin-tegration.com</a> with subject "Data Deletion Request." Confirmed within 5 business days.'],
+        ['7. Security','All data is stored in Google Firestore with encryption at rest and in transit. Access is controlled by Firebase Auth and Firestore security rules scoped to the matched advisor.'],
+        ['8. Contact','Fin-Tegration \u00b7 <a href="mailto:kosal@fin-tegration.com" style="color:var(--blue)">kosal@fin-tegration.com</a> \u00b7 <a href="https://theaumengine.com" style="color:var(--blue)" target="_blank">theaumengine.com</a>'],
+      ].map(([title,body]) => `<div style="margin-bottom:28px"><div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:10px">${title}</div><div style="font-size:13px;color:var(--text-secondary);line-height:1.8">${body}</div></div>`).join('<hr style="border:none;border-top:1px solid var(--border-subtle);margin:0 0 28px">')}
     </div>
   </div>`;
 }

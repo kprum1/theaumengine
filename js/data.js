@@ -18,13 +18,18 @@ const FEEDBACK_STORE = JSON.parse(localStorage.getItem('aumEngineFeedback') || '
 
 // ===== NICHES =====
 const NICHES = [
-  { id: 'n1', icon: '✈️', name: 'Aircraft Owners',             desc: 'Private pilots & aircraft owners in affluent zip codes',        count: 47, color: '#60a5fa' },
-  { id: 'n2', icon: '🏢', name: 'Business Owners',             desc: 'SMB owners age 50–65 near succession planning',                count: 89, color: '#a78bfa' },
-  { id: 'n3', icon: '🎗️', name: 'Charity Board Members',       desc: 'Nonprofit board members with philanthropic giving patterns',    count: 34, color: '#34d399' },
-  { id: 'n4', icon: '💰', name: 'Inheritance Recipients',       desc: 'Individuals receiving $750K+ inheritance in last 24 months',   count: 28, color: '#fbbf24' },
-  { id: 'n5', icon: '👩‍⚕️', name: 'Physicians & Surgeons',    desc: 'Practice owners and partners nearing peak earning years',      count: 61, color: '#fb7185' },
-  { id: 'n6', icon: '🚀', name: 'HENRYs',                       desc: 'High Earner Not Rich Yet — W2 professionals ages 32–45 with high income but no wealth plan', count: 19, color: '#22d3ee' },
-  { id: 'n7', icon: '🤖', name: 'AI-Displaced Executives',      desc: 'Former C-suite & Director-level tech/enterprise executives displaced by AI — est. $3M–$8M in unmanaged assets', count: 10, color: '#f59e0b' },
+  { id: 'n1',  icon: '✈️',  name: 'Aircraft Owners',          desc: 'Private pilots & aircraft owners in affluent zip codes',                                               count: 47,  color: '#60a5fa' },
+  { id: 'n2',  icon: '👩‍⚕️',name: 'Physicians & Surgeons',    desc: 'Practice owners and partners nearing peak earning years',                                              count: 61,  color: '#fb7185' },
+  { id: 'n3',  icon: '🏢',  name: 'Business Owners',          desc: 'SMB owners age 50–65 near succession planning',                                                       count: 89,  color: '#a78bfa' },
+  { id: 'n4',  icon: '⚖️',  name: 'Law Partners',             desc: 'Equity partners with uneven cash flow, K-1 complexity, and partnership buyout timelines',             count: 22,  color: '#f59e0b' },
+  { id: 'n5',  icon: '🚀',  name: 'HENRYs',                   desc: 'High Earner Not Rich Yet — W2 professionals ages 32–45 with high income but no wealth plan',          count: 19,  color: '#22d3ee' },
+  { id: 'n6',  icon: '👔',  name: 'C-Suite Executives',       desc: 'Senior leaders navigating deferred comp, concentrated stock, and executive transition planning',       count: 31,  color: '#34d399' },
+  { id: 'n7',  icon: '🤖',  name: 'AI-Displaced Executives',  desc: 'Former C-suite & Director-level tech executives displaced by AI — est. $3M–$8M in unmanaged assets', count: 32,  color: '#fbbf24' },
+  { id: 'n8',  icon: '🦷',  name: 'Dentists & Specialists',   desc: 'Practice owners navigating buy-in/out decisions, disability gaps, and retirement funding',            count: 18,  color: '#e879f9' },
+  { id: 'n9',  icon: '🔧',  name: 'High Earning Tradesman',   desc: 'HVAC, electrical & plumbing owner-operators with irregular income and no coordinated wealth plan',    count: 14,  color: '#4ade80' },
+  { id: 'n10', icon: '💰',  name: 'Inheritance Recipients',   desc: 'Individuals receiving $750K+ inheritance in last 24 months',                                          count: 28,  color: '#facc15' },
+  { id: 'n11', icon: '🏗️',  name: 'Real Estate Developers',  desc: 'Developers and operators facing 1031 windows, partnership exits, and concentrated property risk',     count: 16,  color: '#f97316' },
+  { id: 'n12', icon: '🎗️',  name: 'Charity Boards',          desc: 'Nonprofit board members with philanthropic giving patterns and DAF/estate planning needs',             count: 34,  color: '#2dd4bf' },
 ];
 
 // ===== VALID STATUSES (stage labels only — no temperature labels) =====

@@ -55,6 +55,30 @@
         { "fieldPath": "lastNameNorm", "order": "ASCENDING" },
         { "fieldPath": "stateNorm", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "operator_presence",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status",   "order": "ASCENDING" },
+        { "fieldPath": "lastSeen", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "ed_situations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "referringAdvisorUid", "order": "ASCENDING" },
+        { "fieldPath": "savedAt",             "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "ed_situations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedAdvisorUid", "order": "ASCENDING" },
+        { "fieldPath": "savedAt",            "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

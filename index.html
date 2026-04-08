@@ -92,7 +92,7 @@
           The AUM Engine is a niche prospecting cockpit for independent Financial Professionals at the $50M–$250M AUM plateau. Instead of renting shared internet leads, you get a monthly stream of exclusive households in your exact niche — already scored, enriched, and paired with outreach drafts you approve.
         </p>
         <div class="hero-ctas">
-          <button class="hero-cta-primary" id="hero-login-cta">Book a 20-minute demo</button>
+          <button class="hero-cta-primary" id="hero-login-cta" onclick="document.getElementById('lead-capture-wrap').scrollIntoView({behavior:'smooth',block:'center'})">Book a 20-minute demo</button>
           <button class="hero-cta-pilot" id="hero-pilot-cta" onclick="window.openAuthModal()">Pilot Login →</button>
         </div>
         <ul class="hero-trust-bullets">
@@ -277,9 +277,13 @@
               if (window.hbspt) {
                 hbspt.forms.create({
                   region: "na1",
-                  portalId: "YOUR_PORTAL_ID",
-                  formId: "YOUR_FORM_ID",
-                  target: "#hubspot-form-target"
+                  portalId: "244639294",
+                  formId: "86f0b722-9232-41cf-bce5-7ba750a2e40d",
+                  target: "#hubspot-form-target",
+                  onFormSubmit: function() {
+                    document.getElementById('lead-capture-wrap').innerHTML =
+                      '<div style="text-align:center;padding:24px 0"><div style="font-size:22px">✅</div><div style="font-weight:700;color:#1e293b;margin-top:8px">You\'re on the list.</div><div style="color:#64748b;font-size:14px;margin-top:4px">We\'ll reach out personally within 24 hours.</div></div>';
+                  }
                 });
               }
             });
@@ -508,6 +512,15 @@
         Meeting Prep
       </a>
 
+      <div class="nav-section-label" style="margin-top:16px">CLIENT INTELLIGENCE</div>
+      <a href="#" class="nav-item" data-page="ed-disclosure" id="nav-ed-disclosure"
+         onclick="navigate('ed-disclosure');return false"
+         title="Send this link to prospects to begin their intake profile">
+        <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M3 17c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14 4l1 1.5M16 7h1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/></svg>
+        Client Intake (ED)
+        <span class="nav-badge" style="background:var(--amber)">Pilot</span>
+      </a>
+
       <div class="nav-section-label" style="margin-top:16px">INTELLIGENCE</div>
       <a href="#" class="nav-item" data-page="manager-console" id="nav-manager-console">
         <svg viewBox="0 0 20 20" fill="none"><path d="M2 16l4-8 3 4 3-6 4 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -516,6 +529,14 @@
       <a href="#" class="nav-item" data-page="settings" id="nav-settings">
         <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity="0.7"/></svg>
         Settings &amp; ICP
+      </a>
+
+      <!-- Admin nav — hidden by default, shown only to operator by auth.js -->
+      <div class="nav-section-label" style="margin-top:16px;display:none" id="admin-nav-section">OPERATOR</div>
+      <a href="#" class="nav-item" data-page="admin-dashboard" id="nav-admin-dashboard"
+         style="display:none;border:1px solid rgba(251,191,36,0.2);background:rgba(251,191,36,0.04)">
+        <svg viewBox="0 0 20 20" fill="none"><path d="M10 2l2.4 4.8 5.6.8-4 3.9.9 5.5L10 14.5l-4.9 2.5.9-5.5L2 7.6l5.6-.8L10 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        Admin Dashboard
       </a>
     </nav>
 
@@ -561,13 +582,16 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <!-- ── App Scripts ── -->
-<script src="js/data.js?v=20260407e"></script>
-<script src="js/niche_engine.js?v=20260407e"></script>
-<script src="js/db.js?v=20260407e"></script>
-<script src="js/outreach_agent.js?v=20260407e"></script>
-<script src="js/outreach_controller.js?v=20260407e"></script>
-<script src="js/pages.js?v=20260407e"></script>
-<script src="js/app.js?v=20260407e"></script>
-<script src="js/auth.js?v=20260407e"></script>
+<script src="js/data.js?v=20260407p"></script>
+<script src="js/niche_engine.js?v=20260407p"></script>
+<script src="js/db.js?v=20260408b"></script>
+<script src="js/admin.js?v=20260407p"></script>
+<script src="js/outreach_agent.js?v=20260407p"></script>
+<script src="js/outreach_controller.js?v=20260407p"></script>
+<script src="js/ed_intake_engine.js?v=20260408c"></script>
+<script src="js/planning_agent.js?v=20260408c"></script>
+<script src="js/pages.js?v=20260408b"></script>
+<script src="js/app.js?v=20260407p"></script>
+<script src="js/auth.js?v=20260408c"></script>
 </body>
 </html>
