@@ -2911,9 +2911,9 @@ body.app-mode {
   margin-bottom: 40px;
 }
 .lp-prose p {
-  font-size: 16px;
+  font-size: 18px;
   color: var(--text-secondary);
-  line-height: 1.75;
+  line-height: 1.8;
   margin-bottom: 20px;
   max-width: 720px;
 }
@@ -2959,9 +2959,9 @@ body.app-mode {
   gap: 11px;
 }
 .comparison-col li {
-  font-size: 13.5px;
+  font-size: 15.5px;
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.55;
 }
 .comparison-col-bad li { color: var(--text-muted); }
 .comparison-col-good li { color: var(--text-secondary); }
@@ -3008,16 +3008,16 @@ body.app-mode {
   margin-bottom: 12px;
 }
 .vp-title {
-  font-size: 17px;
+  font-size: 21px;
   font-weight: 800;
   color: var(--text-primary);
   margin-bottom: 12px;
   letter-spacing: -0.01em;
 }
 .vp-body {
-  font-size: 13.5px;
+  font-size: 15.5px;
   color: var(--text-secondary);
-  line-height: 1.7;
+  line-height: 1.75;
 }
 
 /* ── Social Proof Quote ── */
@@ -3105,16 +3105,16 @@ body.app-mode {
 }
 .how-step-content { flex: 1; padding-top: 8px; }
 .how-step-title {
-  font-size: 19px;
+  font-size: 22px;
   font-weight: 800;
   color: var(--text-primary);
   margin-bottom: 10px;
   letter-spacing: -0.01em;
 }
 .how-step-body {
-  font-size: 14.5px;
+  font-size: 16.5px;
   color: var(--text-secondary);
-  line-height: 1.7;
+  line-height: 1.75;
   max-width: 680px;
 }
 
@@ -3127,9 +3127,9 @@ body.app-mode {
 }
 @media (max-width: 900px) { .offer-block { grid-template-columns: 1fr; } }
 .offer-intro {
-  font-size: 16px;
+  font-size: 18px;
   color: var(--text-secondary);
-  line-height: 1.7;
+  line-height: 1.75;
   margin-bottom: 20px;
 }
 .offer-list {
@@ -3143,9 +3143,9 @@ body.app-mode {
   display: flex;
   gap: 14px;
   align-items: flex-start;
-  font-size: 14.5px;
+  font-size: 16px;
   color: var(--text-secondary);
-  line-height: 1.6;
+  line-height: 1.65;
 }
 .offer-list strong { color: var(--text-primary); }
 .offer-bullet { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
@@ -3323,12 +3323,12 @@ body.app-mode {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 20px 0;
+  padding: 22px 0;
   background: none;
   border: none;
   cursor: pointer;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--text-primary);
   text-align: left;
@@ -3344,9 +3344,9 @@ body.app-mode {
 }
 .faq-item.open .faq-chevron { transform: rotate(90deg); color: var(--blue); }
 .faq-answer {
-  font-size: 14.5px;
+  font-size: 16px;
   color: var(--text-secondary);
-  line-height: 1.75;
+  line-height: 1.8;
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.35s ease, padding 0.35s ease;
