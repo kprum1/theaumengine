@@ -313,8 +313,10 @@ window.alAcceptSituation = async function(situationId) {
   });
   // Clear sessionStorage so approved brief doesn't ghost back
   try { sessionStorage.removeItem('alCurrentBrief'); } catch(e) {}
-  _alCurrentBrief      = null;
-  _alActiveSituationId = null;
+  _alCurrentBrief              = null;
+  _alActiveSituationId         = null;
+  window._alCurrentBrief      = null;   // ← clear panel read path in pages.js
+  window._alActiveSituationId = null;
   showToast('Client accepted — added to your planning queue', '✅');
   if (typeof refreshEdSituations === 'function') {
     window._edSituations = await refreshEdSituations();
@@ -325,8 +327,10 @@ window.alAcceptSituation = async function(situationId) {
 window.alDeclineSituation = async function(situationId) {
   if (!situationId) return;
   await updateEdSituationStatus(situationId, 'al_declined', currentUID);
-  _alActiveSituationId = null;
-  _alCurrentBrief      = null;
+  _alActiveSituationId         = null;
+  _alCurrentBrief              = null;
+  window._alCurrentBrief      = null;   // ← clear panel read path in pages.js
+  window._alActiveSituationId = null;
   // Clear sessionStorage so declined brief doesn't ghost back
   try { sessionStorage.removeItem('alCurrentBrief'); } catch(e) {}
   showToast('Situation returned to queue', '↩️');
