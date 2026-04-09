@@ -177,6 +177,24 @@ service cloud.firestore {
     }
 
     // ================================================================
+    // FUNNEL EVENTS (Phase C3 — Advisor Journey Tracking)
+    // Advisors fire-and-forget their own events; operator reads all.
+    // advisorUid on the document must match the authenticated user.
+    // ================================================================
+    match /funnel_events/{docId} {
+      // Create: auth'd advisor only; advisorUid must equal their own UID
+      allow create: if request.auth != null
+                    && request.resource.data.advisorUid == request.auth.uid;
+      // Read: operator reads all (for Admin Dashboard 30-day funnel)
+      //       advisor reads their own (for My Activity widget)
+      allow read:   if isOperator()
+                 || (request.auth != null
+                     && resource.data.advisorUid == request.auth.uid);
+      // Never allow update or delete — immutable event log
+      allow update, delete: if false;
+    }
+
+    // ================================================================
     // DENY ALL — catch-all for any unmatched paths
     // ================================================================
     match /{document=**} {

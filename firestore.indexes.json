@@ -79,6 +79,23 @@
         { "fieldPath": "assignedAdvisorUid", "order": "ASCENDING" },
         { "fieldPath": "savedAt",            "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "funnel_events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "advisorUid", "order": "ASCENDING" },
+        { "fieldPath": "ts",         "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "funnel_events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "advisorUid", "order": "ASCENDING" },
+        { "fieldPath": "event",      "order": "ASCENDING" },
+        { "fieldPath": "ts",         "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
