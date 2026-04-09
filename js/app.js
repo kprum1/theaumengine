@@ -803,6 +803,169 @@ function showStatusModal(prospectId) {
 }
 
 
+// ===== BATCH ACTION MODALS =====
+
+// Run Nurture Batch — shows all Nurture leads with re-engagement email drafts
+// Advisor reviews each, clicks "Mark Sent" to log outreach + advance to Contacted
+function openNurtureBatch() {
+  const leads = PROSPECTS.filter(p => p.status === 'Nurture');
+  document.getElementById('batch-modal')?.remove();
+
+  if (!leads.length) {
+    showToast('No leads in Nurture right now', '📭');
+    return;
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'batch-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;animation:fadeIn 0.15s ease;';
+
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border-default);border-radius:18px;
+      width:680px;max-width:95vw;box-shadow:0 32px 80px rgba(0,0,0,0.5);">
+      <div style="padding:24px 24px 0;display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:var(--text-primary)">📧 Nurture Batch — ${leads.length} leads</div>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px">
+            Review each re-engagement draft. Click <strong style="color:var(--blue)">Mark Sent</strong> after you send it — this logs the outreach and moves the lead to Contacted.
+          </div>
+        </div>
+        <button onclick="document.getElementById('batch-modal').remove()"
+          style="background:none;border:none;font-size:20px;color:var(--text-muted);cursor:pointer;padding:4px 8px;margin-left:16px;flex-shrink:0">✕</button>
+      </div>
+
+      <div style="padding:16px 24px;display:flex;flex-direction:column;gap:14px">
+        ${leads.map(p => {
+          const preview = (p.emailDraft || 'No draft available — open in Outreach Studio.')
+            .split('\n').slice(0, 5).join('\n').substring(0, 280);
+          const daysSince = p.lastActivity || 'Unknown';
+          return `
+          <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:12px;padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--text-primary)">${p.firstName} ${p.lastName}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${p.niche} · ${p.city || ''} ${p.state || ''} · Last: ${daysSince}</div>
+              </div>
+              <span style="font-size:12px;font-weight:800;color:var(--amber);background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);padding:3px 9px;border-radius:20px;white-space:nowrap">🌱 Nurture · ${p.priorityScore}</span>
+            </div>
+            <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:8px;
+              padding:12px;font-size:11.5px;line-height:1.65;color:var(--text-secondary);
+              white-space:pre-line;max-height:120px;overflow-y:auto;margin-bottom:12px;font-family:'JetBrains Mono',monospace">${preview}…</div>
+            <div style="display:flex;gap:8px">
+              <button onclick="
+                setProspectStatus('${p.id}','Contacted');
+                const card = this.closest('[data-lead-id=\\'${p.id}\\']') || this.closest('div[style]');
+                this.closest('div[style*=border-radius]').style.opacity='0.4';
+                this.disabled=true;this.textContent='✓ Sent';
+                if(typeof FunnelTracker!=='undefined') FunnelTracker.outreachSent('${p.id}','${p.nicheId}','email');"
+                style="flex:1;padding:8px;border-radius:8px;background:var(--blue);color:white;
+                border:none;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit">
+                ✉️ Mark Sent → Move to Contacted
+              </button>
+              <button onclick="setOutreachProspect('${p.id}');navigate('outreach-studio');document.getElementById('batch-modal').remove();"
+                style="padding:8px 14px;border-radius:8px;background:var(--bg-card);border:1px solid var(--border-default);
+                color:var(--text-secondary);font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                Edit in Studio
+              </button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div style="padding:16px 24px 24px;border-top:1px solid var(--border-subtle);display:flex;justify-content:flex-end;gap:8px">
+        <button onclick="document.getElementById('batch-modal').remove()"
+          style="padding:9px 20px;border-radius:9px;background:var(--bg-elevated);border:1px solid var(--border-default);
+          color:var(--text-secondary);font-weight:600;font-size:12.5px;cursor:pointer;font-family:inherit">Done</button>
+      </div>
+    </div>`;
+
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+// Send Booking Links — shows all Meeting Requested leads with booking-link email drafts
+// Advisor reviews, clicks "Mark Sent" to log + advance to Booked
+function openBookingLinksBatch() {
+  const leads = PROSPECTS.filter(p => p.status === 'Meeting Requested');
+  document.getElementById('batch-modal')?.remove();
+
+  if (!leads.length) {
+    showToast('No Meeting Requested leads right now', '📭');
+    return;
+  }
+
+  // Pull Calendly / booking link from ICP config or use placeholder
+  const calLink = ICP_CONFIG?.bookingLink || '[YOUR_CALENDLY_LINK]';
+
+  const modal = document.createElement('div');
+  modal.id = 'batch-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;animation:fadeIn 0.15s ease;';
+
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border-default);border-radius:18px;
+      width:680px;max-width:95vw;box-shadow:0 32px 80px rgba(0,0,0,0.5);">
+      <div style="padding:24px 24px 0;display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:var(--text-primary)">📅 Booking Links — ${leads.length} leads</div>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px">
+            Send each prospect your booking link to confirm the meeting. Click <strong style="color:var(--emerald)">Mark Sent</strong> to move them to <strong style="color:var(--emerald)">Booked</strong>.
+          </div>
+        </div>
+        <button onclick="document.getElementById('batch-modal').remove()"
+          style="background:none;border:none;font-size:20px;color:var(--text-muted);cursor:pointer;padding:4px 8px;margin-left:16px;flex-shrink:0">✕</button>
+      </div>
+
+      <div style="padding:16px 24px;display:flex;flex-direction:column;gap:14px">
+        ${leads.map(p => {
+          const bookingDraft = `Hi ${p.firstName},\n\nExcited to connect. Here's a link to grab a time that works for you:\n${calLink}\n\nThe call is 20–30 minutes. Feel free to pick whatever slot works best — I'll come prepared with a few thoughts relevant to your situation.\n\nLooking forward to it,\n[Your Name]`;
+          return `
+          <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:12px;padding:16px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+              <div>
+                <div style="font-size:13px;font-weight:700;color:var(--text-primary)">${p.firstName} ${p.lastName}</div>
+                <div style="font-size:11px;color:var(--text-muted)">${p.niche} · ${p.city || ''} ${p.state || ''} · Score ${p.priorityScore}</div>
+              </div>
+              <span style="font-size:12px;font-weight:800;color:var(--blue);background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2);padding:3px 9px;border-radius:20px;white-space:nowrap">📅 Meeting Requested</span>
+            </div>
+            <div style="background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:8px;
+              padding:12px;font-size:11.5px;line-height:1.65;color:var(--text-secondary);
+              white-space:pre-line;max-height:120px;overflow-y:auto;margin-bottom:12px;font-family:'JetBrains Mono',monospace">${bookingDraft}</div>
+            <div style="display:flex;gap:8px">
+              <button onclick="
+                setProspectStatus('${p.id}','Booked');
+                this.closest('div[style*=border-radius]').style.opacity='0.4';
+                this.disabled=true;this.textContent='✓ Sent → Booked';
+                if(typeof FunnelTracker!=='undefined') FunnelTracker.meetingBooked('${p.id}','${p.nicheId}');"
+                style="flex:1;padding:8px;border-radius:8px;background:var(--emerald);color:white;
+                border:none;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit">
+                📅 Mark Sent → Move to Booked
+              </button>
+              <button onclick="navigator.clipboard?.writeText('${calLink}').then(()=>showToast('Link copied','📋')).catch(()=>showToast('Copy manually: ${calLink}','📋'))"
+                style="padding:8px 14px;border-radius:8px;background:var(--bg-card);border:1px solid var(--border-default);
+                color:var(--text-secondary);font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit">
+                Copy Link
+              </button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+
+      <div style="padding:16px 24px 24px;border-top:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div style="font-size:11px;color:var(--text-muted)">
+          Booking link: <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px;font-size:10.5px">${calLink}</code>
+          <button onclick="const l=prompt('Update your booking link:',ICP_CONFIG?.bookingLink||'');if(l){ICP_CONFIG.bookingLink=l;showToast('Booking link updated','🔗');document.getElementById('batch-modal').remove();openBookingLinksBatch();}"
+            style="background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;margin-left:6px">Edit</button>
+        </div>
+        <button onclick="document.getElementById('batch-modal').remove()"
+          style="padding:9px 20px;border-radius:9px;background:var(--bg-elevated);border:1px solid var(--border-default);
+          color:var(--text-secondary);font-weight:600;font-size:12.5px;cursor:pointer;font-family:inherit">Done</button>
+      </div>
+    </div>`;
+
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
 function setOutreachProspect(id) {
   activeOutreachProspectId = id;
 }

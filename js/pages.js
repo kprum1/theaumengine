@@ -559,8 +559,8 @@ function pageNurtureBooking() {
     <div class="page-header-left"><div class="page-title">Nurture & Booking</div>
       <div class="page-subtitle">Pipeline board — move prospects from contact to booked meeting</div></div>
     <div class="page-actions">
-      <button class="btn btn-secondary" onclick="showToast('Nurture sequence triggered for ${PROSPECTS.filter(p=>p.status==='Nurture').length} prospects','📧')">Run Nurture Batch</button>
-      <button class="btn btn-primary" onclick="showToast('Booking links sent','📅')">Send Booking Links</button>
+      <button class="btn btn-secondary" onclick="openNurtureBatch()">Run Nurture Batch</button>
+      <button class="btn btn-primary" onclick="openBookingLinksBatch()">Send Booking Links</button>
     </div>
   </div>
   <div class="section">
