@@ -121,6 +121,8 @@ function initWithUserData(data) {
       console.info(`[AUM] Loaded ${assigns.length} Al assignment(s).`);
     }).catch(e => console.warn('[AUM] Al assignments load failed:', e));
   }
+  // Restore any in-session status overrides from localStorage
+  _restoreStatusCache();
 }
 
 // ===== ROUTER =====
@@ -529,7 +531,138 @@ function filterProspects(q) {
   rows.forEach(row=>{ row.style.display = row.textContent.toLowerCase().includes(lq)?'':'none'; });
 }
 
-// ===== OUTREACH STUDIO =====
+// ===== PROSPECT STATUS UPDATE =====
+// The canonical way to move a lead through the pipeline.
+// Updates: in-memory PROSPECTS[], localStorage, Firestore (al_assignments or lead_assignments),
+//          fires a funnel_event, then re-renders the current page.
+function setProspectStatus(id, newStatus) {
+  const p = PROSPECTS.find(x => x.id === id);
+  if (!p) return;
+
+  const prevStatus = p.status;
+  if (prevStatus === newStatus) return; // no-op
+
+  // 1 — Mutate in-memory
+  p.status       = newStatus;
+  p.lastActivity = 'Just now';
+
+  // 2 — Persist to localStorage (demo prospects)
+  try {
+    const cache = JSON.parse(localStorage.getItem('aum_prospect_statuses') || '{}');
+    cache[id] = { status: newStatus, updatedAt: new Date().toISOString() };
+    localStorage.setItem('aum_prospect_statuses', JSON.stringify(cache));
+  } catch(e) {}
+
+  // 3 — Firestore write-back (non-blocking)
+  if (p._fromFirestore && p.assignmentId) {
+    // Routing engine leads live in al_assignments
+    if (typeof updateAlAssignmentStatus === 'function') {
+      updateAlAssignmentStatus(p.assignmentId, newStatus).catch(() => {});
+    }
+    // Legacy Layer 1 leads also update lead_assignments advisorStatus
+    if (typeof updateLeadStatusInFirestore === 'function') {
+      updateLeadStatusInFirestore(p.assignmentId, newStatus).catch(() => {});
+    }
+  }
+
+  // 4 — Funnel event (fire-and-forget)
+  if (typeof FunnelTracker !== 'undefined') {
+    FunnelTracker.leadStatusChanged(id, prevStatus, newStatus);
+    // If moving to "Booked" → also fire meeting_booked
+    if (newStatus === 'Booked') FunnelTracker.meetingBooked(id, p.nicheId);
+  }
+
+  // 5 — Re-render and toast
+  closeDrawer();
+  navigate(currentPage);
+  const icons = {
+    Contacted: '📞', Engaged: '💬', Nurture: '🌱',
+    'Meeting Requested': '📅', Booked: '🎉', Dead: '❌', New: '🔄'
+  };
+  showToast(`${icons[newStatus] || '↗'} ${p.firstName} moved to ${newStatus}`, '✅');
+}
+
+// Restores status overrides from localStorage on app boot (called from initWithUserData)
+function _restoreStatusCache() {
+  try {
+    const cache = JSON.parse(localStorage.getItem('aum_prospect_statuses') || '{}');
+    Object.entries(cache).forEach(([id, data]) => {
+      const p = PROSPECTS.find(x => x.id === id);
+      if (p && data.status) { p.status = data.status; }
+    });
+  } catch(e) {}
+}
+
+// Status picker modal — displayed when advisor clicks "Update Status" in drawer
+function showStatusModal(prospectId) {
+  const p = PROSPECTS.find(x => x.id === prospectId);
+  if (!p) return;
+
+  // Remove any existing modal
+  document.getElementById('status-modal')?.remove();
+
+  const statuses = ['New','Contacted','Engaged','Nurture','Meeting Requested','Booked','Dead'];
+  const colors   = {
+    New:'var(--text-muted)', Contacted:'var(--blue)', Engaged:'var(--violet)',
+    Nurture:'var(--amber)', 'Meeting Requested':'var(--blue)', Booked:'var(--emerald)', Dead:'var(--rose)'
+  };
+  const icons = {
+    New:'🔵', Contacted:'📞', Engaged:'💬',
+    Nurture:'🌱', 'Meeting Requested':'📅', Booked:'🎉', Dead:'❌'
+  };
+  const descriptions = {
+    New: 'Lead not yet contacted',
+    Contacted: 'First outreach sent',
+    Engaged: 'Prospect replied or showing interest',
+    Nurture: 'Long-term — not ready yet',
+    'Meeting Requested': 'Meeting ask made',
+    Booked: 'Meeting confirmed on calendar',
+    Dead: 'Not a fit — mark as inactive',
+  };
+
+  const modal = document.createElement('div');
+  modal.id = 'status-modal';
+  modal.style.cssText = `
+    position:fixed;inset:0;z-index:9999;
+    background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);
+    display:flex;align-items:center;justify-content:center;
+    animation:fadeIn 0.15s ease;
+  `;
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border-default);border-radius:16px;
+      padding:24px;width:340px;max-width:90vw;box-shadow:0 24px 64px rgba(0,0,0,0.4);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div>
+          <div style="font-size:14px;font-weight:800;color:var(--text-primary)">Move ${p.firstName} ${p.lastName}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Current: <span style="color:var(--blue);font-weight:600">${p.status}</span></div>
+        </div>
+        <button onclick="document.getElementById('status-modal').remove()"
+          style="background:none;border:none;font-size:18px;color:var(--text-muted);cursor:pointer;padding:4px 8px;border-radius:6px">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${statuses.map(s => `
+          <button onclick="setProspectStatus('${prospectId}','${s}');document.getElementById('status-modal')?.remove()"
+            style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;
+            border:1px solid ${s === p.status ? 'var(--blue)' : 'var(--border-subtle)'};
+            background:${s === p.status ? 'rgba(96,165,250,0.08)' : 'transparent'};
+            cursor:${s === p.status ? 'default' : 'pointer'};text-align:left;width:100%;
+            transition:all 0.15s ease" ${s === p.status ? 'disabled' : ''}>
+            <span style="font-size:16px">${icons[s]}</span>
+            <div style="flex:1">
+              <div style="font-size:12px;font-weight:700;color:${colors[s]}">${s}</div>
+              <div style="font-size:10px;color:var(--text-muted)">${descriptions[s]}</div>
+            </div>
+            ${s === p.status ? '<span style="font-size:10px;color:var(--blue);font-weight:700">CURRENT</span>' : ''}
+          </button>`).join('')}
+      </div>
+    </div>`;
+
+  // Click outside to close
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+
 function setOutreachProspect(id) {
   activeOutreachProspectId = id;
 }
@@ -784,7 +917,7 @@ function openDrawer(id) {
   <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
     <button class="btn btn-primary" style="width:100%" onclick="setOutreachProspect('${p.id}');navigate('outreach-studio');closeDrawer()">Draft Outreach</button>
     <div style="display:flex;gap:8px">
-      <button class="btn btn-secondary" style="flex:1" onclick="showToast('Status update coming in Phase 2','💎')">Update Status</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="showStatusModal('${p.id}')">Update Status</button>
       <button class="btn btn-ghost" style="flex:1" onclick="setActiveMeeting('${p.id}');closeDrawer()">Meeting Prep</button>
     </div>
   </div>`;

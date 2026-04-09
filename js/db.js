@@ -205,7 +205,7 @@ async function loadAssignedLeadsFromFirestore(uid) {
   }
 }
 
-// Write lead status change back to Firestore assignment doc
+// Write lead status change back to Firestore — lead_assignments (Layer 1 / legacy)
 async function updateLeadStatusInFirestore(assignmentId, newStatus) {
   if (!assignmentId) return;
   try {
@@ -214,6 +214,21 @@ async function updateLeadStatusInFirestore(assignmentId, newStatus) {
       updatedAt:     new Date().toISOString(),
     });
   } catch(e) { console.warn('[db.js] updateLeadStatus failed:', e); }
+}
+
+// Write lead status change back to Firestore — al_assignments (routing engine)
+// Used for leads assigned by routing_engine.js (pilot advisors)
+async function updateAlAssignmentStatus(assignmentId, newStatus) {
+  if (!assignmentId) return;
+  try {
+    await _getDB().collection('al_assignments').doc(assignmentId).update({
+      status:    newStatus,
+      outcome:   newStatus,
+      outcomeAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+    console.info('[db.js] al_assignment status updated:', assignmentId, '→', newStatus);
+  } catch(e) { console.warn('[db.js] updateAlAssignmentStatus failed:', e); }
 }
 
 // Write advisor thumbs up/down feedback back to Firestore

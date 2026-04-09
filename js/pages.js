@@ -570,7 +570,17 @@ function pageNurtureBooking() {
         <div class="pipeline-col">
           <div class="pipeline-col-header">${col}<span class="pipeline-col-count">${colMap[col].length}</span></div>
           ${colMap[col].length===0?`<div style="padding:12px;text-align:center;font-size:10px;color:var(--text-muted)">No prospects</div>`:''}
-          ${colMap[col].map(p=>`
+          ${colMap[col].map(p=>{
+            const NEXT = {
+              New:'Contacted', Contacted:'Engaged', Engaged:'Nurture',
+              Nurture:'Meeting Requested', 'Meeting Requested':'Booked'
+            };
+            const nextStatus = NEXT[p.status];
+            const nextIcons = {
+              Contacted:'📞', Engaged:'💬', Nurture:'🌱',
+              'Meeting Requested':'📅', Booked:'🎉'
+            };
+            return `
           <div class="pipeline-item" onclick="openDrawer('${p.id}')">
             <div class="pipeline-item-name">${p.firstName} ${p.lastName}</div>
             <div class="pipeline-item-meta">${p.niche}</div>
@@ -578,7 +588,24 @@ function pageNurtureBooking() {
               <span style="font-size:10px;color:var(--text-muted)">${p.lastActivity}</span>
               <span style="font-size:11px;font-weight:700;color:var(--blue)">${p.priorityScore}</span>
             </div>
-          </div>`).join('')}
+            <div style="margin-top:8px;display:flex;gap:5px" onclick="event.stopPropagation()">
+              ${nextStatus ? `
+              <button onclick="setProspectStatus('${p.id}','${nextStatus}')"
+                style="flex:1;font-size:10px;font-weight:700;padding:5px 6px;border-radius:7px;
+                background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.25);
+                color:var(--blue);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                ${nextIcons[nextStatus]} ${nextStatus}
+              </button>` : `
+              <span style="flex:1;font-size:10px;color:var(--text-muted);padding:5px 0">
+                ${p.status === 'Booked' ? '🎉 Booked!' : p.status === 'Dead' ? '❌ Closed' : ''}
+              </span>`}
+              <button onclick="showStatusModal('${p.id}')"
+                style="font-size:11px;padding:5px 8px;border-radius:7px;
+                background:var(--bg-elevated);border:1px solid var(--border-subtle);
+                color:var(--text-muted);cursor:pointer" title="Change status">⋯</button>
+            </div>
+          </div>`;
+          }).join('')}
         </div>`).join('')}
       </div>
     </div>
