@@ -26,3 +26,5 @@ npm-debug.log*
 # Build outputs
 dist/
 build/
+staging/
+scripts/incoming/processed/

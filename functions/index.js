@@ -1,6 +1,6 @@
 // ============================================================
 // AUM ENGINE — Cloud Functions Routing Orchestrator
-// functions/index.js — Phase B2
+// functions/index.js — Phase C5 (Node.js 22)
 // ============================================================
 // AGENTS (in pipeline order):
 //   1. onLeadIngested    — HTTP endpoint (Alfred / CSV / manual)
@@ -561,4 +561,245 @@ exports.alfredIngest = onRequest({ cors: false }, async (req, res) => {
   };
 
   return res.status(207).json(summary);
+});
+
+// ============================================================
+// AGENT 5: sendDailyDigest — 7:00 AM CT daily advisor email
+// Schedule: '0 12 * * *' = noon UTC = 7:00 AM Central Time
+//
+// Reads funnel_events from last 24h, groups by advisorUid,
+// fetches advisor email from Firebase Auth, sends HTML digest
+// via Nodemailer + Gmail SMTP (env: GMAIL_USER / GMAIL_APP_PASSWORD).
+//
+// Logs outcome to routing_logs collection.
+// ============================================================
+const nodemailer = require('nodemailer');
+
+function buildDigestHTML(name, dateStr, stats) {
+  const { outreachSent, repliesLogged, meetingsBooked, statusChanges } = stats;
+
+  const statusRows = statusChanges.slice(0, 10).map(e => `
+    <tr>
+      <td style="padding:6px 12px;border-bottom:1px solid #1e293b;color:#cbd5e1;font-size:13px;">
+        Lead ${e.leadId ? e.leadId.slice(0, 8) + '…' : '—'}
+      </td>
+      <td style="padding:6px 12px;border-bottom:1px solid #1e293b;color:#64748b;font-size:13px;">
+        ${e.fromStatus || '—'}
+      </td>
+      <td style="padding:6px 12px;border-bottom:1px solid #1e293b;color:#475569;font-size:13px;">→</td>
+      <td style="padding:6px 12px;border-bottom:1px solid #1e293b;color:#4ade80;font-weight:600;font-size:13px;">
+        ${e.toStatus || '—'}
+      </td>
+    </tr>`).join('');
+
+  const pipelineSection = statusChanges.length > 0 ? `
+    <div style="background:#1e293b;border-radius:12px;padding:20px;margin-bottom:24px;border:1px solid #334155;">
+      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#6366f1;margin-bottom:12px;font-weight:600;">
+        ── Pipeline Moves
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        ${statusRows}
+      </table>
+    </div>` : `
+    <div style="background:#1e293b;border-radius:12px;padding:16px 20px;margin-bottom:24px;border:1px solid #334155;color:#475569;font-size:13px;text-align:center;">
+      No pipeline moves in the last 24 hours.
+    </div>`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>AUM Engine Daily Report</title>
+</head>
+<body style="margin:0;padding:0;background:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#e2e8f0;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:36px;">
+      <div style="display:inline-block;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:8px;padding:6px 16px;font-size:11px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:#fff;margin-bottom:16px;">
+        THE AUM ENGINE
+      </div>
+      <h1 style="margin:0;font-size:26px;font-weight:700;color:#f1f5f9;letter-spacing:-0.5px;">
+        Daily Report
+      </h1>
+      <p style="margin:8px 0 0;color:#64748b;font-size:14px;">${dateStr}</p>
+    </div>
+
+    <!-- Greeting -->
+    <p style="color:#94a3b8;margin:0 0 28px;font-size:15px;line-height:1.6;">
+      Hi <strong style="color:#e2e8f0;">${name}</strong>, here's your activity summary for the past 24 hours.
+    </p>
+
+    <!-- Stats Grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px;">
+      <div style="background:#1e293b;border-radius:12px;padding:24px 20px;text-align:center;border:1px solid #334155;">
+        <div style="font-size:36px;font-weight:800;color:#6366f1;line-height:1;">${outreachSent}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:8px;text-transform:uppercase;letter-spacing:1.5px;">📤 Outreach Sent</div>
+      </div>
+      <div style="background:#1e293b;border-radius:12px;padding:24px 20px;text-align:center;border:1px solid #334155;">
+        <div style="font-size:36px;font-weight:800;color:#06b6d4;line-height:1;">${repliesLogged}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:8px;text-transform:uppercase;letter-spacing:1.5px;">💬 Replies Logged</div>
+      </div>
+      <div style="background:#1e293b;border-radius:12px;padding:24px 20px;text-align:center;border:1px solid #334155;">
+        <div style="font-size:36px;font-weight:800;color:#4ade80;line-height:1;">${meetingsBooked}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:8px;text-transform:uppercase;letter-spacing:1.5px;">📅 Meetings Booked</div>
+      </div>
+      <div style="background:#1e293b;border-radius:12px;padding:24px 20px;text-align:center;border:1px solid #334155;">
+        <div style="font-size:36px;font-weight:800;color:#f59e0b;line-height:1;">${statusChanges.length}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:8px;text-transform:uppercase;letter-spacing:1.5px;">🔄 Status Updates</div>
+      </div>
+    </div>
+
+    <!-- Pipeline Moves -->
+    ${pipelineSection}
+
+    <!-- CTA Button -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <a href="https://theaumengine.web.app"
+         style="display:inline-block;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;text-decoration:none;padding:14px 40px;border-radius:8px;font-weight:600;font-size:15px;letter-spacing:0.3px;">
+        View Full Pipeline →
+      </a>
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align:center;color:#475569;font-size:12px;border-top:1px solid #1e293b;padding-top:24px;line-height:1.8;">
+      <p style="margin:0;">
+        Sent by <a href="https://theaumengine.web.app" style="color:#6366f1;text-decoration:none;font-weight:600;">The AUM Engine</a>
+      </p>
+      <p style="margin:4px 0 0;">kosal@fin-tegration.com</p>
+      <p style="margin:8px 0 0;color:#334155;">You're receiving this because you're an active AUM Engine pilot advisor.</p>
+    </div>
+
+  </div>
+</body>
+</html>`;
+}
+
+exports.sendDailyDigest = onSchedule('0 12 * * *', async (event) => {
+  console.info('[DigestCron] ⏰ Daily digest starting…');
+
+  // Email transport (Gmail SMTP via app password)
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_APP_PASSWORD,
+    },
+  });
+
+  // Verify SMTP config before doing Firestore work
+  try {
+    await transporter.verify();
+    console.info('[DigestCron] ✅ SMTP connection verified');
+  } catch (e) {
+    console.error('[DigestCron] ❌ SMTP verify failed:', e.message);
+    return;
+  }
+
+  // Pull all funnel events from the last 24 hours
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const eventsSnap = await db.collection('funnel_events')
+    .where('ts', '>=', since)
+    .get();
+
+  if (eventsSnap.empty) {
+    console.info('[DigestCron] No events in last 24h — skipping send.');
+    return;
+  }
+
+  // Group events by advisorUid
+  const byAdvisor = {};
+  eventsSnap.docs.forEach(doc => {
+    const e = doc.data();
+    const uid = e.advisorUid;
+    if (!uid || uid === 'anonymous') return;
+    if (!byAdvisor[uid]) byAdvisor[uid] = [];
+    byAdvisor[uid].push(e);
+  });
+
+  const uids = Object.keys(byAdvisor);
+  console.info(`[DigestCron] Found activity for ${uids.length} advisor(s)`);
+
+  const now     = new Date();
+  const dateStr = now.toLocaleDateString('en-US', {
+    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+  });
+
+  let sent = 0, failed = 0;
+
+  for (const uid of uids) {
+    const events = byAdvisor[uid];
+    try {
+      // Resolve advisor email + name from Firebase Auth
+      const userRecord = await admin.auth().getUser(uid);
+      const email = userRecord.email;
+      if (!email) { console.warn(`[DigestCron] No email for uid ${uid} — skip`); continue; }
+      const name = userRecord.displayName || email.split('@')[0];
+
+      // Tally event types
+      const outreachSent    = events.filter(e => e.event === 'outreach_sent').length;
+      const repliesLogged   = events.filter(e => e.event === 'reply_logged').length;
+      const meetingsBooked  = events.filter(e => e.event === 'meeting_booked').length;
+      const statusChanges   = events.filter(e => e.event === 'lead_status_changed');
+
+      // Plain-text fallback
+      const statusLines = statusChanges.slice(0, 10)
+        .map(e => `  • Lead ${e.leadId || '?'} → ${e.toStatus || 'updated'}`)
+        .join('\n') || '  (none)';
+
+      const text = [
+        `AUM Engine Daily Report — ${dateStr}`,
+        '',
+        `Hi ${name},`,
+        '',
+        `Here's your activity summary for the past 24 hours:`,
+        '',
+        `📤 Outreach Sent:    ${outreachSent}`,
+        `💬 Replies Logged:   ${repliesLogged}`,
+        `📅 Meetings Booked:  ${meetingsBooked}`,
+        `🔄 Status Updates:   ${statusChanges.length}`,
+        '',
+        '── Pipeline Moves ──────────────────────',
+        statusLines,
+        '',
+        'View your full pipeline:',
+        'https://theaumengine.web.app',
+        '',
+        '— The AUM Engine',
+      ].join('\n');
+
+      const html = buildDigestHTML(name, dateStr, {
+        outreachSent, repliesLogged, meetingsBooked, statusChanges,
+      });
+
+      await transporter.sendMail({
+        from:    `"${process.env.DIGEST_FROM_NAME || 'The AUM Engine'}" <${process.env.GMAIL_USER}>`,
+        to:      email,
+        subject: `📊 Your AUM Engine Daily Report — ${dateStr}`,
+        text,
+        html,
+      });
+
+      sent++;
+      console.info(`[DigestCron] ✅ Sent to ${email} (${outreachSent} sent, ${meetingsBooked} booked)`);
+
+    } catch (e) {
+      failed++;
+      console.error(`[DigestCron] ❌ Failed for uid ${uid}:`, e.message);
+    }
+  }
+
+  // Audit log
+  await db.collection('routing_logs').add({
+    event:         'daily_digest_sent',
+    agentId:       'sendDailyDigest_v1',
+    advisorCount:  uids.length,
+    sent,
+    failed,
+    since,
+    timestamp:     now.toISOString(),
+  });
+
+  console.info(`[DigestCron] 🏁 Done — Sent: ${sent} | Failed: ${failed}`);
 });
