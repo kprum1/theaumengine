@@ -123,6 +123,60 @@ const FunnelTracker = (() => {
     return log('page_viewed', { pageName });
   }
 
+  // ── Load advisor's own stats into Command Center widget ──────
+  // Called automatically when Command Center renders.
+  // Reads funnel_events scoped to current advisor UID.
+  async function loadMyActivity() {
+    const sentEl     = document.getElementById('my-stat-sent');
+    const repliedEl  = document.getElementById('my-stat-replied');
+    const meetingsEl = document.getElementById('my-stat-meetings');
+    const rateEl     = document.getElementById('my-stat-rate');
+    if (!sentEl) return;  // not on Command Center page
+
+    try {
+      const uid = firebase.auth().currentUser?.uid;
+      if (!uid) return;
+
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const snap  = await db.collection('funnel_events')
+        .where('advisorUid', '==', uid)
+        .where('ts', '>=', since)
+        .limit(1000)
+        .get();
+
+      let sent = 0, replied = 0, meetings = 0;
+      snap.docs.forEach(d => {
+        const e = d.data();
+        if (e.event === 'outreach_sent')  sent++;
+        if (e.event === 'reply_logged')   replied++;
+        if (e.event === 'meeting_booked') meetings++;
+      });
+
+      const rate = sent > 0 ? Math.round(replied / sent * 100) + '%' : '—';
+
+      // Animate in the numbers
+      const set = (el, val) => {
+        if (!el) return;
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(4px)';
+        el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        setTimeout(() => {
+          el.textContent = val;
+          el.style.opacity = '1';
+          el.style.transform = 'translateY(0)';
+        }, 80);
+      };
+
+      set(sentEl,     sent);
+      set(repliedEl,  replied);
+      set(meetingsEl, meetings);
+      set(rateEl,     rate);
+
+    } catch(e) {
+      // Non-blocking — stats are nice-to-have
+    }
+  }
+
   // ── Auto-init ────────────────────────────────────────────────
   initSession();
 
@@ -138,6 +192,7 @@ const FunnelTracker = (() => {
     ctaClicked,
     nicheFormSubmitted,
     pageViewed,
+    loadMyActivity,
   };
 
 })();

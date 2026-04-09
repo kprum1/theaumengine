@@ -187,6 +187,10 @@ function renderPage() {
   if (currentPage === 'admin-dashboard' && typeof renderAdminDashboard === 'function') {
     renderAdminDashboard();
   }
+  // Load advisor's own activity stats on Command Center
+  if (currentPage === 'command-center' && typeof FunnelTracker !== 'undefined') {
+    setTimeout(() => FunnelTracker.loadMyActivity(), 300);
+  }
 }
 
 // ===== PROSPECT MINE =====

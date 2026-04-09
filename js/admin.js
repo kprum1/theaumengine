@@ -159,14 +159,25 @@ function pageAdminDashboard() {
     </div>
   </div>
 
-  <!-- Phase C2 — Outreach KPIs -->
+  <!-- Phase C2 — Pilot Funnel Dashboard -->
   <div class="card" style="margin-bottom:20px">
     <div class="card-header">
-      <div class="card-title">📊 Outreach Analytics</div>
-      <div style="font-size:10px;color:var(--text-muted)">All advisors · Last 200 sends</div>
+      <div class="card-title">📊 Pilot Funnel</div>
+      <div style="font-size:10px;color:var(--text-muted)" id="admin-kpi-updated">Loading…</div>
     </div>
     <div id="admin-kpi-section">
-      <div class="agent-thinking"><div class="agent-dots"><span>●</span><span>●</span><span>●</span></div>Loading analytics…</div>
+      <div class="agent-thinking"><div class="agent-dots"><span>●</span><span>●</span><span>●</span></div>Loading funnel data…</div>
+    </div>
+  </div>
+
+  <!-- Outreach Send Analytics (legacy) -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">✉️ Outreach Outcomes</div>
+      <div style="font-size:10px;color:var(--text-muted)">All advisors · Last 200 sends</div>
+    </div>
+    <div id="admin-outcomes-section">
+      <div class="agent-thinking"><div class="agent-dots"><span>●</span><span>●</span><span>●</span></div>Loading outcomes…</div>
     </div>
   </div>`;
 }
@@ -250,133 +261,215 @@ async function renderAdminDashboard() {
     }
   }, 30_000);
 
-  // Load KPI section in parallel
+  // Load funnel + outcomes in parallel
   renderAdminKPIs();
+  renderAdminOutcomes();
 }
 
-// ── Phase C2: Outreach Analytics ─────────────────────────────────────────
+// ── Phase C2: Pilot Funnel Dashboard ───────────────────────────────────────
 async function renderAdminKPIs() {
-  const el = document.getElementById('admin-kpi-section');
+  const el        = document.getElementById('admin-kpi-section');
+  const updatedEl = document.getElementById('admin-kpi-updated');
+  if (!el) return;
+
+  try {
+    const fdb  = firebase.firestore();
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Pull funnel_events (last 30 days)
+    const evSnap = await fdb.collection('funnel_events')
+      .where('ts', '>=', since)
+      .limit(3000).get();
+    const events = evSnap.docs.map(d => d.data());
+
+    // Pull al_assignments (last 30 days)
+    let assigns = [];
+    try {
+      const aSnap = await fdb.collection('al_assignments')
+        .where('assignedAt', '>=', since)
+        .limit(2000).get();
+      assigns = aSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) {}
+
+    // Pull presence for advisor names
+    const presSnap = await fdb.collection('operator_presence').get();
+    const nameMap  = {};
+    presSnap.docs.forEach(d => {
+      const p = d.data();
+      nameMap[d.id] = p.displayName || p.email || d.id.slice(0,8);
+    });
+
+    // ── Aggregate per advisor ─────────────────────────────────
+    const adv = {};
+    const ensure = uid => {
+      if (!adv[uid]) adv[uid] = {
+        uid, name: nameMap[uid] || uid.slice(0,10),
+        assigned:0, viewed:0, drafted:0, sent:0, replied:0, meetings:0, sla:0,
+      };
+    };
+
+    assigns.forEach(a => {
+      const uid = a.advisorUid || a.ownerUid;
+      if (!uid) return;
+      ensure(uid);
+      adv[uid].assigned++;
+      const age = (Date.now() - new Date(a.assignedAt || a.createdAt || Date.now()).getTime()) / 86400000;
+      if ((a.status === 'New' || a.status === 'new') && age > 7) adv[uid].sla++;
+    });
+
+    events.forEach(e => {
+      const uid = e.advisorUid;
+      if (!uid) return;
+      ensure(uid);
+      if (e.event === 'lead_viewed')      adv[uid].viewed++;
+      if (e.event === 'outreach_drafted') adv[uid].drafted++;
+      if (e.event === 'outreach_sent')    adv[uid].sent++;
+      if (e.event === 'reply_logged')     adv[uid].replied++;
+      if (e.event === 'meeting_booked')   adv[uid].meetings++;
+    });
+
+    const rows   = Object.values(adv).sort((a,b) => b.meetings - a.meetings || b.sent - a.sent);
+    const totals = rows.reduce((t,a) => {
+      t.assigned += a.assigned; t.viewed  += a.viewed;  t.drafted  += a.drafted;
+      t.sent += a.sent; t.replied += a.replied; t.meetings += a.meetings; t.sla += a.sla;
+      return t;
+    }, {assigned:0,viewed:0,drafted:0,sent:0,replied:0,meetings:0,sla:0});
+
+    if (updatedEl) updatedEl.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+
+    // ── Funnel bar helper ─────────────────────────────────────
+    const pct  = (n, d) => d ? Math.round(n/d*100) : 0;
+    const fBar = (label, n, denom, color, icon) => {
+      const p = pct(n, denom);
+      return `
+      <div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <span style="font-size:11px;color:var(--text-secondary);font-weight:600">${icon} ${label}</span>
+          <span style="font-size:11px;font-weight:800;color:${color}">${n.toLocaleString()} <span style="font-size:9px;color:var(--text-muted);font-weight:400">${denom !== n ? `(${p}%)` : ''}</span></span>
+        </div>
+        <div style="height:5px;border-radius:3px;background:var(--border-subtle)">
+          <div style="height:5px;border-radius:3px;background:${color};width:${Math.max(p,denom?0:0)}%;transition:width 0.6s ease"></div>
+        </div>
+      </div>`;
+    };
+
+    // ── Per-advisor rows ──────────────────────────────────────
+    const medal = ['🥇','🥈','🥉'];
+    const advRows = rows.map((a, i) => {
+      const slaFlag = a.sla > 0 ? `<span style="color:var(--amber);font-size:10px;font-weight:700"> ⚠️${a.sla}</span>` : '';
+      return `
+      <tr style="border-bottom:1px solid var(--border-subtle)">
+        <td style="padding:9px 14px;font-size:12px;font-weight:700;color:var(--text-primary)">
+          ${i < 3 ? medal[i] + ' ' : ''}${a.name}${slaFlag}
+        </td>
+        <td style="padding:9px 14px;font-size:12px;color:var(--text-secondary);text-align:center">${a.assigned}</td>
+        <td style="padding:9px 14px;font-size:12px;color:var(--text-secondary);text-align:center">${a.sent}</td>
+        <td style="padding:9px 14px;font-size:12px;color:var(--emerald);text-align:center;font-weight:700">${a.replied}</td>
+        <td style="padding:9px 14px;font-size:13px;color:var(--blue);text-align:center;font-weight:900">${a.meetings}</td>
+        <td style="padding:9px 14px;font-size:11px;color:var(--text-muted);text-align:center">${a.sent ? pct(a.replied,a.sent)+'%' : '—'}</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = !rows.length ? `
+      <div class="empty-state" style="padding:32px 0">
+        <div class="empty-state-icon">📊</div>
+        <div class="empty-state-title">No funnel data yet</div>
+        <div class="empty-state-sub">Advisor activity will appear automatically once they start using the app.</div>
+      </div>` : `
+
+      <!-- Global funnel -->
+      <div style="padding:16px 16px 8px;border-bottom:1px solid var(--border-subtle)">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px">30-Day Pilot Funnel</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 28px">
+          <div>
+            ${fBar('Leads Assigned',  totals.assigned, totals.assigned, '#60a5fa', '📋')}
+            ${fBar('Leads Viewed',    totals.viewed,   totals.assigned, '#818cf8', '👁')}
+            ${fBar('Draft Generated', totals.drafted,  totals.assigned, '#a78bfa', '✍️')}
+          </div>
+          <div>
+            ${fBar('Outreach Sent',   totals.sent,     totals.assigned, '#fb7185', '✉️')}
+            ${fBar('Reply Received',  totals.replied,  totals.sent,     '#34d399', '💬')}
+            ${fBar('Meeting Booked',  totals.meetings, totals.replied,  '#fbbf24', '📅')}
+          </div>
+        </div>
+        ${totals.sla > 0 ? `<div style="margin-top:10px;padding:8px 12px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:8px;font-size:11px;color:var(--amber);font-weight:600">⚠️ ${totals.sla} lead(s) not contacted in 7+ days — follow up needed</div>` : `<div style="margin-top:10px;padding:8px 12px;background:rgba(52,211,153,0.06);border-radius:8px;font-size:11px;color:var(--emerald);font-weight:600">✅ All leads contacted within SLA window</div>`}
+      </div>
+
+      <!-- Per-advisor scorecard -->
+      <div style="padding:14px">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Advisor Scorecard</div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border-subtle)">
+              <th style="padding:4px 14px;text-align:left;font-size:9px;color:var(--text-muted)">Advisor</th>
+              <th style="padding:4px 14px;text-align:center;font-size:9px;color:var(--text-muted)">Assigned</th>
+              <th style="padding:4px 14px;text-align:center;font-size:9px;color:var(--text-muted)">Sent</th>
+              <th style="padding:4px 14px;text-align:center;font-size:9px;color:var(--emerald)">Replies</th>
+              <th style="padding:4px 14px;text-align:center;font-size:9px;color:var(--blue)">Meetings</th>
+              <th style="padding:4px 14px;text-align:center;font-size:9px;color:var(--text-muted)">Rate</th>
+            </tr>
+          </thead>
+          <tbody>${advRows}</tbody>
+        </table>
+      </div>`;
+
+  } catch(e) {
+    const el2 = document.getElementById('admin-kpi-section');
+    if (el2) el2.innerHTML = `<div class="empty-state" style="padding:24px"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Could not load funnel data</div><div class="empty-state-sub">${e.message}</div></div>`;
+  }
+}
+
+// ── Legacy Outreach Outcomes (send analytics) ──────────────────────────────
+async function renderAdminOutcomes() {
+  const el = document.getElementById('admin-outcomes-section');
   if (!el) return;
 
   const outcomes = typeof loadOperatorOutcomes === 'function'
-    ? await loadOperatorOutcomes(200)
-    : [];
+    ? await loadOperatorOutcomes(200) : [];
 
   if (!outcomes.length) {
     el.innerHTML = `
       <div class="empty-state" style="padding:32px 0">
         <div class="empty-state-icon">📬</div>
-        <div class="empty-state-title">No outreach data yet</div>
+        <div class="empty-state-title">No send data yet</div>
         <div class="empty-state-sub">Data appears here as advisors click Send Now in Outreach Studio.</div>
       </div>`;
     return;
   }
 
-  // ── Aggregate ────────────────────────────────────────────────
   const total    = outcomes.length;
   const replied  = outcomes.filter(o => ['reply','positive','meeting'].includes(o.outcome)).length;
   const meetings = outcomes.filter(o => o.outcome === 'meeting').length;
   const replyRate = total ? Math.round(replied / total * 100) : 0;
-
-  // Channel breakdown
   const byCh = {};
   outcomes.forEach(o => { const c = o.channel || 'email'; byCh[c] = (byCh[c]||0)+1; });
-
-  // Variant breakdown
   const byVar = { A:0, B:0, C:0 };
   outcomes.forEach(o => { if (o.variantChosen && byVar[o.variantChosen] !== undefined) byVar[o.variantChosen]++; });
-
-  // Top angle
-  const byAngle = {};
-  outcomes.forEach(o => { if (o.angle) byAngle[o.angle] = (byAngle[o.angle]||0)+1; });
-  const topAngle = Object.entries(byAngle).sort((a,b)=>b[1]-a[1])[0];
-
-  // Per-advisor
-  const byAdvisor = {};
-  outcomes.forEach(o => {
-    if (!byAdvisor[o.advisorUid]) byAdvisor[o.advisorUid] = { uid: o.advisorUid, sends:0, replies:0 };
-    byAdvisor[o.advisorUid].sends++;
-    if (['reply','positive','meeting'].includes(o.outcome)) byAdvisor[o.advisorUid].replies++;
-  });
-  const advisorRows = Object.values(byAdvisor)
-    .sort((a,b) => b.sends - a.sends)
-    .map(a => {
-      const rate = a.sends ? Math.round(a.replies/a.sends*100) : 0;
-      return `<tr style="border-bottom:1px solid var(--border-subtle)">
-        <td style="padding:8px 14px;font-size:11px;color:var(--text-secondary)">${a.uid.slice(0,8)}…</td>
-        <td style="padding:8px 14px;font-size:12px;font-weight:700;color:var(--text-primary)">${a.sends}</td>
-        <td style="padding:8px 14px;font-size:12px;color:var(--emerald)">${a.replies}</td>
-        <td style="padding:8px 14px;font-size:12px;color:var(--blue)">${rate}%</td>
-      </tr>`;
-    }).join('');
-
-  // Channel bars helper
   const chBar = (label, n, color) => {
-    const pct = total ? Math.round(n/total*100) : 0;
-    return `<div style="margin-bottom:6px">
-      <div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px">
-        <span style="color:var(--text-secondary)">${label}</span>
-        <span style="color:var(--text-muted)">${n} (${pct}%)</span>
-      </div>
-      <div style="height:4px;border-radius:2px;background:var(--border-subtle)">
-        <div style="height:4px;border-radius:2px;background:${color};width:${pct}%"></div>
-      </div>
-    </div>`;
+    const p = total ? Math.round(n/total*100) : 0;
+    return `<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:2px"><span style="color:var(--text-secondary)">${label}</span><span style="color:var(--text-muted)">${n} (${p}%)</span></div><div style="height:4px;border-radius:2px;background:var(--border-subtle)"><div style="height:4px;border-radius:2px;background:${color};width:${p}%"></div></div></div>`;
   };
 
   el.innerHTML = `
-    <!-- Top KPI row -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:16px 14px;border-bottom:1px solid var(--border-subtle)">
-      <div style="text-align:center">
-        <div style="font-size:26px;font-weight:900;color:var(--blue)">${total}</div>
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-top:3px">Total Sends</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:26px;font-weight:900;color:var(--emerald)">${replyRate}%</div>
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-top:3px">Reply Rate</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:26px;font-weight:900;color:var(--amber)">${meetings}</div>
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-top:3px">Meetings</div>
-      </div>
-      <div style="text-align:center">
-        <div style="font-size:26px;font-weight:900;color:var(--violet)">${topAngle ? topAngle[0] : '—'}</div>
-        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-top:3px">Top Angle</div>
-      </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:16px 14px;border-bottom:1px solid var(--border-subtle)">
+      <div style="text-align:center"><div style="font-size:26px;font-weight:900;color:var(--blue)">${total}</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-top:3px">Total Sends</div></div>
+      <div style="text-align:center"><div style="font-size:26px;font-weight:900;color:var(--emerald)">${replyRate}%</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-top:3px">Reply Rate</div></div>
+      <div style="text-align:center"><div style="font-size:26px;font-weight:900;color:var(--amber)">${meetings}</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-top:3px">Meetings</div></div>
     </div>
-
-    <!-- Channel + Variant row -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid var(--border-subtle)">
-      <div style="padding:14px;border-right:1px solid var(--border-subtle)">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;padding:14px">
+      <div style="padding-right:14px;border-right:1px solid var(--border-subtle)">
         <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Channel Split</div>
-        ${chBar('📧 Email',     byCh.email     ||0, 'var(--blue)')}
-        ${chBar('📞 Call',      byCh.call      ||0, 'var(--emerald)')}
-        ${chBar('💼 LinkedIn',  byCh.linkedin  ||0, 'var(--violet)')}
-        ${chBar('📣 Voicemail', byCh.voicemail ||0, 'var(--amber)')}
+        ${chBar('✉️ Email', byCh.email||0, 'var(--blue)')}
+        ${chBar('📞 Call', byCh.call||0, 'var(--emerald)')}
+        ${chBar('💼 LinkedIn', byCh.linkedin||0, 'var(--violet)')}
+        ${chBar('📣 Voicemail', byCh.voicemail||0, 'var(--amber)')}
       </div>
-      <div style="padding:14px">
+      <div style="padding-left:14px">
         <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Variant Split</div>
-        ${chBar('A — Direct',      byVar.A, '#60a5fa')}
-        ${chBar('B — Soft',        byVar.B, '#a78bfa')}
+        ${chBar('A — Direct', byVar.A, '#60a5fa')}
+        ${chBar('B — Soft', byVar.B, '#a78bfa')}
         ${chBar('C — Insight-Led', byVar.C, '#34d399')}
       </div>
-    </div>
-
-    <!-- Per-advisor table -->
-    <div style="padding:14px">
-      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">By Advisor</div>
-      <table style="width:100%;border-collapse:collapse">
-        <thead>
-          <tr style="border-bottom:1px solid var(--border-subtle)">
-            <th style="padding:4px 14px;text-align:left;font-size:9px;color:var(--text-muted)">Advisor</th>
-            <th style="padding:4px 14px;text-align:left;font-size:9px;color:var(--text-muted)">Sends</th>
-            <th style="padding:4px 14px;text-align:left;font-size:9px;color:var(--text-muted)">Replies</th>
-            <th style="padding:4px 14px;text-align:left;font-size:9px;color:var(--text-muted)">Rate</th>
-          </tr>
-        </thead>
-        <tbody>${advisorRows || '<tr><td colspan="4" style="padding:12px 14px;color:var(--text-muted);font-size:11px">No outcome data yet</td></tr>'}</tbody>
-      </table>
     </div>`;
 }
 

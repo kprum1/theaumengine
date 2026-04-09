@@ -181,12 +181,33 @@ function pageCommandCenter() {
       <div class="kpi-delta neutral">Industry avg: 8%</div><div class="kpi-icon">💬</div>
     </div>
   </div>
+
+  <!-- My Activity — auto-loads from Firestore, scoped to this advisor -->
+  <div id="my-activity-strip" style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+    <div style="flex:1;min-width:110px;background:var(--bg-card);border:1px solid var(--border-default);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">&#x2709;&#xFE0F;</span>
+      <div><div style="font-size:22px;font-weight:900;color:var(--blue)" id="my-stat-sent">&#x2014;</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-top:2px">Sent</div></div>
+    </div>
+    <div style="flex:1;min-width:110px;background:var(--bg-card);border:1px solid var(--border-default);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">&#x1F4AC;</span>
+      <div><div style="font-size:22px;font-weight:900;color:var(--emerald)" id="my-stat-replied">&#x2014;</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-top:2px">Replies</div></div>
+    </div>
+    <div style="flex:1;min-width:110px;background:var(--bg-card);border:1px solid var(--border-default);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">&#x1F4C5;</span>
+      <div><div style="font-size:22px;font-weight:900;color:var(--amber)" id="my-stat-meetings">&#x2014;</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-top:2px">Meetings</div></div>
+    </div>
+    <div style="flex:1;min-width:110px;background:var(--bg-card);border:1px solid var(--border-default);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">&#x1F3AF;</span>
+      <div><div style="font-size:22px;font-weight:900;color:var(--violet)" id="my-stat-rate">&#x2014;</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-top:2px">Contact Rate</div></div>
+    </div>
+  </div>
+
   <div class="section">
     <div class="grid-21" style="gap:16px">
       <div>
         <div class="section-header">
           <div class="section-title"><div class="section-title-dot"></div>Top 8 To Work Now</div>
-          <a href="#" onclick="navigate('lead-scoreboard');return false" style="font-size:11px;color:var(--blue);text-decoration:none">View All →</a>
+          <a href="#" onclick="navigate('lead-scoreboard');return false" style="font-size:11px;color:var(--blue);text-decoration:none">View All &#x2192;</a>
         </div>
         <div class="top-queue">
           ${top.map((p,i)=>`
