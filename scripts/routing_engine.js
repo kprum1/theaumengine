@@ -174,15 +174,15 @@ async function main() {
 
   const now = new Date().toISOString();
 
-  // ── Pull unrouted leads from masterLeads ────────────────────
-  const leadsSnap = await db.collection('masterLeads')
-    .where('status', '==', 'New')
+  // ── Pull unrouted leads from master_leads ───────────────────
+  const leadsSnap = await db.collection('master_leads')
+    .where('ownershipStatus', '==', 'unassigned')
     .limit(LIMIT)
     .get();
 
   if (leadsSnap.empty) {
-    console.log('  ℹ️  No leads with status=New in masterLeads.');
-    console.log('  → Run approve_and_ingest.js first, or check collection name.\n');
+    console.log('  ℹ️  No unassigned leads in master_leads.');
+    console.log('  → Run lead_ingest_agent.js first, or check ownershipStatus field.\n');
     process.exit(0);
   }
   console.log(`  📋 Leads to route: ${leadsSnap.docs.length} (limit: ${LIMIT})\n`);
@@ -255,7 +255,8 @@ async function main() {
       const assignId = `route_${ldoc.id}_${advisor.id}`.slice(0, 100);
       batch.set(db.collection('al_assignments').doc(assignId), {
         masterLeadId:     ldoc.id,
-        ownerUid:         advisor.id,
+        ownerUid:         advisor.id,   // legacy field — keep for backwards compat
+        advisorUid:       advisor.id,   // canonical field — used by funnel_tracker + admin.js
         ownerFirmName:    advisor.firmName || '',
         ownerEmail:       advisor.email || '',
 
@@ -288,12 +289,12 @@ async function main() {
         updatedAt:        now,
       });
 
-      // ── Update masterLead status to 'routed' ─────────────────
-      batch.update(db.collection('masterLeads').doc(ldoc.id), {
-        status:      'routed',
-        routedTo:    advisor.id,
-        routedAt:    now,
-        updatedAt:   now,
+      // ── Update master_lead ownershipStatus to 'assigned' ──────
+      batch.update(db.collection('master_leads').doc(ldoc.id), {
+        ownershipStatus:   'assigned',
+        currentOwnerUid:   advisor.id,
+        currentOwnerSince: now,
+        updatedAt:         now,
       });
 
       // ── Increment advisor capacity counter ────────────────────

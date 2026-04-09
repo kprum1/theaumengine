@@ -9,6 +9,14 @@
       ]
     },
     {
+      "collectionGroup": "master_leads",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ownershipStatus", "order": "ASCENDING" },
+        { "fieldPath": "ingestedAt",      "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "routing_queue",
       "queryScope": "COLLECTION",
       "fields": [

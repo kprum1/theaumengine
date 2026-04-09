@@ -309,7 +309,8 @@ async function renderAdminKPIs() {
     };
 
     assigns.forEach(a => {
-      const uid = a.advisorUid || a.ownerUid;
+      // al_assignments uses ownerUid (written by routing_engine.js)
+      const uid = a.ownerUid || a.advisorUid;
       if (!uid) return;
       ensure(uid);
       adv[uid].assigned++;
@@ -317,6 +318,7 @@ async function renderAdminKPIs() {
       if ((a.status === 'New' || a.status === 'new') && age > 7) adv[uid].sla++;
     });
 
+    // funnel_events uses advisorUid (written by funnel_tracker.js)
     events.forEach(e => {
       const uid = e.advisorUid;
       if (!uid) return;
