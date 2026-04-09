@@ -11,6 +11,7 @@ const ICP_CONFIG = JSON.parse(localStorage.getItem('aumEngineICP') || 'null') ||
   professions: 'Business owners, Physicians, Pilots, Board members',
   lifeEventTriggers: 'Business sale, Inheritance, Retirement, Divorce',
   messagingAngle: 'We help [niche] who are navigating [key transition] build a coordinated strategy across their [assets/business/legacy] — without adding complexity to an already full life.',
+  bookingLink: localStorage.getItem('aum_booking_link') || '',
 };
 
 const NOTES_STORE    = JSON.parse(localStorage.getItem('aumEngineNotes')    || '{}');

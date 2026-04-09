@@ -950,15 +950,47 @@ function openBookingLinksBatch() {
         }).join('')}
       </div>
 
-      <div style="padding:16px 24px 24px;border-top:1px solid var(--border-subtle);display:flex;justify-content:space-between;align-items:center;gap:8px">
-        <div style="font-size:11px;color:var(--text-muted)">
-          Booking link: <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px;font-size:10.5px">${calLink}</code>
-          <button onclick="const l=prompt('Update your booking link:',ICP_CONFIG?.bookingLink||'');if(l){ICP_CONFIG.bookingLink=l;showToast('Booking link updated','🔗');document.getElementById('batch-modal').remove();openBookingLinksBatch();}"
-            style="background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;margin-left:6px">Edit</button>
+      <div id="booking-link-footer" style="padding:16px 24px 24px;border-top:1px solid var(--border-subtle)">
+        <div id="booking-link-display" style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px;min-width:0">
+            <span style="flex-shrink:0">🔗 Booking link:</span>
+            ${calLink && calLink !== '[YOUR_CALENDLY_LINK]'
+              ? `<a href="${calLink}" target="_blank" style="color:var(--blue);text-decoration:none;font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:280px;display:inline-block">${calLink}</a>`
+              : `<span style="color:var(--rose);font-size:11px;font-weight:600">⚠️ Not set — add your Calendly link</span>`
+            }
+            <button id="booking-link-edit-btn" onclick="
+              document.getElementById('booking-link-display').style.display='none';
+              document.getElementById('booking-link-edit-form').style.display='flex';"
+              style="background:none;border:none;color:var(--blue);font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0">Edit</button>
+          </div>
+          <button onclick="document.getElementById('batch-modal').remove()"
+            style="padding:9px 20px;border-radius:9px;background:var(--bg-elevated);border:1px solid var(--border-default);
+            color:var(--text-secondary);font-weight:600;font-size:12.5px;cursor:pointer;font-family:inherit;flex-shrink:0">Done</button>
         </div>
-        <button onclick="document.getElementById('batch-modal').remove()"
-          style="padding:9px 20px;border-radius:9px;background:var(--bg-elevated);border:1px solid var(--border-default);
-          color:var(--text-secondary);font-weight:600;font-size:12.5px;cursor:pointer;font-family:inherit">Done</button>
+
+        <div id="booking-link-edit-form" style="display:none;gap:8px;align-items:center">
+          <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0">🔗 Your link:</span>
+          <input id="booking-link-input" type="url"
+            placeholder="https://calendly.com/yourname/30min"
+            value="${calLink !== '[YOUR_CALENDLY_LINK]' ? calLink : ''}"
+            style="flex:1;background:var(--bg-elevated);border:1px solid var(--amber);border-radius:8px;
+            color:var(--text-primary);font-family:inherit;font-size:12px;padding:8px 10px;outline:none;min-width:0"
+            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--amber)'">
+          <button onclick="
+            const val = document.getElementById('booking-link-input').value.trim();
+            if (!val) { showToast('Paste your Calendly link first', '⚠️'); return; }
+            ICP_CONFIG.bookingLink = val;
+            try { localStorage.setItem('aum_booking_link', val); } catch(e) {}
+            document.getElementById('batch-modal').remove();
+            openBookingLinksBatch();"
+            style="padding:8px 14px;border-radius:8px;background:var(--blue);border:none;
+            color:white;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap">Save ✓</button>
+          <button onclick="
+            document.getElementById('booking-link-edit-form').style.display='none';
+            document.getElementById('booking-link-display').style.display='flex';"
+            style="padding:8px 12px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--border-default);
+            color:var(--text-secondary);font-size:12px;cursor:pointer;font-family:inherit">Cancel</button>
+        </div>
       </div>
     </div>`;
 
