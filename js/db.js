@@ -231,6 +231,22 @@ async function updateAlAssignmentStatus(assignmentId, newStatus) {
   } catch(e) { console.warn('[db.js] updateAlAssignmentStatus failed:', e); }
 }
 
+// Write reply outcome back to al_assignments (Phase C6 — Reply Tapper persistence)
+// Called from _tapReplyOutcome() in outreach_controller.js for routing-engine leads.
+// replyType: 'reply' | 'positive' | 'meeting' | 'dead' | 'objection' | 'not_now' | 'unsubscribe'
+async function updateAlAssignmentReply(assignmentId, replyType) {
+  if (!assignmentId || !replyType) return;
+  try {
+    await _getDB().collection('al_assignments').doc(assignmentId).update({
+      replyType,
+      replyOutcome:  replyType,
+      repliedAt:     new Date().toISOString(),
+      updatedAt:     new Date().toISOString(),
+    });
+    console.info('[db.js] al_assignment reply written:', assignmentId, '→', replyType);
+  } catch(e) { console.warn('[db.js] updateAlAssignmentReply failed:', e); }
+}
+
 // Write advisor thumbs up/down feedback back to Firestore
 async function updateLeadFeedbackInFirestore(assignmentId, vote, notes) {
   if (!assignmentId) return;

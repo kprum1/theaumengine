@@ -723,6 +723,17 @@ async function _tapReplyOutcome(outcome) {
     }
   }
 
+  // ── C6: Reply Tapper → al_assignments write-back ─────────
+  // For routing-engine leads (_fromFirestore: true), persist replyType
+  // to al_assignments/{assignmentId} so runGovernance can track reply rates.
+  const pid = window._outreachState?.prospectId;
+  const currentProspect = PROSPECTS.find(p => p.id === pid);
+  if (currentProspect?._fromFirestore && currentProspect?.assignmentId
+      && typeof updateAlAssignmentReply === 'function') {
+    updateAlAssignmentReply(currentProspect.assignmentId, outcome)
+      .catch(e => console.warn('[ReplyTapper] al_assignments write-back failed:', e));
+  }
+
   if (!docId) {
     try {
       const log = JSON.parse(localStorage.getItem('aumOutreachLog') || '[]');
@@ -739,4 +750,5 @@ async function _tapReplyOutcome(outcome) {
   await osLogReply(docId, outcome);
   document.getElementById('reply-tapper-zone').innerHTML = '';
 }
+
 
