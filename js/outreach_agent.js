@@ -20,7 +20,9 @@ const PERSONA_TYPES = {
   'high-earning-tradesman':   'high_earning_trade',
   'inheritance-recipients':   'inheritance_recipient',
   'real-estate-developers':   'real_estate_developer',
+  'charity-boards':           'charity_board',
   'charity-board-members':    'charity_board',
+  'yacht-owners':             'yacht_owner',
 };
 
 // ── TRIGGER SIGNALS → trigger type ───────────────────────────
@@ -96,6 +98,11 @@ const ANGLE_MATRIX = {
   high_earning_trade: {
     general_intro:   { angle: 'owner_succession',        cta: 'compare_notes'    },
   },
+  yacht_owner: {
+    general_intro:   { angle: 'yacht_lifestyle',          cta: 'compare_notes'    },
+    exit_liquidity:  { angle: 'exit_liquidity',           cta: 'brief_intro_call' },
+    retirement:      { angle: 'yacht_lifestyle',          cta: 'compare_notes'    },
+  },
 };
 
 // ── ANGLE METADATA (for UI display) ──────────────────────────
@@ -113,6 +120,7 @@ const ANGLE_META = {
   inheritance_transition: { label: 'Inheritance Transition',   why: 'Sudden wealth creates anxiety — lead with clarity, not performance' },
   deal_fluency:           { label: 'Deal Fluency',             why: '1031s, DSTs, and concentration risk need someone who understands real estate tax strategy' },
   general_niche_intro:    { label: 'Niche Introduction',       why: 'Warm, observation-based intro establishes relevance without pressure' },
+  yacht_lifestyle:        { label: 'Yacht & Maritime Wealth',  why: 'USCG-documented vessel ownership signals $2M+ AUM — lead with lifestyle fluency, not finance-first' },
 };
 
 // ── CTA LANGUAGE ─────────────────────────────────────────────
@@ -319,6 +327,22 @@ const _TEMPLATES = {
              body:`${firstName},\n\nI work with a specific group of clients who tend to have complex financial lives. Not sure if you're already working with an advisor, but happy to ${cta} if it might be useful.\n\n[Your Name]` },
         C: { id:'C', label:'Insight-Led', subject:`One thing clients in your space ask about most`,
              body:`${firstName},\n\nThe most common question I get from clients similar to you: "Why did I wait so long to have this conversation?"\n\nHappy to ${cta}.\n\n[Your Name]` },
+      };
+      return variants[tone] || variants.A;
+    },
+
+    yacht_lifestyle: (ctx, strategy, tone) => {
+      const { firstName, city, state } = ctx.prospect;
+      const cta = strategy.ctaMeta.full;
+      const geo = city ? `${city}, ${state}` : 'your area';
+      const vessel = ctx.prospect.signals?.vesselName ? `your ${ctx.prospect.signals.vesselLength || ''} ${ctx.prospect.signals.vesselType || 'vessel'}` : 'your vessel';
+      const variants = {
+        A: { id:'A', label:'Direct', subject:`Wealth planning for yacht owners in ${geo}`,
+             body:`${firstName},\n\nI work with a select group of clients who own documented vessels — people whose financial lives tend to be more complex than a generalist advisor is built for.\n\nEstate coordination, insurance exposure, concentrated wealth, legacy planning — it all connects.\n\nHappy to ${cta} if the timing's right.\n\n[Your Name]` },
+        B: { id:'B', label:'Soft', subject:`A thought on vessel ownership and financial planning`,
+             body:`${firstName},\n\nI specialize in working with clients who own private vessels — not because of the boat itself, but because of what tends to surround it: serious wealth, planning gaps, and a lifestyle worth protecting.\n\nNot sure if you're working with an advisor now, but happy to ${cta}.\n\n[Your Name]` },
+        C: { id:'C', label:'Insight-Led', subject:`What I see most vessel owners overlook`,
+             body:`${firstName},\n\nOwning a documented vessel at your level usually means the wealth picture around it is significant — and often under-coordinated. Insurance gaps, estate titling, concentrated assets.\n\nI work specifically with clients who want that picture managed as well as the vessel itself is.\n\nHappy to ${cta}.\n\n[Your Name]` },
       };
       return variants[tone] || variants.A;
     },
