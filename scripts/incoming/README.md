@@ -60,3 +60,18 @@
 - `Law Partners`
 - `C-Suite Executives`
 - `High Earning Tradesman`
+- `Yacht Owners`  ← NEW — USCG-documented vessels 40ft+
+
+## Yacht Owners — Special Signal Fields
+For Yacht Owner leads, include these in the `signals` object:
+```json
+"signals": {
+  "vesselName":   "Lady Luck III",
+  "vesselLength": "58ft",
+  "vesselType":   "Motor Yacht",
+  "hailingPort":  "Newport Beach, CA",
+  "uscgDocNum":   "1234567",
+  "estimatedAssets": "$3.5M+"
+}
+```
+Data source: USCG National Vessel Documentation Center (mvr.uscg.mil) — public federal record.

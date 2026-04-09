@@ -30,6 +30,7 @@ const NICHES = [
   { id: 'n10', icon: '💰',  name: 'Inheritance Recipients',   desc: 'Individuals receiving $750K+ inheritance in last 24 months',                                          count: 28,  color: '#facc15' },
   { id: 'n11', icon: '🏗️',  name: 'Real Estate Developers',  desc: 'Developers and operators facing 1031 windows, partnership exits, and concentrated property risk',     count: 16,  color: '#f97316' },
   { id: 'n12', icon: '🎗️',  name: 'Charity Boards',          desc: 'Nonprofit board members with philanthropic giving patterns and DAF/estate planning needs',             count: 34,  color: '#2dd4bf' },
+  { id: 'n13', icon: '⛵',  name: 'Yacht Owners',             desc: 'USCG-documented vessel owners (40ft+) — strong $2M+ AUM signal from registry cross-reference',        count: 11,  color: '#38bdf8' },
 ];
 
 // ===== VALID STATUSES (stage labels only — no temperature labels) =====

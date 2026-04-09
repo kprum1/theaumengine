@@ -46,7 +46,7 @@ const VALID_NICHES = new Set([
   'charity-board-members', 'physicians', 'ai-displaced-executives',
   'henrys', 'inheritance-recipients', 'high-earning-tradesman',
   'real-estate-developers', 'law-partners', 'dentists-specialists',
-  'c-suite-executives'
+  'c-suite-executives', 'yacht-owners'
 ]);
 
 // ── Niche label → nicheId normalizer ─────────────────────────
@@ -67,6 +67,11 @@ const NICHE_MAP = {
   'high earning tradesman':  'high-earning-tradesman',
   'law partners':            'law-partners',
   'c-suite executives':      'c-suite-executives',
+  'yacht owners':            'yacht-owners',
+  'yacht owner':             'yacht-owners',
+  'large watercraft':        'yacht-owners',
+  'uscg vessel owner':       'yacht-owners',
+  'documented vessel owner': 'yacht-owners',
 };
 
 function toNicheId(raw) {
