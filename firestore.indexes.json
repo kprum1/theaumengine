@@ -104,6 +104,14 @@
         { "fieldPath": "event",      "order": "ASCENDING" },
         { "fieldPath": "ts",         "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "al_assignments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "advisorUid", "order": "ASCENDING" },
+        { "fieldPath": "createdAt",  "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -566,7 +566,7 @@ function pageNurtureBooking() {
   <div class="section">
     <div class="scroll-x">
       <div class="pipeline-board">
-        ${PIPELINE_COLUMNS.map(col=>`
+        ${PIPELINE_COLUMNS.filter(col => col !== 'Snoozed' || colMap['Snoozed'].length > 0).map(col=>`
         <div class="pipeline-col">
           <div class="pipeline-col-header">${col}<span class="pipeline-col-count">${colMap[col].length}</span></div>
           ${colMap[col].length===0?`<div style="padding:12px;text-align:center;font-size:10px;color:var(--text-muted)">No prospects</div>`:''}
