@@ -346,6 +346,17 @@ const OutreachController = {
     window._outreachState.isGenerating = false;
     _setGeneratingUI(false);
     _renderOutreachPanel();
+
+    // ── Funnel tracking: draft generated ────────────────────
+    if (typeof FunnelTracker !== 'undefined') {
+      const st = window._outreachState;
+      FunnelTracker.outreachDrafted(
+        st.prospectId,
+        st.channel,
+        st.draftResult?.angle || 'unknown',
+        st.activeVariant
+      );
+    }
   },
 };
 
@@ -573,6 +584,13 @@ function osInitForProspect(prospectId) {
   window._outreachState.prospectId = prospectId;
   window._outreachState.stage      = 'first_touch';
   window._outreachState.channel    = activeOutreachType || 'email';
+
+  // ── Funnel tracking: lead opened ──────────────────────────
+  if (typeof FunnelTracker !== 'undefined') {
+    const prospect = PROSPECTS.find(p => p.id === prospectId);
+    FunnelTracker.leadViewed(prospectId, prospect?.nicheId, prospect?.fitScore);
+  }
+
   // Auto-run stack when studio loads
   osRunAgentStack();
 }
@@ -617,6 +635,15 @@ async function osLogOutcome(outcome) {
 
   // Store docId for reply tapper
   if (window._outreachState) window._outreachState.lastDocId = log.firestoreDocId || null;
+
+  // ── Funnel tracking: outreach sent ──────────────────────────
+  if (log.sent && typeof FunnelTracker !== 'undefined') {
+    FunnelTracker.outreachSent(
+      log.prospectId,
+      log.channel,
+      log.variantChosen
+    );
+  }
 
   console.info('[OutreachController] Outcome logged:', log);
 }
@@ -685,7 +712,17 @@ function _showReplyTapper() {
 // Called by the tapper buttons in the DOM
 async function _tapReplyOutcome(outcome) {
   const docId = window._outreachState?.lastDocId || null;
-  // Also check localStorage for the most recent entry with a firestoreDocId
+
+  // ── Funnel tracking: reply or meeting logged ────────────────
+  if (typeof FunnelTracker !== 'undefined') {
+    const pid = window._outreachState?.prospectId;
+    const prospect = PROSPECTS.find(p => p.id === pid);
+    FunnelTracker.replyLogged(pid, outcome);
+    if (outcome === 'meeting') {
+      FunnelTracker.meetingBooked(pid, prospect?.nicheId);
+    }
+  }
+
   if (!docId) {
     try {
       const log = JSON.parse(localStorage.getItem('aumOutreachLog') || '[]');
