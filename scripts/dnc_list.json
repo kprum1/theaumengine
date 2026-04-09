@@ -1,0 +1,11 @@
+{
+  "_notes": "Do Not Contact list. Add entries to block leads. All matches are BLOCKED by bouncer_agent.js. Digits-only for phones (no dashes/spaces).",
+  "_how_to_add_email":  "Add exact email string to emails array",
+  "_how_to_add_phone":  "Add digits only — e.g. '6125550000'",
+  "_how_to_add_name":   "Add full name as 'First Last' — case insensitive match",
+  "_how_to_add_domain": "Add domain only — e.g. 'competitor.com' — blocks all emails from that firm",
+  "emails":  [],
+  "phones":  [],
+  "names":   [],
+  "domains": []
+}
