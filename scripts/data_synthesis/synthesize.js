@@ -166,7 +166,14 @@ async function main() {
     console.log('   3. APPROVE (write to Firestore masterLeads):');
     console.log('      node scripts/approve_and_ingest.js --batch=bounced_[timestamp]');
     console.log('');
-    console.log('   4. ROUTE (assign to advisors via al_assignments):');
+    console.log('   4. ENRICH (resolve company name → real person + email):');
+    console.log('      node scripts/data_synthesis/enrich_leads.js');
+    console.log('      → Send Alfred the alfred_enrich_queue_[date].json from staging/');
+    console.log('');
+    console.log('   5. DEDUP (match against master_contacts):');
+    console.log('      node scripts/identity_resolution_agent.js --batch');
+    console.log('');
+    console.log('   6. ROUTE (assign to advisors via al_assignments):');
     console.log('      node scripts/routing_engine.js --dry-run  # preview first');
     console.log('      node scripts/routing_engine.js             # live assign');
     console.log('');
