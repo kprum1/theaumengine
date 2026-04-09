@@ -1004,8 +1004,9 @@ function closeMobileNav() {
 }
 
 // ===== BOOK DEMO EMAIL =====
+// TODO: Set up hello@theaumengine.com forwarding → kosal@fin-tegration.com (confirmed interim inbox)
 function openDemoEmail() {
-  const to      = 'hello@theaumengine.com';
+  const to      = 'kosal@fin-tegration.com';
   const subject = encodeURIComponent("I'd like to discuss The AUM Engine");
   const body    = encodeURIComponent(
     "Hi,\n\n" +
