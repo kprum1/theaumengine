@@ -128,6 +128,8 @@ function initWithUserData(data) {
 // ===== ROUTER =====
 function navigate(page) {
   currentPage = page;
+  // Check if any snoozed leads have expired — auto-promote them back to New
+  if (typeof _checkSnoozedLeads === 'function') _checkSnoozedLeads();
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const el = document.getElementById('nav-'+page);
   if (el) el.classList.add('active');
@@ -591,6 +593,144 @@ function _restoreStatusCache() {
       if (p && data.status) { p.status = data.status; }
     });
   } catch(e) {}
+}
+
+// ===== RE-ENGAGE / SNOOZE SYSTEM =====
+// Moves a Dead lead to "Snoozed" with a timestamp. The lead sits in the Snoozed column
+// (hidden from active workflow) and auto-promotes back to "New" after the chosen interval.
+
+// Snooze a lead for N days: status → "Snoozed", stores snoozeUntil timestamp
+function snoozeProspect(id, days) {
+  const p = PROSPECTS.find(x => x.id === id);
+  if (!p) return;
+
+  const snoozeUntil = new Date();
+  snoozeUntil.setDate(snoozeUntil.getDate() + parseInt(days));
+
+  p.status       = 'Snoozed';
+  p.lastActivity = 'Snoozed';
+  p._snoozeUntil = snoozeUntil.toISOString();
+  p._snoozeDays  = days;
+
+  try {
+    const statCache = JSON.parse(localStorage.getItem('aum_prospect_statuses') || '{}');
+    statCache[id] = { status: 'Snoozed', updatedAt: new Date().toISOString() };
+    localStorage.setItem('aum_prospect_statuses', JSON.stringify(statCache));
+
+    const snoozeCache = JSON.parse(localStorage.getItem('aum_snooze_cache') || '{}');
+    snoozeCache[id] = { snoozeUntil: snoozeUntil.toISOString(), days, snoozedAt: new Date().toISOString() };
+    localStorage.setItem('aum_snooze_cache', JSON.stringify(snoozeCache));
+  } catch(e) {}
+
+  if (p._fromFirestore && p.assignmentId && typeof updateAlAssignmentStatus === 'function') {
+    updateAlAssignmentStatus(p.assignmentId, 'Snoozed').catch(() => {});
+  }
+
+  const until = snoozeUntil.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  document.getElementById('snooze-modal')?.remove();
+  closeDrawer();
+  navigate(currentPage);
+  showToast('⏰ ' + p.firstName + ' snoozed — returns ' + until, '✅');
+}
+
+// Check all snoozed leads — auto-promote any with expired snoozeUntil dates back to New
+// Runs on boot (inside _restoreStatusCache) and on every navigate() invocation
+function _checkSnoozedLeads() {
+  try {
+    const snoozeCache = JSON.parse(localStorage.getItem('aum_snooze_cache') || '{}');
+    const statCache   = JSON.parse(localStorage.getItem('aum_prospect_statuses') || '{}');
+    const now = Date.now();
+    const promoted = [];
+
+    Object.entries(snoozeCache).forEach(([id, data]) => {
+      if (!data.snoozeUntil) return;
+      if (now >= new Date(data.snoozeUntil).getTime()) {
+        const p = PROSPECTS.find(x => x.id === id);
+        if (p && p.status === 'Snoozed') {
+          p.status       = 'New';
+          p.lastActivity = 'Re-activated';
+          p._snoozeUntil = null;
+          p._snoozeDays  = null;
+          statCache[id]  = { status: 'New', updatedAt: new Date().toISOString() };
+          promoted.push(p.firstName + ' ' + p.lastName);
+        }
+        delete snoozeCache[id];
+      } else {
+        const p = PROSPECTS.find(x => x.id === id);
+        if (p) { p._snoozeUntil = data.snoozeUntil; p._snoozeDays = data.days; }
+      }
+    });
+
+    localStorage.setItem('aum_snooze_cache', JSON.stringify(snoozeCache));
+    localStorage.setItem('aum_prospect_statuses', JSON.stringify(statCache));
+    if (promoted.length) showToast('🔄 ' + promoted.join(', ') + ' re-entered the queue', '📅');
+  } catch(e) {}
+}
+
+// Snooze picker modal — shows 90/120/180/365 day options + custom input
+function showSnoozeModal(prospectId) {
+  const p = PROSPECTS.find(x => x.id === prospectId);
+  if (!p) return;
+  document.getElementById('snooze-modal')?.remove();
+
+  const opts = [
+    { days: 90,  label: '90 Days', sub: '"Call me in 3 months"' },
+    { days: 120, label: '120 Days', sub: '"Check back next quarter"' },
+    { days: 180, label: '180 Days', sub: '"Reach out in 6 months"' },
+    { days: 365, label: '1 Year',   sub: '"Annual cycle / waiting on event"' },
+  ];
+
+  const modal = document.createElement('div');
+  modal.id = 'snooze-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;animation:fadeIn 0.15s ease;';
+  modal.innerHTML = `
+    <div style="background:var(--bg-card);border:1px solid var(--border-default);border-radius:16px;
+      padding:26px;width:380px;max-width:90vw;box-shadow:0 24px 64px rgba(0,0,0,0.4);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:15px;font-weight:800;color:var(--text-primary)">♻️ Re-engage ${p.firstName} ${p.lastName}</div>
+        <button onclick="document.getElementById('snooze-modal').remove()"
+          style="background:none;border:none;font-size:18px;color:var(--text-muted);cursor:pointer;padding:4px 8px;border-radius:6px">✕</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:20px;line-height:1.5">
+        Re-label this lead and send it back to <strong style="color:var(--blue)">New</strong> after the chosen snooze window.
+        They'll reappear at the top of your queue automatically — no manual follow-up needed.
+      </div>
+      <div style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:10px">Re-activate interval</div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:20px">
+        ${opts.map(o => `
+        <button onclick="snoozeProspect('${prospectId}',${o.days})"
+          style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;
+          border:1px solid var(--border-subtle);background:transparent;cursor:pointer;text-align:left;width:100%;
+          font-family:inherit;transition:all 0.15s ease"
+          onmouseover="this.style.borderColor='var(--amber)';this.style.background='rgba(251,191,36,0.06)'"
+          onmouseout="this.style.borderColor='var(--border-subtle)';this.style.background='transparent'">
+          <div style="width:44px;height:44px;border-radius:10px;background:rgba(251,191,36,0.1);
+            border:1px solid rgba(251,191,36,0.2);display:flex;align-items:center;justify-content:center;
+            font-size:10px;font-weight:800;color:var(--amber);flex-shrink:0;line-height:1.2;text-align:center;">
+            ${o.label}</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text-primary)">${o.label} snooze</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${o.sub}</div>
+          </div>
+        </button>`).join('')}
+      </div>
+      <div style="border-top:1px solid var(--border-subtle);padding-top:16px">
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px">Custom interval</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="number" id="custom-snooze-days" min="7" max="730" value="90"
+            style="width:72px;background:var(--bg-elevated);border:1px solid var(--border-default);
+            border-radius:8px;color:var(--text-primary);font-family:inherit;font-size:14px;font-weight:700;
+            padding:8px 10px;outline:none;text-align:center">
+          <span style="font-size:12px;color:var(--text-muted)">days</span>
+          <button onclick="const d=parseInt(document.getElementById('custom-snooze-days').value);if(d>=7&&d<=730)snoozeProspect('${prospectId}',d);"
+            style="flex:1;padding:9px 12px;border-radius:8px;background:rgba(251,191,36,0.1);
+            border:1px solid rgba(251,191,36,0.25);color:var(--amber);font-weight:700;
+            font-size:12.5px;cursor:pointer;font-family:inherit">Set Snooze ⏰</button>
+        </div>
+      </div>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
 }
 
 // Status picker modal — displayed when advisor clicks "Update Status" in drawer

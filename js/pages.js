@@ -580,6 +580,13 @@ function pageNurtureBooking() {
               Contacted:'📞', Engaged:'💬', Nurture:'🌱',
               'Meeting Requested':'📅', Booked:'🎉'
             };
+            // Days remaining for snoozed leads
+            let snoozeBadge = '';
+            if (p.status === 'Snoozed' && p._snoozeUntil) {
+              const daysLeft = Math.ceil((new Date(p._snoozeUntil) - Date.now()) / 86400000);
+              const returnDate = new Date(p._snoozeUntil).toLocaleDateString('en-US', {month:'short',day:'numeric'});
+              snoozeBadge = `Returns ${returnDate} · ${daysLeft}d`;
+            }
             return `
           <div class="pipeline-item" onclick="openDrawer('${p.id}')">
             <div class="pipeline-item-name">${p.firstName} ${p.lastName}</div>
@@ -595,9 +602,19 @@ function pageNurtureBooking() {
                 background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.25);
                 color:var(--blue);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
                 ${nextIcons[nextStatus]} ${nextStatus}
-              </button>` : `
+              </button>` : p.status === 'Dead' ? `
+              <button onclick="showSnoozeModal('${p.id}')"
+                style="flex:1;font-size:10px;font-weight:700;padding:5px 8px;border-radius:7px;
+                background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.25);
+                color:var(--amber);cursor:pointer">
+                ♻️ Re-engage
+              </button>` : p.status === 'Snoozed' ? `
+              <span style="flex:1;font-size:9.5px;color:var(--amber);font-weight:600;
+                padding:5px 0;display:flex;align-items:center;gap:4px">
+                ⏰ ${snoozeBadge}
+              </span>` : `
               <span style="flex:1;font-size:10px;color:var(--text-muted);padding:5px 0">
-                ${p.status === 'Booked' ? '🎉 Booked!' : p.status === 'Dead' ? '❌ Closed' : ''}
+                ${p.status === 'Booked' ? '🎉 Booked!' : ''}
               </span>`}
               <button onclick="showStatusModal('${p.id}')"
                 style="font-size:11px;padding:5px 8px;border-radius:7px;

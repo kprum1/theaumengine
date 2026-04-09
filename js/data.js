@@ -445,7 +445,7 @@ const ALERTS = [
   { id:'a7', type:'hot',     title:'Kirk McDonald — Fit Score 98 🔥', sub:'AI-Displaced Exec · Former Apple Director · Bend OR · Mine now', time:'Just now', prospectId:'p25' },
 ];
 
-const PIPELINE_COLUMNS = ['New','Contacted','Engaged','Nurture','Meeting Requested','Booked','Dead'];
+const PIPELINE_COLUMNS = ['New','Contacted','Engaged','Nurture','Meeting Requested','Booked','Dead','Snoozed'];
 
 // ===== COMPUTED METRICS (stable — no Math.random) =====
 function computeMetrics() {
@@ -508,6 +508,7 @@ function getStatusPill(status) {
     'Meeting Requested':'pill-warm',
     'Booked':           'pill-booked',
     'Dead':             'pill-dead',
+    'Snoozed':          'pill-snoozed',
     // legacy fallbacks
     'hot':'pill-contacted', 'warm':'pill-warm', 'cold':'pill-nurture',
   };
