@@ -513,7 +513,52 @@ async function loadAlAssignmentsForAdvisor(uid) {
       .orderBy('createdAt', 'desc')
       .limit(50)
       .get();
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Return both raw docs (for _alAssignments) AND PROSPECTS-schema objects
+    return snap.docs.map(d => {
+      const a = d.data();
+      const firstName = a.firstName || (a.fullName || '').split(' ')[0] || 'Unknown';
+      const lastName  = a.lastName  || (a.fullName || '').split(' ').slice(1).join(' ') || '';
+      return {
+        // PROSPECTS schema — required for pipeline display
+        id:            'al_' + d.id,
+        assignmentId:  d.id,
+        masterLeadId:  a.masterLeadId || d.id,
+
+        firstName,
+        lastName,
+        name:          a.fullName || `${firstName} ${lastName}`.trim(),
+
+        title:         a.title    || '',
+        company:       a.company  || '',
+        location:      [a.city, a.state].filter(Boolean).join(', '),
+
+        fitScore:      a.fitScore      || 0,
+        timingScore:   a.timingScore   || 0,
+        priorityScore: a.priorityScore || Math.round(((a.fitScore||0)+(a.timingScore||0))/2),
+
+        niche:         a.niche   || 'Assigned Lead',
+        nicheId:       a.nicheId || 'n0',
+        assets:        a.estimatedAUM || '$1M+',
+
+        status:        a.status  || 'New',
+        assignedRep:   'You',
+        lastActivity:  a.assignedAt
+                         ? new Date(a.assignedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})
+                         : 'Today',
+
+        source:        a.source  || 'AUM Engine',
+        tags:          ['🔵 Assigned'],
+
+        signals:       a.signals    || [],
+        enrichment:    a.enrichment || {},
+
+        // Write-back routing
+        _fromFirestore:    true,
+        _fromAlAssignment: true,     // identifies routing-engine leads specifically
+        batchId:           a.batchId || '',
+        routingScore:      a.routingScore || 0,
+      };
+    });
   } catch(e) { console.warn('[db.js] loadAlAssignments failed:', e); return []; }
 }
 

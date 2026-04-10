@@ -119,6 +119,21 @@ function initWithUserData(data) {
     loadAlAssignmentsForAdvisor(_uid).then(assigns => {
       window._alAssignments = assigns;
       console.info(`[AUM] Loaded ${assigns.length} Al assignment(s).`);
+
+      // ── Merge routing-engine leads into PROSPECTS (same pattern as lead_assignments) ──
+      // These are leads written by routing_engine.js / route_batch.js to al_assignments.
+      // They come back as PROSPECTS-schema objects (id:'al_'+docId) and need to appear
+      // in the pipeline board and scoreboard like any other lead.
+      if (assigns.length > 0) {
+        const existingIds = new Set(PROSPECTS.map(p => p.masterLeadId).filter(Boolean));
+        const freshAl = assigns.filter(l => l.masterLeadId && !existingIds.has(l.masterLeadId));
+        if (freshAl.length > 0) {
+          PROSPECTS.unshift(...freshAl);
+          console.info(`[AUM] Injected ${freshAl.length} routing-engine lead(s) from al_assignments into PROSPECTS.`);
+          // Re-render current page to show new leads (non-blocking)
+          requestAnimationFrame(() => { if (typeof renderPage === 'function') renderPage(); });
+        }
+      }
     }).catch(e => console.warn('[AUM] Al assignments load failed:', e));
   }
   // Restore any in-session status overrides from localStorage
@@ -981,6 +996,10 @@ function openBookingLinksBatch() {
             if (!val) { showToast('Paste your Calendly link first', '⚠️'); return; }
             ICP_CONFIG.bookingLink = val;
             try { localStorage.setItem('aum_booking_link', val); } catch(e) {}
+            // Firestore dual-write — cross-device persistence
+            if (typeof saveBookingLink === 'function' && typeof currentUID !== 'undefined' && currentUID) {
+              saveBookingLink(currentUID, val).catch(() => {});
+            }
             document.getElementById('batch-modal').remove();
             openBookingLinksBatch();"
             style="padding:8px 14px;border-radius:8px;background:var(--blue);border:none;
