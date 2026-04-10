@@ -599,6 +599,19 @@
         <svg viewBox="0 0 20 20" fill="none"><path d="M10 2l2.4 4.8 5.6.8-4 3.9.9 5.5L10 14.5l-4.9 2.5.9-5.5L2 7.6l5.6-.8L10 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
         Admin Dashboard
       </a>
+
+      <!-- Security Sentinel nav — hidden by default; auth.js reveals it if sentinel_enabled=true -->
+      <div class="nav-section-label" style="margin-top:16px;display:none" id="sentinel-nav-section">SECURITY</div>
+      <a href="#" class="nav-item" data-page="security-sentinel" id="nav-security-sentinel"
+         style="display:none;border:1px solid rgba(99,102,241,0.2);background:rgba(99,102,241,0.04)">
+        <svg viewBox="0 0 20 20" fill="none" width="16" height="16">
+          <path d="M10 2L3 5v5c0 4.4 3 8.3 7 9.3 4-1 7-4.9 7-9.3V5l-7-3z"
+                stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+          <path d="M7 10l2 2 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Security Sentinel
+        <span style="background:var(--violet);font-size:9px;padding:1px 6px;border-radius:8px;color:#fff;font-weight:700;margin-left:auto">Beta</span>
+      </a>
     </nav>
 
     <div class="sidebar-footer">
@@ -652,8 +665,9 @@
 <script src="js/outreach_controller.js?v=20260410a"></script>
 <script src="js/ed_intake_engine.js?v=20260408c"></script>
 <script src="js/planning_agent.js?v=20260408e"></script>
-<script src="js/pages.js?v=20260409e"></script>
-<script src="js/app.js?v=20260410b"></script>
-<script src="js/auth.js?v=20260410a"></script>
+<script src="js/pages.js?v=20260410c"></script>
+<script src="js/sentinel.js?v=20260410c"></script>
+<script src="js/app.js?v=20260410c"></script>
+<script src="js/auth.js?v=20260410c"></script>
 </body>
 </html>

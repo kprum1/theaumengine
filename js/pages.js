@@ -1530,3 +1530,25 @@ function pagePrivacyPolicy() {
     </div>
   </div>`;
 }
+
+// ── SECURITY SENTINEL (Sprint 1) ─────────────────────────────
+// Thin wrapper — delegates to js/sentinel.js to keep pages.js
+// clean. Registered in app.js pageMap as 'security-sentinel'.
+function pageSentinelDashboard() {
+  if (typeof renderSentinelPage === 'function') {
+    return renderSentinelPage();
+  }
+  // Fallback: sentinel.js failed to load
+  return `
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">🛡️ Security Sentinel</div>
+      <div class="page-subtitle">Trust &amp; exposure monitoring</div>
+    </div>
+  </div>
+  <div class="empty-state">
+    <div class="empty-state-icon">🛡️</div>
+    <div class="empty-state-title">Sentinel module not loaded</div>
+    <div class="empty-state-sub">Check that sentinel.js is included in index.html before app.js.</div>
+  </div>`;
+}

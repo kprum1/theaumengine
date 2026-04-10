@@ -138,6 +138,12 @@ function initWithUserData(data) {
   }
   // Restore any in-session status overrides from localStorage
   _restoreStatusCache();
+
+  // Load Sentinel config — sets window.SENTINEL_ENABLED asynchronously (non-blocking)
+  // auth.js reads this flag 1.5s later to reveal/hide the nav item.
+  if (typeof loadSentinelConfig === 'function') {
+    loadSentinelConfig().catch(() => {});
+  }
 }
 
 // ===== ROUTER =====
@@ -198,6 +204,8 @@ function renderPage() {
     'ed-disclosure'  : typeof pageEdDisclosure  === 'function' ? pageEdDisclosure  : pageCommandCenter,
     'ed-intake'      : typeof pageEdIntake      === 'function' ? pageEdIntake      : pageCommandCenter,
     'privacy'        : typeof pagePrivacyPolicy  === 'function' ? pagePrivacyPolicy  : pageCommandCenter,
+    // ── SECURITY SENTINEL ───────────────────────────────────────
+    'security-sentinel': typeof pageSentinelDashboard === 'function' ? pageSentinelDashboard : pageCommandCenter,
   };
   div.innerHTML = (pageMap[currentPage] || pageCommandCenter)();
   main.appendChild(div);

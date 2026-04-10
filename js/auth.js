@@ -141,6 +141,18 @@ auth.onAuthStateChanged(async (user) => {
     if (adminNavItem)    adminNavItem.style.display    = isOp ? 'flex'  : 'none';
     if (adminNavSection) adminNavSection.style.display = isOp ? 'block' : 'none';
 
+    // Security Sentinel nav — revealed only if sentinel_enabled flag is true
+    // loadSentinelConfig() (called from initWithUserData in app.js) sets
+    // window.SENTINEL_ENABLED asynchronously; we check after a short delay.
+    const sentinelNavItem    = document.getElementById('nav-security-sentinel');
+    const sentinelNavSection = document.getElementById('sentinel-nav-section');
+    setTimeout(() => {
+      const sentinelOn = window.SENTINEL_ENABLED === true;
+      if (sentinelNavItem)    sentinelNavItem.style.display    = sentinelOn ? 'flex'  : 'none';
+      if (sentinelNavSection) sentinelNavSection.style.display = sentinelOn ? 'block' : 'none';
+      if (sentinelOn) console.info('[auth.js] Sentinel nav revealed.');
+    }, 1500);
+
     if (typeof navigate === 'function') navigate('command-center');
     if (typeof bindPageEvents === 'function') bindPageEvents();
 
