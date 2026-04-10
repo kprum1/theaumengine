@@ -195,6 +195,44 @@ service cloud.firestore {
     }
 
     // ================================================================
+    // SECURITY SENTINEL — sentinel_* collections (Sprint 1)
+    // Read-only from client. Writes are Admin SDK only.
+    // sentinel_config / sentinel_orgs: operator + any authenticated user
+    //   (needed so loadSentinelConfig() can check the feature flag on login)
+    // All other sentinel_* collections: any authenticated user
+    //   (org_id is the logical scope; tighter per-advisor rules in Sprint 2)
+    // ================================================================
+
+    match /sentinel_config/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false; // Admin SDK only
+    }
+    match /sentinel_orgs/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+    match /sentinel_assets/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+    match /sentinel_findings/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+    match /sentinel_tasks/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+    match /sentinel_runs/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+    match /sentinel_reports/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false;
+    }
+
+    // ================================================================
     // DENY ALL — catch-all for any unmatched paths
     // ================================================================
     match /{document=**} {
