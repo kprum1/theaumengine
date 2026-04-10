@@ -304,6 +304,7 @@ async function saveOutcomeToFirestore(uid, outcome) {
       editedBeforeSend: outcome.editedBeforeSend || false,
       sent:             outcome.sent             || false,
       outcome:          outcome.outcome          || null,
+      replyType:        null,                    // set later via osLogReply() — Reply Tapper
       replyClassification: null,
       timestamp:        outcome.timestamp        || new Date().toISOString(),
       createdAt:        new Date().toISOString(),
@@ -332,6 +333,28 @@ async function loadOutcomesFromFirestore(uid, limitN) {
     console.warn('[db.js] loadOutcomesFromFirestore failed:', e);
     return [];
   }
+}
+
+// ── Booking Link — advisor_settings/{uid} ────────────────────────────────
+// Persists the advisor's Calendly / booking URL to Firestore for cross-device sync.
+// Mirrors the localStorage key 'aum_booking_link' as the offline fallback.
+async function saveBookingLink(uid, url) {
+  if (!uid || !url) return;
+  try {
+    await _getDB().collection('advisor_settings').doc(uid).set({
+      bookingLink: url,
+      bookingLinkUpdatedAt: new Date().toISOString(),
+    }, { merge: true });
+    console.info('[db.js] bookingLink saved to Firestore for uid:', uid);
+  } catch(e) { console.warn('[db.js] saveBookingLink failed:', e); }
+}
+
+async function loadBookingLink(uid) {
+  if (!uid) return null;
+  try {
+    const snap = await _getDB().collection('advisor_settings').doc(uid).get();
+    return snap.exists ? (snap.data().bookingLink || null) : null;
+  } catch(e) { console.warn('[db.js] loadBookingLink failed:', e); return null; }
 }
 
 // Reads ALL outcomes across all advisors — operator only

@@ -670,6 +670,7 @@ async function osLogReply(firestoreDocId, outcome) {
     const db = firebase.firestore();
     await db.collection('outreach_outcomes').doc(firestoreDocId).update({
       outcome,
+      replyType:     outcome,          // parallel field — matches al_assignments schema
       replyLoggedAt: new Date().toISOString(),
     });
     showToast(`Outcome logged: ${outcome}`, '📊');

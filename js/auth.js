@@ -118,6 +118,17 @@ auth.onAuthStateChanged(async (user) => {
     if (typeof bootstrapUserData === 'function') {
       const data = await bootstrapUserData(user.uid);
       if (typeof initWithUserData === 'function') initWithUserData(data);
+
+      // Load booking link from Firestore → hydrate ICP_CONFIG + localStorage
+      if (typeof loadBookingLink === 'function') {
+        loadBookingLink(user.uid).then(link => {
+          if (link) {
+            if (typeof ICP_CONFIG !== 'undefined') ICP_CONFIG.bookingLink = link;
+            try { localStorage.setItem('aum_booking_link', link); } catch(e) {}
+            console.info('[auth.js] bookingLink loaded from Firestore');
+          }
+        }).catch(() => {});
+      }
     }
 
     // Start presence tracking (non-blocking)
