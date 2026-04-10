@@ -294,6 +294,57 @@ function _renderShell() {
       </div>
     </div>
 
+    <!-- What is Security Sentinel — description banner -->
+    <div style="border:1px solid rgba(99,102,241,0.2);border-radius:14px;background:linear-gradient(135deg,rgba(99,102,241,0.06),rgba(139,92,246,0.04));padding:20px 24px;margin-bottom:20px;position:relative;overflow:hidden">
+      <!-- Background glow -->
+      <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,0.15),transparent 70%);pointer-events:none"></div>
+
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap">
+        <!-- Left: what it is -->
+        <div style="flex:2;min-width:260px">
+          <div style="font-size:11px;font-weight:700;color:var(--violet);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">What is Security Sentinel?</div>
+          <div style="font-size:13.5px;font-weight:700;color:var(--text-primary);margin-bottom:8px;line-height:1.4">
+            Your firm's always-on trust and exposure watchdog.
+          </div>
+          <div style="font-size:12px;color:var(--text-secondary);line-height:1.75">
+            Security Sentinel monitors your advisory firm's digital footprint — domain health, email authentication, admin access, credential exposure, and vendor risk — and turns every finding into a scored, prioritized task your team can actually act on.
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div style="width:1px;background:rgba(99,102,241,0.2);align-self:stretch;flex-shrink:0;display:none" class="sentinel-divider"></div>
+
+        <!-- Right: what it does -->
+        <div style="flex:2;min-width:260px">
+          <div style="font-size:11px;font-weight:700;color:var(--violet);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">What it does</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px">
+            ${[
+              ['🔍','Scans DNS, SSL, and domain posture'],
+              ['👤','Audits admin access and ownership gaps'],
+              ['📧','Checks SPF, DKIM, and DMARC email auth'],
+              ['🔑','Flags credential and config exposure'],
+              ['📋','Generates prioritized remediation tasks'],
+              ['📊','Tracks a live trust score (0–100)'],
+            ].map(([icon, text]) => `
+            <div style="display:flex;align-items:flex-start;gap:7px;padding:4px 0">
+              <span style="font-size:13px;flex-shrink:0;margin-top:1px">${icon}</span>
+              <span style="font-size:11.5px;color:var(--text-secondary);line-height:1.5">${text}</span>
+            </div>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Mythos callout -->
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(99,102,241,0.15);display:flex;align-items:center;gap:10px">
+        <div style="width:6px;height:6px;border-radius:50%;background:var(--violet);box-shadow:0 0 8px var(--violet);animation:pulse 2s infinite;flex-shrink:0"></div>
+        <span style="font-size:11.5px;color:var(--text-muted)">
+          Read-only intelligence in v1. Active remediation, behavioral anomaly detection, and zero-trust enforcement —
+          <strong style="color:var(--violet)">soon to be powered by Mythos.</strong>
+        </span>
+        <span style="margin-left:auto;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(139,92,246,0.12);color:var(--violet);white-space:nowrap;flex-shrink:0">Mythos · Coming Soon</span>
+      </div>
+    </div>
+
     <!-- Score + KPI header -->
     <div style="display:flex;gap:16px;margin-bottom:20px;align-items:stretch">
       <!-- Score ring -->
