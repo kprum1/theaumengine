@@ -530,7 +530,10 @@ async function loadAlAssignmentsForAdvisor(uid) {
 
         title:         a.title    || '',
         company:       a.company  || '',
-        location:      [a.city, a.state].filter(Boolean).join(', '),
+        location:      [
+                          a.city  || a.homeCity  || a.prospect_city  || '',
+                          a.state || a.homeState || a.prospect_state || '',
+                        ].filter(Boolean).join(', '),
 
         fitScore:      a.fitScore      || 0,
         timingScore:   a.timingScore   || 0,

@@ -578,15 +578,18 @@ function setProspectStatus(id, newStatus) {
     localStorage.setItem('aum_prospect_statuses', JSON.stringify(cache));
   } catch(e) {}
 
-  // 3 — Firestore write-back (non-blocking)
+  // 3 — Firestore write-back (non-blocking, routed to correct collection)
   if (p._fromFirestore && p.assignmentId) {
-    // Routing engine leads live in al_assignments
-    if (typeof updateAlAssignmentStatus === 'function') {
-      updateAlAssignmentStatus(p.assignmentId, newStatus).catch(() => {});
-    }
-    // Legacy Layer 1 leads also update lead_assignments advisorStatus
-    if (typeof updateLeadStatusInFirestore === 'function') {
-      updateLeadStatusInFirestore(p.assignmentId, newStatus).catch(() => {});
+    if (p._fromAlAssignment) {
+      // Routing-engine lead → al_assignments
+      if (typeof updateAlAssignmentStatus === 'function') {
+        updateAlAssignmentStatus(p.assignmentId, newStatus).catch(() => {});
+      }
+    } else {
+      // Legacy lead_assignments track
+      if (typeof updateLeadStatusInFirestore === 'function') {
+        updateLeadStatusInFirestore(p.assignmentId, newStatus).catch(() => {});
+      }
     }
   }
 

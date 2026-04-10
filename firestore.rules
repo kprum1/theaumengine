@@ -107,6 +107,14 @@ service cloud.firestore {
     }
 
     // ================================================================
+    // ADVISOR SETTINGS — booking link, preferences, cross-device sync
+    // Each advisor reads and writes only their own doc.
+    // ================================================================
+    match /advisor_settings/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ================================================================
     // PROSPECTS (Alfred-imported shared pool)
     // Any authenticated advisor can read.
     // Writes only from Admin SDK (import script) — not from browser.
