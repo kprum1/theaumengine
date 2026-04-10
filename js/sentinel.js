@@ -315,7 +315,7 @@ function _renderShell() {
         <div style="width:1px;background:rgba(99,102,241,0.2);align-self:stretch;flex-shrink:0;display:none" class="sentinel-divider"></div>
 
         <!-- Right: what it does -->
-        <div style="flex:2;min-width:260px">
+        <div style="flex:2;min-width:260px;padding-right:12px">
           <div style="font-size:11px;font-weight:700;color:var(--violet);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">What it does</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px">
             ${[
