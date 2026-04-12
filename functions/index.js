@@ -403,36 +403,7 @@ async function finalizeAssignment(lead, masterLeadId, winner, queueRef) {
     updatedAt:       now,
   });
 
-  // 2. Write materialised view to advisor's workspace
-  const prospectRef = db
-    .collection('users').doc(winner.uid)
-    .collection('data').doc(`ap_${masterLeadId}`);
-  batch.set(prospectRef, {
-    masterLeadId,
-    assignmentId: assignRef.id,
-    // Mirror display fields for fast UI reads
-    firstName:    lead.firstName,
-    lastName:     lead.lastName,
-    title:        lead.title,
-    company:      lead.company,
-    city:         lead.city,
-    state:        lead.state,
-    niche:        lead.niche,
-    nicheId:      lead.nicheId,
-    fitScore:     lead.fitScore,
-    timingScore:  lead.timingScore,
-    priorityScore: winner.score,
-    reasonCodes:  lead.reasonCodes || [],
-    signals:      lead.signals || {},
-    source:       lead.source,
-    // Pipeline status (advisor-owned)
-    status:       'New',
-    ownershipStatus: 'active',
-    assignedAt:   now,
-    lastActivity: 'Assigned ' + new Date().toLocaleDateString('en-US', { month:'short', day:'numeric' }),
-  });
-
-  // 3. Update routing_queue item → assigned
+  // 2. Update routing_queue item → assigned
   queueRef && batch.update(queueRef, {
     status: 'assigned',
     assignedTo: winner.uid,
@@ -440,7 +411,7 @@ async function finalizeAssignment(lead, masterLeadId, winner, queueRef) {
     updatedAt:  now,
   });
 
-  // 4. Update master_lead → ownershipStatus
+  // 3. Update master_lead → ownershipStatus
   batch.update(db.collection('master_leads').doc(masterLeadId), {
     ownershipStatus:   'assigned',
     currentOwnerUid:   winner.uid,
