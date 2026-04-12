@@ -254,42 +254,53 @@ async function checkOwnership(lead, masterLeadId) {
 }
 
 // ── runEligibility ──────────────────────────────────────────
-// Loads all advisor profiles and filters to those eligible
-// for this lead based on: licensed state, niche/ICP match,
-// AUM band, and active lead cap.
+// Reads from advisor_pool (flat collection, fully indexed — no
+// collectionGroup query needed). Filters on: eligibility flag,
+// niche match, licensed state, and combined lead cap.
 async function runEligibility(lead) {
-  // Load all user advisorProfiles from Firestore
-  const usersSnap = await db.collectionGroup('data')
-    .where('advisorType', '!=', null) // advisorProfile docs have this field
+  const poolSnap = await db.collection('advisor_pool')
+    .where('eligibleForRouting', '==', true)
     .get();
 
   const eligible = [];
+  const leadState = (lead.state || '').toUpperCase();
+  const leadNiche = (lead.nicheId || '').toLowerCase();
+  const leadAUM   = parseAUM(lead.estimatedAUM);
 
-  for (const doc of usersSnap.docs) {
-    const ap = doc.data();
-    if (!ap.advisorType) continue; // skip non-advisorProfile docs
+  for (const doc of poolSnap.docs) {
+    const ap  = doc.data();
+    const uid = doc.id; // advisor_pool/{uid}
 
-    const uid = doc.ref.parent.parent.id; // users/{uid}/data/advisorProfile
+    // Gate 1: Niche match — advisor must serve this lead's niche
+    const nicheIds = (ap.nicheIds || []).map(n => n.toLowerCase());
+    if (leadNiche && nicheIds.length > 0 && !nicheIds.includes(leadNiche)) continue;
 
-    // Gate 1: Licensed state match
-    const leadState = (lead.state || '').toUpperCase();
-    if (ap.licensedStates && ap.licensedStates.length > 0) {
-      if (!ap.licensedStates.includes(leadState)) continue;
+    // Gate 2: Licensed state match (skip gate if licensedStates not set)
+    const licensedStates = ap.licensedStates || [];
+    if (licensedStates.length > 0 && !licensedStates.includes(leadState)) continue;
+
+    // Gate 3: Combined lead cap — count BOTH lead_assignments + al_assignments
+    const cap = ap.activeLeadCap || 25;
+    const [legacySnap, alSnap] = await Promise.all([
+      db.collection('lead_assignments')
+        .where('ownerUid', '==', uid)
+        .where('ownershipStatus', '==', 'active')
+        .get(),
+      db.collection('al_assignments')
+        .where('advisorUid', '==', uid)
+        .where('status', 'in', ['New', 'active', 'Contacted', 'In Progress'])
+        .get(),
+    ]);
+    const totalActive = legacySnap.size + alSnap.size;
+    if (totalActive >= cap) {
+      console.info(`[Eligibility] ${uid} at cap (${totalActive}/${cap}) — skipping`);
+      continue;
     }
 
-    // Gate 2: Active lead cap — count current active assignments
-    const activeCount = await db.collection('lead_assignments')
-      .where('ownerUid', '==', uid)
-      .where('ownershipStatus', '==', 'active')
-      .get();
-    const cap = ap.activeLeadCap || 25;
-    if (activeCount.size >= cap) continue;
+    // Gate 4: AUM band match (soft)
+    const bandOK = checkAUMBand(leadAUM, ap.targetAUMBands || []);
 
-    // Gate 3: AUM band match (soft — don't hard-exclude, just score lower)
-    const leadAUM  = parseAUM(lead.estimatedAUM);
-    const bandOK   = checkAUMBand(leadAUM, ap.targetAUMBands || []);
-
-    eligible.push({ uid, profile: ap, activeCount: activeCount.size, bandOK });
+    eligible.push({ uid, profile: ap, activeCount: totalActive, bandOK });
   }
 
   return eligible;
@@ -330,9 +341,12 @@ async function runScoring(lead, advisors) {
 
 // ── Scoring sub-functions ───────────────────────────────────
 function scoreNicheMatch(lead, profile) {
-  // Simple: check if lead's niche aligns with advisor's ICP niche
-  // A real v2 would compare icpConfig.primaryNiche deeply
-  return 0.7; // Placeholder — full ICP match requires reading icpConfig doc
+  // Real nicheId matching against advisor_pool nicheIds array.
+  // Exact match = 1.0, no match = 0.1 (soft — still eligible, just scores low).
+  const leadNiche    = (lead.nicheId || '').toLowerCase();
+  const advisorNiches = (profile.nicheIds || []).map(n => n.toLowerCase());
+  if (!leadNiche || advisorNiches.length === 0) return 0.5; // unknown = neutral
+  return advisorNiches.includes(leadNiche) ? 1.0 : 0.1;
 }
 
 function scoreGeoMatch(lead, profile) {
