@@ -26,8 +26,11 @@ service cloud.firestore {
     }
     match /lead_assignments/{id} {
       // Advisors can read and update ONLY their own assignments.
+      // Operator (kosal@fin-tegration.com) can read all.
       // create/delete still locked to service accounts.
-      allow read:   if request.auth != null && resource.data.ownerUid == request.auth.uid;
+      allow read:   if request.auth != null
+                    && (resource.data.ownerUid == request.auth.uid
+                        || request.auth.token.email == 'kosal@fin-tegration.com');
       allow update: if request.auth != null && resource.data.ownerUid == request.auth.uid
                     && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['advisorStatus', 'advisorFeedback', 'advisorFeedbackNotes',

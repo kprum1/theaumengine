@@ -170,6 +170,42 @@ function pageAdminDashboard() {
     </div>
   </div>
 
+  <!-- Master Leads Pool -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div class="card-title">🗂️ Master Leads Pool</div>
+        <div style="font-size:10px;color:var(--text-muted)" id="admin-leads-meta">Loading all leads…</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="admin-leads-niche-filter" onchange="renderMasterLeadsPool()"
+          style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border-default);background:var(--bg-card);color:var(--text-primary);cursor:pointer">
+          <option value="">All Niches</option>
+          <option value="yacht-owners">Yacht Owners</option>
+          <option value="aircraft-owners">Aircraft Owners</option>
+          <option value="business-owners">Business Owners</option>
+          <option value="physicians">Physicians</option>
+          <option value="ai-displaced-executives">AI-Displaced Execs</option>
+          <option value="charity-board-members">Charity Board Members</option>
+          <option value="c-suite-executives">C-Suite Executives</option>
+          <option value="real-estate-developers">Real Estate Developers</option>
+          <option value="law-partners">Law Partners</option>
+          <option value="inheritance-recipients">Inheritance Recipients</option>
+        </select>
+        <select id="admin-leads-status-filter" onchange="renderMasterLeadsPool()"
+          style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border-default);background:var(--bg-card);color:var(--text-primary);cursor:pointer">
+          <option value="">All Status</option>
+          <option value="unassigned">Unassigned</option>
+          <option value="assigned">Assigned</option>
+        </select>
+        <button class="btn btn-secondary" style="font-size:11px;padding:5px 14px" onclick="renderMasterLeadsPool()">↻ Refresh</button>
+      </div>
+    </div>
+    <div id="admin-leads-pool-section">
+      <div class="agent-thinking"><div class="agent-dots"><span>●</span><span>●</span><span>●</span></div>Loading leads…</div>
+    </div>
+  </div>
+
   <!-- Outreach Send Analytics (legacy) -->
   <div class="card">
     <div class="card-header">
@@ -261,9 +297,10 @@ async function renderAdminDashboard() {
     }
   }, 30_000);
 
-  // Load funnel + outcomes in parallel
+  // Load funnel + outcomes + master leads in parallel
   renderAdminKPIs();
   renderAdminOutcomes();
+  renderMasterLeadsPool();
 }
 
 // ── Phase C2: Pilot Funnel Dashboard ───────────────────────────────────────
@@ -473,6 +510,131 @@ async function renderAdminOutcomes() {
         ${chBar('C — Insight-Led', byVar.C, '#34d399')}
       </div>
     </div>`;
+}
+
+// ── Master Leads Pool ─────────────────────────────────────────────────────
+// Reads master_leads collection (operator-only). Supports niche + status filter.
+let _masterLeadsCache = null;  // cache for filter re-renders without re-fetching
+
+async function renderMasterLeadsPool() {
+  const el      = document.getElementById('admin-leads-pool-section');
+  const metaEl  = document.getElementById('admin-leads-meta');
+  if (!el) return;
+
+  const nicheFilter  = document.getElementById('admin-leads-niche-filter')?.value  || '';
+  const statusFilter = document.getElementById('admin-leads-status-filter')?.value || '';
+
+  // Only fetch from Firestore if cache is empty
+  if (!_masterLeadsCache) {
+    el.innerHTML = `<div class="agent-thinking"><div class="agent-dots"><span>●</span><span>●</span><span>●</span></div>Fetching master leads pool…</div>`;
+    try {
+      const db   = firebase.firestore();
+      const snap = await db.collection('master_leads').orderBy('ingestedAt','desc').limit(500).get();
+
+      // Also pull lead_assignments to build ownerUid lookup
+      const laSnap = await db.collection('lead_assignments').get();
+      const ownerMap = {}; // masterLeadId → ownerUid
+      laSnap.docs.forEach(d => {
+        const la = d.data();
+        if (la.masterLeadId && la.ownerUid && la.ownershipStatus !== 'released') {
+          ownerMap[la.masterLeadId] = la.ownerUid;
+        }
+      });
+
+      // Advisor name map from operator_presence
+      const presSnap = await db.collection('operator_presence').get();
+      const nameMap  = {};
+      presSnap.docs.forEach(d => {
+        const p = d.data();
+        nameMap[d.id] = p.displayName || p.email?.split('@')[0] || d.id.slice(0,8);
+      });
+
+      _masterLeadsCache = snap.docs.map(d => ({
+        id: d.id,
+        ownerName: ownerMap[d.id] ? (nameMap[ownerMap[d.id]] || ownerMap[d.id].slice(0,8)) : null,
+        ...d.data(),
+      }));
+    } catch(e) {
+      el.innerHTML = `<div class="empty-state" style="padding:24px"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Could not load leads pool</div><div class="empty-state-sub">${e.message}</div></div>`;
+      return;
+    }
+  }
+
+  // Apply filters client-side
+  let leads = _masterLeadsCache;
+  if (nicheFilter)  leads = leads.filter(l => (l.nicheId||'').toLowerCase() === nicheFilter);
+  if (statusFilter) leads = leads.filter(l => (l.ownershipStatus||'unassigned') === statusFilter);
+
+  if (metaEl) metaEl.textContent = `${leads.length} lead${leads.length !== 1 ? 's' : ''} · ${_masterLeadsCache.length} total in pool · Updated ${new Date().toLocaleTimeString()}`;
+
+  if (!leads.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:32px 0"><div class="empty-state-icon">🗂️</div><div class="empty-state-title">No leads match filter</div></div>`;
+    return;
+  }
+
+  // Niche badge colors
+  const nicheColor = {
+    'yacht-owners':            '#0ea5e9',
+    'aircraft-owners':         '#8b5cf6',
+    'business-owners':         '#3b82f6',
+    'physicians':              '#10b981',
+    'ai-displaced-executives': '#f59e0b',
+    'charity-board-members':   '#ec4899',
+    'c-suite-executives':      '#6366f1',
+    'real-estate-developers':  '#f97316',
+    'law-partners':            '#14b8a6',
+    'inheritance-recipients':  '#a855f7',
+  };
+
+  const rows = leads.map(l => {
+    const assigned   = l.ownershipStatus === 'assigned';
+    const color      = nicheColor[l.nicheId] || 'var(--text-muted)';
+    const fitPct     = l.fitScore     ? Math.round(l.fitScore)     : (l.priorityScore ? Math.round(l.priorityScore) : 0);
+    const timingPct  = l.timingScore  ? Math.round(l.timingScore)  : 0;
+    const city_state = [l.city, l.state].filter(Boolean).join(', ') || '—';
+    const niche_label = (l.niche || l.nicheId || '—').replace(/-/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+
+    const statusBadge = assigned
+      ? `<span style="font-size:9.5px;font-weight:700;color:var(--emerald);background:rgba(52,211,153,0.1);padding:2px 8px;border-radius:10px">✅ Assigned → ${l.ownerName || 'advisor'}</span>`
+      : `<span style="font-size:9.5px;font-weight:700;color:var(--amber);background:rgba(251,191,36,0.1);padding:2px 8px;border-radius:10px">⏳ Unassigned</span>`;
+
+    const scoreBar = n => `<div style="display:inline-block;width:${Math.max(n,0)}px;height:4px;border-radius:2px;background:var(--blue);vertical-align:middle;max-width:50px"></div>`;
+
+    return `
+    <tr style="border-bottom:1px solid var(--border-subtle);transition:background .15s" onmouseover="this.style.background='rgba(96,165,250,0.04)'" onmouseout="this.style.background=''">
+      <td style="padding:10px 14px">
+        <div style="font-size:12.5px;font-weight:700;color:var(--text-primary)">${l.firstName || ''} ${l.lastName || ''}</div>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px">${l.title || ''} ${l.company ? '· ' + l.company : ''}</div>
+      </td>
+      <td style="padding:10px 14px">
+        <span style="font-size:10px;font-weight:700;color:${color};background:${color}18;padding:2px 8px;border-radius:10px">${niche_label}</span>
+      </td>
+      <td style="padding:10px 14px;font-size:11px;color:var(--text-secondary)">${city_state}</td>
+      <td style="padding:10px 14px;font-size:11px;color:var(--text-secondary)">${l.estimatedAUM || '—'}</td>
+      <td style="padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:6px">
+          ${scoreBar(fitPct * 0.5)}
+          <span style="font-size:11px;font-weight:700;color:var(--blue)">${fitPct}</span>
+        </div>
+      </td>
+      <td style="padding:10px 14px">${statusBadge}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="border-bottom:1px solid var(--border-subtle)">
+        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Lead</th>
+        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Niche</th>
+        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Location</th>
+        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Est. AUM</th>
+        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)">Fit Score</th>
+        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Assignment</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
 }
 
 // ── Time helper ────────────────────────────────────────────────────────────
