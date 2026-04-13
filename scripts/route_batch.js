@@ -124,17 +124,23 @@ async function main() {
 
   const now = new Date().toISOString();
 
-  // ── Step 1: Pull leads from masterLeads by batchId ─────────────────
-  // Note: masterLeads is the correct collection — approve_and_ingest.js
-  // writes here. routing_engine.js uses master_leads (snake) — mismatch.
-  const leadsSnap = await db.collection('masterLeads')
+  // ── Step 1: Pull leads from master_leads by batchId ─────────────────
+  // master_leads is the canonical snake_case CF collection.
+  // masterLeads (camelCase) has been archived — do not read from it.
+  const leadsSnap = await db.collection('master_leads')
     .where('batchId', '==', BATCH_ID)
     .limit(LIMIT)
     .get();
 
   if (leadsSnap.empty) {
-    console.log(`  ⚠️  No leads found in masterLeads with batchId="${BATCH_ID}".`);
-    console.log('  → Check the batch ID. Available batches are in scripts/staging/ingest_log.md');
+    // Fallback: also check masterLeads in case old batches haven't migrated
+    const legacySnap = await db.collection('masterLeads')
+      .where('batchId', '==', BATCH_ID).limit(1).get();
+    if (!legacySnap.empty) {
+      console.log(`  ⚠️  Batch found in legacy masterLeads — run migrate_masterleads.js first.`);
+    } else {
+      console.log(`  ⚠️  No leads found with batchId="${BATCH_ID}" in master_leads.`);
+    }
     process.exit(0);
   }
   console.log(`  📋 Leads in batch: ${leadsSnap.docs.length}\n`);
@@ -188,11 +194,15 @@ async function main() {
     const best    = scored[0];
     const advisor = best.advisor;
 
-    // Check for existing al_assignment (idempotent — safe to re-run)
-    const assignId = `route_${ldoc.id}_${advisor.id}`.replace(/[^a-z0-9_]/gi, '_').slice(0, 100);
-    const existSnap = await db.collection('al_assignments').doc(assignId).get();
-    if (existSnap.exists) {
-      console.log(`  ↩  ALREADY ASSIGNED — ${name} → ${advisor.firmName || advisor.id.slice(0,8)}`);
+    // Dedup check: has this masterLeadId already been assigned to ANYONE?
+    // Uses masterLeadId field so re-runs with a different winner still dedup correctly.
+    const existSnap = await db.collection('al_assignments')
+      .where('masterLeadId', '==', ldoc.id)
+      .limit(1)
+      .get();
+    if (!existSnap.empty) {
+      const ex = existSnap.docs[0].data();
+      console.log(`  ↩  ALREADY ASSIGNED — ${name} → ${ex.ownerFirmName || ex.advisorUid?.slice(0,8)}`);
       skipped++;
       continue;
     }
@@ -205,10 +215,12 @@ async function main() {
       continue;
     }
 
-    // ── Write to al_assignments + update masterLeads + increment cap ──
+    // ── Write to al_assignments + update master_leads + increment cap ──
     const batch = db.batch();
+    // Use a random doc ID (CF routing style) — masterLeadId dedup check above prevents doubles
+    const assignRef = db.collection('al_assignments').doc();
 
-    batch.set(db.collection('al_assignments').doc(assignId), {
+    batch.set(assignRef, {
       masterLeadId:    ldoc.id,
       ownerUid:        advisor.id,
       advisorUid:      advisor.id,
@@ -247,8 +259,8 @@ async function main() {
       updatedAt:        now,
     });
 
-    // Mark masterLeads doc as routed
-    batch.update(db.collection('masterLeads').doc(ldoc.id), {
+    // Mark master_leads doc as assigned
+    batch.update(db.collection('master_leads').doc(ldoc.id), {
       ownershipStatus:   'assigned',
       currentOwnerUid:   advisor.id,
       currentOwnerFirm:  advisor.firmName || '',
@@ -269,7 +281,7 @@ async function main() {
     console.log(`  ✅ ASSIGNED — ${name}`);
     console.log(`     → ${advisor.firmName || advisor.id.slice(0,12)} (score:${best.score})`);
     console.log(`     Reason: ${best.reason}`);
-    console.log(`     Assignment ID: ${assignId}\n`);
+    console.log(`     Assignment ID: ${assignRef.id}\n`);
   }
 
   // ── Summary ──────────────────────────────────────────────────────────

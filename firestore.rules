@@ -45,6 +45,12 @@ service cloud.firestore {
       allow read: if false;
       allow write: if false;
     }
+    match /governance_flags/{id} {
+      // Operator can read stale-lead flags surfaced by runGovernance
+      allow read:  if request.auth != null
+                   && request.auth.token.email == 'kosal@fin-tegration.com';
+      allow write: if false;
+    }
     match /routing_policies/{id} {
       // Operator can read (inspect/verify weights); writes are service-account-only
       allow read:  if request.auth != null

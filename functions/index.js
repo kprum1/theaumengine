@@ -435,43 +435,100 @@ async function finalizeAssignment(lead, masterLeadId, winner, queueRef) {
 // ============================================================
 // AGENT 3: runGovernance — daily SLA + stale audit
 // ============================================================
+// Checks BOTH lead_assignments and al_assignments for stale leads.
+// Reads slaWindowDays from routing_policies/default_v1 (default: 7).
+// Writes a governance_flags doc per stale lead so Admin Dashboard
+// can surface them without a separate query.
 exports.runGovernance = onSchedule('every 24 hours', async (event) => {
     console.info('[Governance] Daily audit starting…');
-    const now     = new Date().toISOString();
-    let released  = 0, flagged = 0;
+    const now = new Date().toISOString();
+    let flagged = 0;
 
-    const slaBreached = await db.collection('lead_assignments')
+    // Load SLA window from policy doc (fallback: 7 days)
+    const policySnap = await db.collection('routing_policies').doc('default_v1').get();
+    const slaWindowDays = (policySnap.exists ? policySnap.data().slaWindowDays : null) || 7;
+    const slaThreshold  = new Date(Date.now() - slaWindowDays * 24 * 60 * 60 * 1000).toISOString();
+    console.info(`[Governance] SLA window: ${slaWindowDays} days | Threshold: ${slaThreshold}`);
+
+    // ── Track 1: lead_assignments (CF routing track) ─────────────────
+    const laBreached = await db.collection('lead_assignments')
       .where('ownershipStatus', '==', 'active')
       .where('slaDeadline', '<', now)
       .get();
 
-    for (const doc of slaBreached.docs) {
+    for (const doc of laBreached.docs) {
       const a = doc.data();
-      await db.collection('manual_review_queue').add({
-        masterLeadId:    a.masterLeadId,
-        assignmentId:    doc.id,
-        ownerUid:        a.ownerUid,
-        identityTier:    null,
-        reason:          'sla_breach',
-        status:          'open',
-        assignedTo:      null,
-        slaDeadline:     new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-        createdAt:       now,
-        resolvedAt:      null,
-        resolution:      null,
-        resolutionNotes: null,
-      });
-      await log('sla_breach_flagged', {
-        masterLeadId: a.masterLeadId,
-        assignmentId: doc.id,
-        ownerUid:     a.ownerUid,
-        agentId:      'runGovernance_v1',
-        detail:       'SLA breached — flagged for manual review',
+      await _flagStale({
+        collection: 'lead_assignments', docId: doc.id,
+        masterLeadId: a.masterLeadId, ownerUid: a.ownerUid,
+        assignedAt: a.assignedAt, status: a.status,
+        slaWindowDays, now,
       });
       flagged++;
     }
-    console.info(`[Governance] ✅ Released: ${released} | Flagged: ${flagged}`);
+    console.info(`[Governance] lead_assignments SLA breaches: ${laBreached.size}`);
+
+    // ── Track 2: al_assignments (batch routing track) ────────────────
+    // al_assignments uses slaDeadline too; fall back to assignedAt age check
+    const alSnap = await db.collection('al_assignments')
+      .where('ownershipStatus', '==', 'active')
+      .where('status', 'in', ['New', 'new'])
+      .get();
+
+    let alFlagged = 0;
+    for (const doc of alSnap.docs) {
+      const a = doc.data();
+      const assignedAt = a.assignedAt || a.createdAt || '';
+
+      // SLA check: slaDeadline field OR age > slaWindowDays
+      const slaBreached = a.slaDeadline
+        ? a.slaDeadline < now
+        : assignedAt < slaThreshold;
+
+      if (!slaBreached) continue;
+
+      await _flagStale({
+        collection: 'al_assignments', docId: doc.id,
+        masterLeadId: a.masterLeadId, ownerUid: a.advisorUid || a.ownerUid,
+        assignedAt, status: a.status,
+        slaWindowDays, now,
+      });
+      flagged++;
+      alFlagged++;
+    }
+    console.info(`[Governance] al_assignments SLA breaches: ${alFlagged}`);
+    console.info(`[Governance] ✅ Total flagged: ${flagged}`);
   });
+
+// Helper: write a governance_flags doc (idempotent by docId)
+async function _flagStale({ collection, docId, masterLeadId, ownerUid, assignedAt, status, slaWindowDays, now }) {
+  const flagId = `${collection}_${docId}`;
+  const existing = await db.collection('governance_flags').doc(flagId).get();
+  if (existing.exists) return; // already flagged
+
+  await db.collection('governance_flags').doc(flagId).set({
+    sourceCollection: collection,
+    sourceDocId:      docId,
+    masterLeadId:     masterLeadId || null,
+    ownerUid:         ownerUid     || null,
+    assignedAt:       assignedAt   || null,
+    lastStatus:       status       || null,
+    reason:           'sla_breach',
+    slaWindowDays,
+    flaggedAt:        now,
+    resolvedAt:       null,
+    resolution:       null,
+  });
+
+  await log('sla_breach_flagged', {
+    masterLeadId: masterLeadId || null,
+    assignmentId: docId,
+    ownerUid:     ownerUid    || null,
+    agentId:      'runGovernance_v1',
+    detail:       `SLA breached (${slaWindowDays}d) in ${collection}/${docId}`,
+  });
+}
+
 
 // ============================================================
 // AGENT 4: Alfred Miner HTTP endpoint
