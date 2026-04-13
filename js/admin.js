@@ -1,6 +1,6 @@
 // ==========================================
 // THE AUM ENGINE — ADMIN / PRESENCE SYSTEM
-// Phase C1 — Operator Dashboard  |  v=20260412b
+// Phase C1 — Operator Dashboard  |  v=20260413a  (P1: Mark Resolved, P4: al_assignments frozen)
 // Visible ONLY when logged in as operator
 // ==========================================
 
@@ -727,8 +727,9 @@ async function renderGovernanceFlags(forceRefresh = false) {
     const advisor  = nameMap[f.ownerUid] || f.ownerUid?.slice(0,10) || '—';
     const age      = f.flaggedAt ? _relativeTime(f.flaggedAt) : '—';
     const assigned = f.assignedAt ? _relativeTime(f.assignedAt) : '—';
+    const safeId   = f.id.replace(/'/g, "\\'");
     return `
-    <tr style="border-bottom:1px solid var(--border-subtle);transition:background .15s"
+    <tr id="gov-flag-row-${f.id}" style="border-bottom:1px solid var(--border-subtle);transition:background .15s"
         onmouseover="this.style.background='rgba(251,191,36,0.04)'" onmouseout="this.style.background=''">
       <td style="padding:10px 14px">
         <div style="font-size:12px;font-weight:700;color:var(--text-primary)">${advisor}</div>
@@ -739,12 +740,31 @@ async function renderGovernanceFlags(forceRefresh = false) {
       <td style="padding:10px 14px">${reasonLabel(f.reason)}</td>
       <td style="padding:10px 14px;font-size:10.5px;color:var(--text-muted)">${assigned}</td>
       <td style="padding:10px 14px;font-size:10.5px;color:var(--amber);font-weight:600">${age}</td>
+      <td style="padding:10px 14px">
+        <button
+          id="resolve-btn-${f.id}"
+          onclick="resolveGovernanceFlag('${safeId}')"
+          style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:8px;border:none;
+                 background:rgba(52,211,153,0.12);color:var(--emerald);cursor:pointer;
+                 transition:background .15s,transform .1s"
+          onmouseover="this.style.background='rgba(52,211,153,0.24)'"
+          onmouseout="this.style.background='rgba(52,211,153,0.12)'"
+          title="Write resolvedAt to governance_flags/${f.id}">
+          ✓ Mark Resolved
+        </button>
+      </td>
     </tr>`;
   }).join('');
 
+  // "Mark All Resolved" only shown when ≥2 active breaches
+  const markAllBtn = active.length >= 2
+    ? `<button onclick="resolveAllGovernanceFlags()" style="font-size:10px;font-weight:700;padding:4px 12px;border-radius:8px;border:none;background:rgba(52,211,153,0.12);color:var(--emerald);cursor:pointer;white-space:nowrap" title="Resolve all ${active.length} active breaches at once">✓✓ Mark All Resolved</button>`
+    : '';
+
   el.innerHTML = `
-  <div style="padding:8px 14px;background:rgba(251,191,36,0.06);border-bottom:1px solid rgba(251,191,36,0.15);font-size:11px;color:var(--amber);font-weight:600">
-    ⚠️ ${active.length} lead${active.length !== 1 ? 's have' : ' has'} breached the SLA window. Follow up immediately or mark as resolved in Firestore.
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:rgba(251,191,36,0.06);border-bottom:1px solid rgba(251,191,36,0.15);gap:12px;flex-wrap:wrap">
+    <span style="font-size:11px;color:var(--amber);font-weight:600">⚠️ ${active.length} lead${active.length !== 1 ? 's have' : ' has'} breached the SLA window — contact advisor or mark as resolved.</span>
+    ${markAllBtn}
   </div>
   <table style="width:100%;border-collapse:collapse">
     <thead>
@@ -755,10 +775,98 @@ async function renderGovernanceFlags(forceRefresh = false) {
         <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)">Reason</th>
         <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Assigned</th>
         <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)">Flagged</th>
+        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--emerald)">Action</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
   </table>`;
+}
+
+// ── Resolve Governance Flag (P1 — Mark Resolved) ─────────────────────────
+// Writes resolvedAt + resolvedBy + resolution to governance_flags/{flagId}.
+// Then clears the cache and re-renders the SLA Alerts card.
+async function resolveGovernanceFlag(flagId) {
+  const btn = document.getElementById(`resolve-btn-${flagId}`);
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Resolving…';
+    btn.style.opacity = '0.6';
+  }
+
+  try {
+    const db  = firebase.firestore();
+    const uid = window._currentUser?.uid || 'operator';
+    await db.collection('governance_flags').doc(flagId).update({
+      resolvedAt:   new Date().toISOString(),
+      resolvedBy:   window._currentUser?.email || 'operator',
+      resolution:   'operator_resolved',
+      resolvedByUid: uid,
+    });
+
+    // Animate row out
+    const row = document.getElementById(`gov-flag-row-${flagId}`);
+    if (row) {
+      row.style.transition = 'opacity 0.3s, transform 0.3s';
+      row.style.opacity = '0';
+      row.style.transform = 'translateX(12px)';
+      setTimeout(() => row.remove(), 320);
+    }
+
+    // Clear cache and re-render after animation
+    setTimeout(() => {
+      _govFlagsCache = null;
+      renderGovernanceFlags(true);
+    }, 380);
+
+  } catch(e) {
+    console.error('[admin.js] resolveGovernanceFlag failed:', e);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '✗ Failed — retry';
+      btn.style.background = 'rgba(251,113,133,0.15)';
+      btn.style.color = 'var(--red, #f87171)';
+      btn.style.opacity = '1';
+    }
+    alert(`Could not resolve flag:\n${e.message}`);
+  }
+}
+
+// Bulk: resolve all currently active breaches in one pass
+async function resolveAllGovernanceFlags() {
+  if (!_govFlagsCache) return;
+  const active = _govFlagsCache.filter(f => !f.resolvedAt);
+  if (!active.length) return;
+  if (!confirm(`Mark all ${active.length} active breach${active.length !== 1 ? 'es' : ''} as resolved?`)) return;
+
+  // Disable all buttons immediately
+  active.forEach(f => {
+    const btn = document.getElementById(`resolve-btn-${f.id}`);
+    if (btn) { btn.disabled = true; btn.textContent = 'Resolving…'; btn.style.opacity = '0.6'; }
+  });
+
+  try {
+    const db  = firebase.firestore();
+    const now = new Date().toISOString();
+    const uid = window._currentUser?.uid   || 'operator';
+    const email = window._currentUser?.email || 'operator';
+    const batch = db.batch();
+    active.forEach(f => {
+      batch.update(db.collection('governance_flags').doc(f.id), {
+        resolvedAt:    now,
+        resolvedBy:    email,
+        resolution:    'operator_resolved',
+        resolvedByUid: uid,
+      });
+    });
+    await batch.commit();
+    _govFlagsCache = null;
+    renderGovernanceFlags(true);
+  } catch(e) {
+    console.error('[admin.js] resolveAllGovernanceFlags failed:', e);
+    alert(`Batch resolve failed:\n${e.message}`);
+    _govFlagsCache = null;
+    renderGovernanceFlags(true);
+  }
 }
 
 // ── Time helper ────────────────────────────────────────────────────────────
