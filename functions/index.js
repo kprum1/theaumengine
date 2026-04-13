@@ -1,6 +1,6 @@
 // ============================================================
 // AUM ENGINE — Cloud Functions Routing Orchestrator
-// functions/index.js — Phase C5 (Node.js 22)
+// functions/index.js — Phase C5 (Node.js 22) | Sprint 4 + P2 cap-warning
 // ============================================================
 // AGENTS (in pipeline order):
 //   1. onLeadIngested    — HTTP endpoint (Alfred / CSV / manual)
@@ -462,16 +462,15 @@ exports.runGovernance = onSchedule('every 24 hours', async (event) => {
     const now = new Date().toISOString();
     let flagged = 0;
 
-    // Load SLA window from policy doc (fallback: 7 days)
+    // Load policy doc — SLA window + cap warning threshold
     const policySnap = await db.collection('routing_policies').doc('default_v1').get();
-    const slaWindowDays = (policySnap.exists ? policySnap.data().slaWindowDays : null) || 7;
-    const slaThreshold  = new Date(Date.now() - slaWindowDays * 24 * 60 * 60 * 1000).toISOString();
-    console.info(`[Governance] SLA window: ${slaWindowDays} days | Threshold: ${slaThreshold}`);
+    const policy         = policySnap.exists ? policySnap.data() : {};
+    const slaWindowDays  = policy.slaWindowDays  || 7;
+    const capWarningPct  = policy.capWarningPct  || 0.90; // default: warn at 90% capacity
+    const slaThreshold   = new Date(Date.now() - slaWindowDays * 24 * 60 * 60 * 1000).toISOString();
+    console.info(`[Governance] SLA window: ${slaWindowDays}d | Cap warning: ${Math.round(capWarningPct*100)}%`);
 
-    // ── Single track: lead_assignments (canonical — Sprint 4 unified) ────────
-    // Covers CF-routed leads (assignedBy: RoutingOrchestrator_v1) AND
-    // migrated al_assignments docs (migratedFromAlId field present).
-    // Breach condition: slaDeadline < now (both tracks set this field).
+    // ── Track 1: SLA breach audit (lead_assignments only — Sprint 4 unified) ─────
     const laBreached = await db.collection('lead_assignments')
       .where('ownershipStatus', '==', 'active')
       .where('slaDeadline', '<', now)
@@ -487,10 +486,91 @@ exports.runGovernance = onSchedule('every 24 hours', async (event) => {
       });
       flagged++;
     }
-    console.info(`[Governance] lead_assignments SLA breaches: ${laBreached.size}`);
+    console.info(`[Governance] SLA breaches: ${laBreached.size}`);
 
-    // NOTE: al_assignments no longer audited — all docs migrated to lead_assignments in Sprint 4.
-    console.info(`[Governance] ✅ Total flagged: ${flagged}`);
+    // ── Track 2: Cap-warning sweep (P2) ────────────────────────────────
+    // For each advisor, count active lead_assignments and compare against
+    // (cap * capWarningPct). Soft-cap advisors use a slightly lower threshold
+    // (capWarningPct - 0.05) because they already have a 1-lead buffer.
+    let capWarnings = 0;
+    const poolSnap = await db.collection('advisor_pool')
+      .where('eligibleForRouting', '==', true)
+      .get();
+
+    for (const poolDoc of poolSnap.docs) {
+      const ap        = poolDoc.data();
+      const uid       = poolDoc.id;
+      const cap       = ap.activeLeadCap || 25;
+      const capPolicy = (ap.capPolicy || 'hard').toLowerCase();
+      // Soft-cap advisors already have a 1-lead grace slot — warn slightly earlier
+      const threshold = capPolicy === 'soft'
+        ? Math.max(0, capWarningPct - 0.05)
+        : capWarningPct;
+      const warnAt = Math.floor(cap * threshold); // e.g. 90% of 30 = 27
+
+      const activeSnap = await db.collection('lead_assignments')
+        .where('ownerUid', '==', uid)
+        .where('ownershipStatus', '==', 'active')
+        .get();
+      const totalActive = activeSnap.size;
+
+      const flagId = `cap_warning_${uid}`;
+
+      if (totalActive >= warnAt) {
+        // ━ Write / refresh cap-warning flag ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        const existingFlag = await db.collection('governance_flags').doc(flagId).get();
+        if (existingFlag.exists && !existingFlag.data().resolvedAt) {
+          // Already active — refresh the count only (don't duplicate)
+          await db.collection('governance_flags').doc(flagId).update({
+            totalActive, cap, warnAt, capWarningPct: threshold,
+            updatedAt: now,
+          });
+        } else {
+          // New or previously resolved — (re)write
+          await db.collection('governance_flags').doc(flagId).set({
+            reason:         'approaching_cap',
+            ownerUid:       uid,
+            firmName:       ap.firmName || uid,
+            cap,
+            capPolicy,
+            capWarningPct:  threshold,
+            warnAt,
+            totalActive,
+            pctFull:        Math.round((totalActive / cap) * 100),
+            flaggedAt:      now,
+            updatedAt:      now,
+            resolvedAt:     null,
+            resolvedBy:     null,
+            resolution:     null,
+            sourceCollection: 'lead_assignments',
+          });
+          await log('cap_warning_flagged', {
+            ownerUid: uid,
+            firmName: ap.firmName || uid,
+            totalActive, cap, warnAt, capPolicy,
+            agentId: 'runGovernance_v1',
+            detail: `Cap warning: ${totalActive}/${cap} (${Math.round(totalActive/cap*100)}%) — policy:${capPolicy}`,
+          });
+          capWarnings++;
+        }
+      } else {
+        // ━ Auto-resolve stale cap-warning if advisor dropped below threshold ━━
+        const existingFlag = await db.collection('governance_flags').doc(flagId).get();
+        if (existingFlag.exists && !existingFlag.data().resolvedAt) {
+          await db.collection('governance_flags').doc(flagId).update({
+            resolvedAt:  now,
+            resolvedBy:  'runGovernance_v1',
+            resolution:  'cap_dropped_below_threshold',
+            totalActive, // final count at resolution
+            updatedAt:   now,
+          });
+          console.info(`[Governance] Auto-resolved cap warning for ${uid} (${totalActive}/${cap})`);
+        }
+      }
+    }
+
+    console.info(`[Governance] Cap warnings raised: ${capWarnings}`);
+    console.info(`[Governance] ✅ Total SLA flags: ${flagged} | Cap warnings: ${capWarnings}`);
   });
 
 

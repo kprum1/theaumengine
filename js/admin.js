@@ -1,6 +1,6 @@
 // ==========================================
 // THE AUM ENGINE — ADMIN / PRESENCE SYSTEM
-// Phase C1 — Operator Dashboard  |  v=20260413a  (P1: Mark Resolved, P4: al_assignments frozen)
+// Phase C1 — Operator Dashboard  |  v=20260413b  (P2: cap-warning UI; P3: indexes)
 // Visible ONLY when logged in as operator
 // ==========================================
 
@@ -689,97 +689,139 @@ async function renderGovernanceFlags(forceRefresh = false) {
     }
   }
 
-  // Filter: only active (unresolved) breaches
-  const active = _govFlagsCache.filter(f => !f.resolvedAt);
-  const nameMap = _govFlagsCache[0]?._nameMap || {};
+  // Filter: only active (unresolved) flags
+  const active     = _govFlagsCache.filter(f => !f.resolvedAt);
+  const slaFlags   = active.filter(f => f.reason === 'sla_breach');
+  const capFlags   = active.filter(f => f.reason === 'approaching_cap');
+  const nameMap    = _govFlagsCache[0]?._nameMap || {};
 
   if (metaEl) {
     const total    = _govFlagsCache.length;
     const resolved = total - active.length;
+    const parts = [];
+    if (slaFlags.length)  parts.push(`⏰ ${slaFlags.length} SLA breach${slaFlags.length !== 1 ? 'es' : ''}`);
+    if (capFlags.length)  parts.push(`⚡ ${capFlags.length} at-cap warning${capFlags.length !== 1 ? 's' : ''}`);
     metaEl.textContent = active.length === 0
-      ? `✅ No active SLA breaches · ${resolved} resolved · Updated ${new Date().toLocaleTimeString()}`
-      : `⚠️ ${active.length} active breach${active.length !== 1 ? 'es' : ''} · ${resolved} resolved · Updated ${new Date().toLocaleTimeString()}`;
+      ? `✅ No active flags · ${resolved} resolved · Updated ${new Date().toLocaleTimeString()}`
+      : `${parts.join(' · ')} · ${resolved} resolved · Updated ${new Date().toLocaleTimeString()}`;
   }
 
   if (!active.length) {
     el.innerHTML = `
       <div class="empty-state" style="padding:32px 0">
         <div class="empty-state-icon">✅</div>
-        <div class="empty-state-title">No active SLA breaches</div>
-        <div class="empty-state-sub">All leads are within their SLA window. Governance runs every 24h.</div>
+        <div class="empty-state-title">No active governance flags</div>
+        <div class="empty-state-sub">All leads within SLA window. All advisors below cap threshold. Governance runs every 24h.</div>
       </div>`;
     return;
   }
 
-  // Source-collection badge
-  const collBadge = coll => {
-    const isAL = coll === 'al_assignments';
-    return `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isAL ? 'rgba(139,92,246,0.12)' : 'rgba(59,130,246,0.12)'};color:${isAL ? '#8b5cf6' : '#3b82f6'}">${isAL ? 'al_assign' : 'lead_assign'}</span>`;
+  // ── Shared helpers ────────────────────────────────────────────────────
+  const makeResolveBtn = (id) => {
+    const safeId = id.replace(/'/g, "\\'");
+    return `<button
+      id="resolve-btn-${id}"
+      onclick="resolveGovernanceFlag('${safeId}')"
+      style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:8px;border:none;
+             background:rgba(52,211,153,0.12);color:var(--emerald);cursor:pointer;
+             transition:background .15s"
+      onmouseover="this.style.background='rgba(52,211,153,0.24)'"
+      onmouseout="this.style.background='rgba(52,211,153,0.12)'"
+      title="Write resolvedAt to governance_flags/${id}">
+      ✓ Resolve
+    </button>`;
   };
 
-  // Reason label
-  const reasonLabel = r => {
-    if (r === 'sla_breach') return `<span style="color:var(--amber);font-weight:700;font-size:10.5px">⏰ SLA Breach</span>`;
-    return `<span style="color:var(--text-muted);font-size:10.5px">${r || 'unknown'}</span>`;
-  };
-
-  const rows = active.map(f => {
-    const advisor  = nameMap[f.ownerUid] || f.ownerUid?.slice(0,10) || '—';
-    const age      = f.flaggedAt ? _relativeTime(f.flaggedAt) : '—';
+  // ── SLA Breach rows (red ⏰) ───────────────────────────────────────
+  const slaRows = slaFlags.map(f => {
+    const advisor  = f.firmName || nameMap[f.ownerUid] || f.ownerUid?.slice(0,10) || '—';
+    const age      = f.flaggedAt  ? _relativeTime(f.flaggedAt)  : '—';
     const assigned = f.assignedAt ? _relativeTime(f.assignedAt) : '—';
-    const safeId   = f.id.replace(/'/g, "\\'");
+    return `
+    <tr id="gov-flag-row-${f.id}" style="border-bottom:1px solid var(--border-subtle);transition:background .15s"
+        onmouseover="this.style.background='rgba(251,113,133,0.04)'" onmouseout="this.style.background=''">
+      <td style="padding:10px 14px">
+        <div style="font-size:12px;font-weight:700;color:var(--text-primary)">${advisor}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${f.id?.slice(0,26) || '—'}…</div>
+      </td>
+      <td style="padding:10px 14px">
+        <span style="font-size:10px;font-weight:700;color:#f87171;background:rgba(248,113,113,0.1);padding:2px 8px;border-radius:8px">⏰ SLA Breach</span>
+      </td>
+      <td style="padding:10px 14px;font-size:11px;color:var(--text-muted)">${assigned}</td>
+      <td style="padding:10px 14px;font-size:11px;color:#f87171;font-weight:600">${age}</td>
+      <td style="padding:10px 14px">${makeResolveBtn(f.id)}</td>
+    </tr>`;
+  }).join('');
+
+  // ── Cap Warning rows (yellow ⚡) ───────────────────────────────────
+  const capRows = capFlags.map(f => {
+    const advisor  = f.firmName || nameMap[f.ownerUid] || f.ownerUid?.slice(0,10) || '—';
+    const capLabel = f.totalActive != null ? `${f.totalActive}/${f.cap}` : '—';
+    const pctLabel = f.pctFull    != null ? `${f.pctFull}%` : '—';
+    const flaggedAgo = f.flaggedAt ? _relativeTime(f.flaggedAt) : '—';
+    const policyBadge = f.capPolicy === 'soft'
+      ? `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px;background:rgba(99,102,241,0.12);color:#818cf8">soft</span>`
+      : `<span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:6px;background:rgba(251,113,133,0.12);color:#f87171">hard</span>`;
     return `
     <tr id="gov-flag-row-${f.id}" style="border-bottom:1px solid var(--border-subtle);transition:background .15s"
         onmouseover="this.style.background='rgba(251,191,36,0.04)'" onmouseout="this.style.background=''">
       <td style="padding:10px 14px">
-        <div style="font-size:12px;font-weight:700;color:var(--text-primary)">${advisor}</div>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:2px">UID: ${f.ownerUid?.slice(0,10) || '—'}…</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text-primary)">${advisor} ${policyBadge}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${f.ownerUid?.slice(0,10) || '—'}…</div>
       </td>
-      <td style="padding:10px 14px">${collBadge(f.sourceCollection)}</td>
-      <td style="padding:10px 14px;font-size:10.5px;color:var(--text-muted)">${f.id?.slice(0,28) || '—'}</td>
-      <td style="padding:10px 14px">${reasonLabel(f.reason)}</td>
-      <td style="padding:10px 14px;font-size:10.5px;color:var(--text-muted)">${assigned}</td>
-      <td style="padding:10px 14px;font-size:10.5px;color:var(--amber);font-weight:600">${age}</td>
       <td style="padding:10px 14px">
-        <button
-          id="resolve-btn-${f.id}"
-          onclick="resolveGovernanceFlag('${safeId}')"
-          style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:8px;border:none;
-                 background:rgba(52,211,153,0.12);color:var(--emerald);cursor:pointer;
-                 transition:background .15s,transform .1s"
-          onmouseover="this.style.background='rgba(52,211,153,0.24)'"
-          onmouseout="this.style.background='rgba(52,211,153,0.12)'"
-          title="Write resolvedAt to governance_flags/${f.id}">
-          ✓ Mark Resolved
-        </button>
+        <span style="font-size:10px;font-weight:700;color:var(--amber);background:rgba(251,191,36,0.1);padding:2px 8px;border-radius:8px">⚡ At-Cap Warning</span>
       </td>
+      <td style="padding:10px 14px;font-size:11.5px;font-weight:700;color:var(--amber)">${capLabel} <span style="font-size:10px;font-weight:400;color:var(--text-muted)">(${pctLabel})</span></td>
+      <td style="padding:10px 14px;font-size:11px;color:var(--text-muted)">${flaggedAgo}</td>
+      <td style="padding:10px 14px">${makeResolveBtn(f.id)}</td>
     </tr>`;
   }).join('');
 
-  // "Mark All Resolved" only shown when ≥2 active breaches
+  // ── Shared Mark-All button (shown if ≥2 active flags total) ────────────
   const markAllBtn = active.length >= 2
-    ? `<button onclick="resolveAllGovernanceFlags()" style="font-size:10px;font-weight:700;padding:4px 12px;border-radius:8px;border:none;background:rgba(52,211,153,0.12);color:var(--emerald);cursor:pointer;white-space:nowrap" title="Resolve all ${active.length} active breaches at once">✓✓ Mark All Resolved</button>`
+    ? `<button onclick="resolveAllGovernanceFlags()" style="font-size:10px;font-weight:700;padding:4px 12px;border-radius:8px;border:none;background:rgba(52,211,153,0.12);color:var(--emerald);cursor:pointer;white-space:nowrap" title="Resolve all ${active.length} active flags at once">✓✓ Mark All Resolved</button>`
     : '';
 
+  // ── SLA section (render only when there are SLA flags) ─────────────
+  const slaSection = slaFlags.length ? `
+  <div style="padding:8px 14px 4px;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f87171;border-bottom:1px solid rgba(248,113,113,0.15);background:rgba(248,113,113,0.03)">⏰ SLA Breaches (${slaFlags.length})</div>
+  <table style="width:100%;border-collapse:collapse">
+    <thead><tr style="border-bottom:1px solid var(--border-subtle)">
+      <th style="padding:7px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted)">Advisor</th>
+      <th style="padding:7px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#f87171">Type</th>
+      <th style="padding:7px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted)">Assigned</th>
+      <th style="padding:7px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#f87171">Flagged</th>
+      <th style="padding:7px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--emerald)">Action</th>
+    </tr></thead>
+    <tbody>${slaRows}</tbody>
+  </table>` : '';
+
+  // ── Cap-warning section (render only when there are cap flags) ───────
+  const capSection = capFlags.length ? `
+  <div style="padding:8px 14px 4px;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);border-top:1px solid var(--border-subtle);border-bottom:1px solid rgba(251,191,36,0.15);background:rgba(251,191,36,0.03)">⚡ At-Cap Warnings (${capFlags.length})</div>
+  <table style="width:100%;border-collapse:collapse">
+    <thead><tr style="border-bottom:1px solid var(--border-subtle)">
+      <th style="padding:7px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted)">Advisor</th>
+      <th style="padding:7px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--amber)">Type</th>
+      <th style="padding:7px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--amber)">Leads / Cap</th>
+      <th style="padding:7px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted)">Flagged</th>
+      <th style="padding:7px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--emerald)">Action</th>
+    </tr></thead>
+    <tbody>${capRows}</tbody>
+  </table>` : '';
+
   el.innerHTML = `
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:rgba(251,191,36,0.06);border-bottom:1px solid rgba(251,191,36,0.15);gap:12px;flex-wrap:wrap">
-    <span style="font-size:11px;color:var(--amber);font-weight:600">⚠️ ${active.length} lead${active.length !== 1 ? 's have' : ' has'} breached the SLA window — contact advisor or mark as resolved.</span>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--border-subtle);gap:12px;flex-wrap:wrap">
+    <span style="font-size:11px;font-weight:600;color:var(--text-secondary)">
+      ${slaFlags.length ? `<span style="color:#f87171">⏰ ${slaFlags.length} SLA breach${slaFlags.length !== 1 ? 'es' : ''}</span>` : ''}
+      ${slaFlags.length && capFlags.length ? ' &nbsp;·&nbsp; ' : ''}
+      ${capFlags.length ? `<span style="color:var(--amber)">⚡ ${capFlags.length} at-cap warning${capFlags.length !== 1 ? 's' : ''}</span>` : ''}
+    </span>
     ${markAllBtn}
   </div>
-  <table style="width:100%;border-collapse:collapse">
-    <thead>
-      <tr style="border-bottom:1px solid var(--border-subtle)">
-        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Advisor</th>
-        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Collection</th>
-        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Flag ID</th>
-        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)">Reason</th>
-        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Assigned</th>
-        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)">Flagged</th>
-        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--emerald)">Action</th>
-      </tr>
-    </thead>
-    <tbody>${rows}</tbody>
-  </table>`;
+  ${slaSection}
+  ${capSection}`;
 }
 
 // ── Resolve Governance Flag (P1 — Mark Resolved) ─────────────────────────

@@ -112,6 +112,48 @@
         { "fieldPath": "advisorUid", "order": "ASCENDING" },
         { "fieldPath": "createdAt",  "order": "DESCENDING" }
       ]
+    },
+
+    {
+      "collectionGroup": "lead_assignments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ownerUid",    "order": "ASCENDING" },
+        { "fieldPath": "assignedAt",  "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "lead_assignments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ownerUid",          "order": "ASCENDING" },
+        { "fieldPath": "ownershipStatus",   "order": "ASCENDING" },
+        { "fieldPath": "assignedAt",        "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "al_assignments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "advisorUid",  "order": "ASCENDING" },
+        { "fieldPath": "assignedAt",  "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "governance_flags",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "reason",     "order": "ASCENDING" },
+        { "fieldPath": "flaggedAt",  "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "governance_flags",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "resolvedAt", "order": "ASCENDING" },
+        { "fieldPath": "flaggedAt",  "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
