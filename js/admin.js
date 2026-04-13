@@ -1,6 +1,6 @@
 // ==========================================
 // THE AUM ENGINE — ADMIN / PRESENCE SYSTEM
-// Phase C1 — Operator Dashboard
+// Phase C1 — Operator Dashboard  |  v=20260412b
 // Visible ONLY when logged in as operator
 // ==========================================
 
@@ -206,6 +206,20 @@ function pageAdminDashboard() {
     </div>
   </div>
 
+  <!-- SLA Governance Alerts -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header" style="justify-content:space-between">
+      <div>
+        <div class="card-title">⚠️ SLA Alerts</div>
+        <div style="font-size:10px;color:var(--text-muted)" id="admin-flags-meta">Checking governance flags…</div>
+      </div>
+      <button class="btn btn-secondary" style="font-size:11px;padding:5px 14px" onclick="renderGovernanceFlags(true)">↻ Refresh</button>
+    </div>
+    <div id="admin-flags-section">
+      <div class="agent-thinking"><div class="agent-dots"><span>●</span><span>●</span><span>●</span></div>Loading SLA flags…</div>
+    </div>
+  </div>
+
   <!-- Outreach Send Analytics (legacy) -->
   <div class="card">
     <div class="card-header">
@@ -297,10 +311,11 @@ async function renderAdminDashboard() {
     }
   }, 30_000);
 
-  // Load funnel + outcomes + master leads in parallel
+  // Load funnel + outcomes + master leads + governance flags in parallel
   renderAdminKPIs();
   renderAdminOutcomes();
   renderMasterLeadsPool();
+  renderGovernanceFlags();
 }
 
 // ── Phase C2: Pilot Funnel Dashboard ───────────────────────────────────────
@@ -631,6 +646,115 @@ async function renderMasterLeadsPool() {
         <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Est. AUM</th>
         <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)">Fit Score</th>
         <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Assignment</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ── SLA Governance Flags ──────────────────────────────────────────────────
+// Reads governance_flags where resolvedAt == null (active SLA breaches).
+// forceRefresh=true clears the cache so Refresh button always re-fetches.
+let _govFlagsCache = null;
+
+async function renderGovernanceFlags(forceRefresh = false) {
+  const el     = document.getElementById('admin-flags-section');
+  const metaEl = document.getElementById('admin-flags-meta');
+  if (!el) return;
+
+  if (forceRefresh) _govFlagsCache = null;
+
+  if (!_govFlagsCache) {
+    el.innerHTML = `<div class="agent-thinking"><div class="agent-dots"><span>●</span><span>●</span><span>●</span></div>Reading governance flags…</div>`;
+    try {
+      const db   = firebase.firestore();
+      // Firestore rules: operator-only read on governance_flags
+      const snap = await db.collection('governance_flags')
+        .orderBy('flaggedAt', 'desc')
+        .limit(200)
+        .get();
+
+      // Advisor name lookup from operator_presence
+      const presSnap = await db.collection('operator_presence').get();
+      const nameMap  = {};
+      presSnap.docs.forEach(d => {
+        const p = d.data();
+        nameMap[d.id] = p.displayName || p.email?.split('@')[0] || d.id.slice(0,8);
+      });
+
+      _govFlagsCache = snap.docs.map(d => ({ id: d.id, ...d.data(), _nameMap: nameMap }));
+    } catch(e) {
+      el.innerHTML = `<div class="empty-state" style="padding:24px"><div class="empty-state-icon">⚠️</div><div class="empty-state-title">Could not load flags</div><div class="empty-state-sub">${e.message}</div></div>`;
+      return;
+    }
+  }
+
+  // Filter: only active (unresolved) breaches
+  const active = _govFlagsCache.filter(f => !f.resolvedAt);
+  const nameMap = _govFlagsCache[0]?._nameMap || {};
+
+  if (metaEl) {
+    const total    = _govFlagsCache.length;
+    const resolved = total - active.length;
+    metaEl.textContent = active.length === 0
+      ? `✅ No active SLA breaches · ${resolved} resolved · Updated ${new Date().toLocaleTimeString()}`
+      : `⚠️ ${active.length} active breach${active.length !== 1 ? 'es' : ''} · ${resolved} resolved · Updated ${new Date().toLocaleTimeString()}`;
+  }
+
+  if (!active.length) {
+    el.innerHTML = `
+      <div class="empty-state" style="padding:32px 0">
+        <div class="empty-state-icon">✅</div>
+        <div class="empty-state-title">No active SLA breaches</div>
+        <div class="empty-state-sub">All leads are within their SLA window. Governance runs every 24h.</div>
+      </div>`;
+    return;
+  }
+
+  // Source-collection badge
+  const collBadge = coll => {
+    const isAL = coll === 'al_assignments';
+    return `<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:${isAL ? 'rgba(139,92,246,0.12)' : 'rgba(59,130,246,0.12)'};color:${isAL ? '#8b5cf6' : '#3b82f6'}">${isAL ? 'al_assign' : 'lead_assign'}</span>`;
+  };
+
+  // Reason label
+  const reasonLabel = r => {
+    if (r === 'sla_breach') return `<span style="color:var(--amber);font-weight:700;font-size:10.5px">⏰ SLA Breach</span>`;
+    return `<span style="color:var(--text-muted);font-size:10.5px">${r || 'unknown'}</span>`;
+  };
+
+  const rows = active.map(f => {
+    const advisor  = nameMap[f.ownerUid] || f.ownerUid?.slice(0,10) || '—';
+    const age      = f.flaggedAt ? _relativeTime(f.flaggedAt) : '—';
+    const assigned = f.assignedAt ? _relativeTime(f.assignedAt) : '—';
+    return `
+    <tr style="border-bottom:1px solid var(--border-subtle);transition:background .15s"
+        onmouseover="this.style.background='rgba(251,191,36,0.04)'" onmouseout="this.style.background=''">
+      <td style="padding:10px 14px">
+        <div style="font-size:12px;font-weight:700;color:var(--text-primary)">${advisor}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:2px">UID: ${f.ownerUid?.slice(0,10) || '—'}…</div>
+      </td>
+      <td style="padding:10px 14px">${collBadge(f.sourceCollection)}</td>
+      <td style="padding:10px 14px;font-size:10.5px;color:var(--text-muted)">${f.id?.slice(0,28) || '—'}</td>
+      <td style="padding:10px 14px">${reasonLabel(f.reason)}</td>
+      <td style="padding:10px 14px;font-size:10.5px;color:var(--text-muted)">${assigned}</td>
+      <td style="padding:10px 14px;font-size:10.5px;color:var(--amber);font-weight:600">${age}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+  <div style="padding:8px 14px;background:rgba(251,191,36,0.06);border-bottom:1px solid rgba(251,191,36,0.15);font-size:11px;color:var(--amber);font-weight:600">
+    ⚠️ ${active.length} lead${active.length !== 1 ? 's have' : ' has'} breached the SLA window. Follow up immediately or mark as resolved in Firestore.
+  </div>
+  <table style="width:100%;border-collapse:collapse">
+    <thead>
+      <tr style="border-bottom:1px solid var(--border-subtle)">
+        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Advisor</th>
+        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Collection</th>
+        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Flag ID</th>
+        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)">Reason</th>
+        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)">Assigned</th>
+        <th style="padding:8px 14px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)">Flagged</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>

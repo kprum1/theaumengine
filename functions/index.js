@@ -280,7 +280,8 @@ async function runEligibility(lead) {
     if (licensedStates.length > 0 && !licensedStates.includes(leadState)) continue;
 
     // Gate 3: Combined lead cap — count BOTH lead_assignments + al_assignments
-    const cap = ap.activeLeadCap || 25;
+    const cap       = ap.activeLeadCap || 25;
+    const capPolicy = (ap.capPolicy || 'hard').toLowerCase(); // 'hard' | 'soft'
     const [legacySnap, alSnap] = await Promise.all([
       db.collection('lead_assignments')
         .where('ownerUid', '==', uid)
@@ -292,9 +293,26 @@ async function runEligibility(lead) {
         .get(),
     ]);
     const totalActive = legacySnap.size + alSnap.size;
-    if (totalActive >= cap) {
-      console.info(`[Eligibility] ${uid} at cap (${totalActive}/${cap}) — skipping`);
+
+    // Hard cap: strict block at >= cap
+    // Soft cap: allow exactly 1 overflow (totalActive === cap is OK; cap+1 is blocked)
+    const effectiveCap = capPolicy === 'soft' ? cap + 1 : cap;
+    if (totalActive >= effectiveCap) {
+      console.info(`[Eligibility] ${uid} at cap (${totalActive}/${cap}, policy:${capPolicy}) — skipping`);
       continue;
+    }
+
+    // Log a warning when routing into a soft-cap overflow slot
+    if (capPolicy === 'soft' && totalActive >= cap) {
+      console.warn(`[Eligibility] ${uid} entering soft-cap overflow slot (${totalActive}/${cap}) — routing allowed with warning`);
+      await log('cap_overflow_warning', {
+        ownerUid:    uid,
+        firmName:    ap.firmName || uid,
+        totalActive, cap,
+        capPolicy:   'soft',
+        agentId:     'runEligibility_v1',
+        detail:      `Soft-cap overflow: ${totalActive}/${cap} — routing 1 extra lead`,
+      });
     }
 
     // Gate 4: AUM band match (soft)
