@@ -468,7 +468,10 @@ exports.runGovernance = onSchedule('every 24 hours', async (event) => {
     const slaThreshold  = new Date(Date.now() - slaWindowDays * 24 * 60 * 60 * 1000).toISOString();
     console.info(`[Governance] SLA window: ${slaWindowDays} days | Threshold: ${slaThreshold}`);
 
-    // ── Track 1: lead_assignments (CF routing track) ─────────────────
+    // ── Single track: lead_assignments (canonical — Sprint 4 unified) ────────
+    // Covers CF-routed leads (assignedBy: RoutingOrchestrator_v1) AND
+    // migrated al_assignments docs (migratedFromAlId field present).
+    // Breach condition: slaDeadline < now (both tracks set this field).
     const laBreached = await db.collection('lead_assignments')
       .where('ownershipStatus', '==', 'active')
       .where('slaDeadline', '<', now)
@@ -479,44 +482,17 @@ exports.runGovernance = onSchedule('every 24 hours', async (event) => {
       await _flagStale({
         collection: 'lead_assignments', docId: doc.id,
         masterLeadId: a.masterLeadId, ownerUid: a.ownerUid,
-        assignedAt: a.assignedAt, status: a.status,
+        assignedAt: a.assignedAt, status: a.advisorStatus || a.status,
         slaWindowDays, now,
       });
       flagged++;
     }
     console.info(`[Governance] lead_assignments SLA breaches: ${laBreached.size}`);
 
-    // ── Track 2: al_assignments (batch routing track) ────────────────
-    // al_assignments uses slaDeadline too; fall back to assignedAt age check
-    const alSnap = await db.collection('al_assignments')
-      .where('ownershipStatus', '==', 'active')
-      .where('status', 'in', ['New', 'new'])
-      .get();
-
-    let alFlagged = 0;
-    for (const doc of alSnap.docs) {
-      const a = doc.data();
-      const assignedAt = a.assignedAt || a.createdAt || '';
-
-      // SLA check: slaDeadline field OR age > slaWindowDays
-      const slaBreached = a.slaDeadline
-        ? a.slaDeadline < now
-        : assignedAt < slaThreshold;
-
-      if (!slaBreached) continue;
-
-      await _flagStale({
-        collection: 'al_assignments', docId: doc.id,
-        masterLeadId: a.masterLeadId, ownerUid: a.advisorUid || a.ownerUid,
-        assignedAt, status: a.status,
-        slaWindowDays, now,
-      });
-      flagged++;
-      alFlagged++;
-    }
-    console.info(`[Governance] al_assignments SLA breaches: ${alFlagged}`);
+    // NOTE: al_assignments no longer audited — all docs migrated to lead_assignments in Sprint 4.
     console.info(`[Governance] ✅ Total flagged: ${flagged}`);
   });
+
 
 // Helper: write a governance_flags doc (idempotent by docId)
 async function _flagStale({ collection, docId, masterLeadId, ownerUid, assignedAt, status, slaWindowDays, now }) {

@@ -1,6 +1,8 @@
 // ==========================================
 // THE AUM ENGINE — FIRESTORE DATA LAYER
 // js/db.js — Phase 2.0 (Per-User Persistence)
+// Sprint 4: al_assignments → lead_assignments unified
+// v=20260412c
 // ==========================================
 // Depends on: firebase-firestore-compat.js loaded in index.html BEFORE this file
 // All functions are async. Firestore is keyed by Firebase Auth UID.
@@ -216,34 +218,35 @@ async function updateLeadStatusInFirestore(assignmentId, newStatus) {
   } catch(e) { console.warn('[db.js] updateLeadStatus failed:', e); }
 }
 
-// Write lead status change back to Firestore — al_assignments (routing engine)
-// Used for leads assigned by routing_engine.js (pilot advisors)
+// Write lead status change back to Firestore — al_assignments leads (Sprint 4: now uses lead_assignments)
+// Keeps function name for backward compatibility with app.js call sites.
 async function updateAlAssignmentStatus(assignmentId, newStatus) {
   if (!assignmentId) return;
   try {
-    await _getDB().collection('al_assignments').doc(assignmentId).update({
-      status:    newStatus,
-      outcome:   newStatus,
-      outcomeAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    await _getDB().collection('lead_assignments').doc(assignmentId).update({
+      advisorStatus: newStatus,
+      status:        newStatus,
+      outcome:       newStatus,
+      outcomeAt:     new Date().toISOString(),
+      updatedAt:     new Date().toISOString(),
     });
-    console.info('[db.js] al_assignment status updated:', assignmentId, '→', newStatus);
+    console.info('[db.js] lead_assignments status updated:', assignmentId, '→', newStatus);
   } catch(e) { console.warn('[db.js] updateAlAssignmentStatus failed:', e); }
 }
 
-// Write reply outcome back to al_assignments (Phase C6 — Reply Tapper persistence)
+// Write reply outcome back to lead_assignments (Sprint 4: unified from al_assignments)
 // Called from _tapReplyOutcome() in outreach_controller.js for routing-engine leads.
 // replyType: 'reply' | 'positive' | 'meeting' | 'dead' | 'objection' | 'not_now' | 'unsubscribe'
 async function updateAlAssignmentReply(assignmentId, replyType) {
   if (!assignmentId || !replyType) return;
   try {
-    await _getDB().collection('al_assignments').doc(assignmentId).update({
+    await _getDB().collection('lead_assignments').doc(assignmentId).update({
       replyType,
       replyOutcome:  replyType,
       repliedAt:     new Date().toISOString(),
       updatedAt:     new Date().toISOString(),
     });
-    console.info('[db.js] al_assignment reply written:', assignmentId, '→', replyType);
+    console.info('[db.js] lead_assignments reply written:', assignmentId, '→', replyType);
   } catch(e) { console.warn('[db.js] updateAlAssignmentReply failed:', e); }
 }
 
@@ -489,37 +492,59 @@ async function updateEdSituationStatus(situationId, status, advisorUid) {
   } catch(e) { console.warn('[db.js] updateEdSituationStatus failed:', e); }
 }
 
-// ── AL ASSIGNMENTS — advisor accepted briefs ─────────────────
+// ── AL ASSIGNMENTS — Sprint 4: now writes to lead_assignments ─────────────
+// Kept for backward compatibility. Any new batch assignments go to lead_assignments.
 async function saveAlAssignment(assignment) {
   try {
     const db = _getDB();
     if (!db) return null;
-    const docRef = await db.collection('al_assignments').add({
+    const docRef = await db.collection('lead_assignments').add({
       ...assignment,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      status: 'pending_review',
+      ownerUid:        assignment.advisorUid || assignment.ownerUid || null,
+      ownershipStatus: 'active',
+      assignedBy:      'saveAlAssignment_v2',
+      createdAt:       firebase.firestore.FieldValue.serverTimestamp(),
+      status:          'new',
     });
     return docRef.id;
   } catch(e) { console.warn('[db.js] saveAlAssignment failed:', e); return null; }
 }
 
+
+// Sprint 4: reads from lead_assignments only (canonical collection).
+// Covers both CF-routed leads (ownerUid) AND migrated al_assignments docs
+// (also use ownerUid after migration). The _fromAlAssignment flag is kept
+// for backward compat with app.js / outreach_controller.js write-back routing.
 async function loadAlAssignmentsForAdvisor(uid) {
   if (!uid) return [];
   try {
     const db = _getDB();
     if (!db) return [];
-    const snap = await db.collection('al_assignments')
-      .where('advisorUid', '==', uid)
-      .orderBy('createdAt', 'desc')
-      .limit(50)
+
+    // Query lead_assignments for this advisor — includes migrated al docs
+    // (migrated docs have ownerUid set to advisorUid by migration script)
+    const snap = await db.collection('lead_assignments')
+      .where('ownerUid', '==', uid)
+      .orderBy('assignedAt', 'desc')
+      .limit(100)
       .get();
-    // Return both raw docs (for _alAssignments) AND PROSPECTS-schema objects
+
+    if (snap.empty) return [];
+
     return snap.docs.map(d => {
       const a = d.data();
+      // Skip docs already loaded by loadAssignedLeadsFromFirestore (ownershipStatus: active/pending)
+      // Only surface migrated-from-al docs or batch-sourced docs not in the standard track
+      const isMigrated = !!a.migratedFromAlId;
+      const isCFRouted = a.assignedBy === 'RoutingOrchestrator_v1';
+      // If it's a pure CF-routed lead, loadAssignedLeadsFromFirestore already handles it
+      // via the master_leads hydration path. Don't double-count those.
+      if (isCFRouted && !isMigrated) return null;
+
       const firstName = a.firstName || (a.fullName || '').split(' ')[0] || 'Unknown';
       const lastName  = a.lastName  || (a.fullName || '').split(' ').slice(1).join(' ') || '';
       return {
-        // PROSPECTS schema — required for pipeline display
+        // PROSPECTS schema
         id:            'al_' + d.id,
         assignmentId:  d.id,
         masterLeadId:  a.masterLeadId || d.id,
@@ -543,7 +568,7 @@ async function loadAlAssignmentsForAdvisor(uid) {
         nicheId:       a.nicheId || 'n0',
         assets:        a.estimatedAUM || '$1M+',
 
-        status:        a.status  || 'New',
+        status:        a.advisorStatus || a.status || 'New',
         assignedRep:   'You',
         lastActivity:  a.assignedAt
                          ? new Date(a.assignedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})
@@ -555,13 +580,13 @@ async function loadAlAssignmentsForAdvisor(uid) {
         signals:       a.signals    || [],
         enrichment:    a.enrichment || {},
 
-        // Write-back routing
+        // Write-back routing — still identifies via lead_assignments now
         _fromFirestore:    true,
-        _fromAlAssignment: true,     // identifies routing-engine leads specifically
+        _fromAlAssignment: true,     // preserves app.js write-back routing path
         batchId:           a.batchId || '',
         routingScore:      a.routingScore || 0,
       };
-    });
+    }).filter(Boolean);
   } catch(e) { console.warn('[db.js] loadAlAssignments failed:', e); return []; }
 }
 

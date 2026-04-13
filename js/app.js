@@ -120,8 +120,8 @@ function initWithUserData(data) {
       window._alAssignments = assigns;
       console.info(`[AUM] Loaded ${assigns.length} Al assignment(s).`);
 
-      // ── Merge routing-engine leads into PROSPECTS (same pattern as lead_assignments) ──
-      // These are leads written by routing_engine.js / route_batch.js to al_assignments.
+      // ── Merge routing-engine leads into PROSPECTS (Sprint 4: now from lead_assignments) ──
+      // These are migrated-from-al docs returned by loadAlAssignmentsForAdvisor.
       // They come back as PROSPECTS-schema objects (id:'al_'+docId) and need to appear
       // in the pipeline board and scoreboard like any other lead.
       if (assigns.length > 0) {
@@ -129,7 +129,7 @@ function initWithUserData(data) {
         const freshAl = assigns.filter(l => l.masterLeadId && !existingIds.has(l.masterLeadId));
         if (freshAl.length > 0) {
           PROSPECTS.unshift(...freshAl);
-          console.info(`[AUM] Injected ${freshAl.length} routing-engine lead(s) from al_assignments into PROSPECTS.`);
+          console.info(`[AUM] Injected ${freshAl.length} routing-engine lead(s) (migrated from al_assignments) into PROSPECTS.`);
           // Re-render current page to show new leads (non-blocking)
           requestAnimationFrame(() => { if (typeof renderPage === 'function') renderPage(); });
         }
