@@ -1,6 +1,6 @@
 // ==========================================
 // THE AUM ENGINE — ADMIN / PRESENCE SYSTEM
-// Phase C1 — Operator Dashboard  |  v=20260413b  (P2: cap-warning UI; P3: indexes)
+// Phase C1 — Operator Dashboard  |  v=20260413c  (Pilot Funnel: lead_assignments fix)
 // Visible ONLY when logged in as operator
 // ==========================================
 
@@ -334,10 +334,10 @@ async function renderAdminKPIs() {
       .limit(3000).get();
     const events = evSnap.docs.map(d => d.data());
 
-    // Pull al_assignments (last 30 days)
+    // Pull lead_assignments (Sprint 4 canonical — replaced stale al_assignments query)
     let assigns = [];
     try {
-      const aSnap = await fdb.collection('al_assignments')
+      const aSnap = await fdb.collection('lead_assignments')
         .where('assignedAt', '>=', since)
         .limit(2000).get();
       assigns = aSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -361,7 +361,7 @@ async function renderAdminKPIs() {
     };
 
     assigns.forEach(a => {
-      // al_assignments uses ownerUid (written by routing_engine.js)
+      // lead_assignments uses ownerUid (canonical — Sprint 4 unified)
       const uid = a.ownerUid || a.advisorUid;
       if (!uid) return;
       ensure(uid);
