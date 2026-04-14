@@ -1321,7 +1321,7 @@ function pageEdDisclosure() {
         Start Client Profile — 10 Questions (~3 min) →
       </button>
       <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--text-muted)">
-        <a href="#" onclick="navigate('privacy');return false" style="color:var(--text-muted);text-decoration:underline">Privacy Policy</a>
+        <a href="#" onclick="navigate('privacy');return false" style="color:var(--blue);text-decoration:underline;font-weight:600">Privacy Policy</a>
         &nbsp;·&nbsp; Responses are encrypted and stored securely.
       </div>
     </div>
