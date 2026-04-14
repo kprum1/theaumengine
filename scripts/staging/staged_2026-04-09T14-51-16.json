@@ -1,0 +1,442 @@
+{
+  "reviewedAt": "2026-04-09T14:51:16.480Z",
+  "totalApproved": 15,
+  "totalResults": 15,
+  "leads": [
+    {
+      "firstName": "Michael",
+      "lastName": "Thornton",
+      "email": "michael.thornton@thorntonholdings.com",
+      "phone": "6025550182",
+      "title": "Founder & CEO",
+      "company": "Thornton Holdings LLC",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "niche": "Aircraft Owners",
+      "nicheId": "aircraft-owners",
+      "estimatedAUM": "2.4M",
+      "reasonCodes": [
+        "Aircraft registration AZ",
+        "Business owner exit signal",
+        "Board appointment 2024"
+      ],
+      "fitScore": 84,
+      "timingScore": 78,
+      "signals": {
+        "estimatedAssets": "$2.4M",
+        "nextEvent": "Q2 business review",
+        "relationship": "Cold"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.479Z",
+      "priorityScore": 81
+    },
+    {
+      "firstName": "Sandra",
+      "lastName": "Okafor",
+      "email": "s.okafor@meritwealth.com",
+      "phone": "4804880923",
+      "title": "Managing Partner",
+      "company": "Merit Wealth Group",
+      "city": "Phoenix",
+      "state": "AZ",
+      "niche": "Business Owners",
+      "nicheId": "business-owners",
+      "estimatedAUM": "3.1M",
+      "reasonCodes": [
+        "Business sale in progress",
+        "Estate planning gap",
+        "Referral signal"
+      ],
+      "fitScore": 91,
+      "timingScore": 88,
+      "signals": {
+        "estimatedAssets": "$3.1M",
+        "nextEvent": "Business closing Q3",
+        "relationship": "2nd degree"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.479Z",
+      "priorityScore": 90
+    },
+    {
+      "firstName": "James",
+      "lastName": "Hargrove",
+      "email": "jhargrove@sunstaterealty.com",
+      "phone": "9133340571",
+      "title": "Principal Broker",
+      "company": "Sunstate Realty Partners",
+      "city": "Overland Park",
+      "state": "KS",
+      "niche": "Business Owners",
+      "nicheId": "business-owners",
+      "estimatedAUM": "1.8M",
+      "reasonCodes": [
+        "Commercial portfolio sale signal",
+        "Retirement horizon 5yr",
+        "Tax planning gap"
+      ],
+      "fitScore": 76,
+      "timingScore": 71,
+      "signals": {
+        "estimatedAssets": "$1.8M",
+        "nextEvent": "Portfolio review Jan",
+        "relationship": "Cold"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.479Z",
+      "priorityScore": 74
+    },
+    {
+      "firstName": "Rebecca",
+      "lastName": "Stanton",
+      "email": "rstanton@stantonprivateaircraft.com",
+      "phone": "7204991234",
+      "title": "Owner & Operator",
+      "company": "Stanton Private Aircraft",
+      "city": "Denver",
+      "state": "CO",
+      "niche": "Aircraft Owners",
+      "nicheId": "aircraft-owners",
+      "estimatedAUM": "4.2M",
+      "reasonCodes": [
+        "TBM 940 owner",
+        "Hangar lease renewal",
+        "Insurance renewal Q2"
+      ],
+      "fitScore": 92,
+      "timingScore": 85,
+      "signals": {
+        "estimatedAssets": "$4.2M",
+        "nextEvent": "Annual maintenance",
+        "relationship": "Cold"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.479Z",
+      "priorityScore": 89
+    },
+    {
+      "firstName": "Derek",
+      "lastName": "Huang",
+      "email": "derek.huang@techbridge.io",
+      "phone": "4153331982",
+      "title": "Former VP Engineering",
+      "company": "TechBridge (laid off Q1 2026)",
+      "city": "San Francisco",
+      "state": "CA",
+      "niche": "AI-Displaced Executives",
+      "nicheId": "ai-displaced-executives",
+      "estimatedAUM": "1.2M",
+      "reasonCodes": [
+        "Google layoff Jan 2026",
+        "RSU vesting event",
+        "No advisor on record"
+      ],
+      "fitScore": 88,
+      "timingScore": 94,
+      "signals": {
+        "estimatedAssets": "$1.2M",
+        "nextEvent": "RSU vesting March 15",
+        "relationship": "Cold"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.479Z",
+      "priorityScore": 91
+    },
+    {
+      "firstName": "Monica",
+      "lastName": "Weiss",
+      "email": "monica.weiss@gmail.com",
+      "phone": "3122219870",
+      "title": "Former Director of Product",
+      "company": "Meta Platforms (exited 2025)",
+      "city": "Chicago",
+      "state": "IL",
+      "niche": "AI-Displaced Executives",
+      "nicheId": "ai-displaced-executives",
+      "estimatedAUM": "2.1M",
+      "reasonCodes": [
+        "AI restructuring exit",
+        "FAANG equity package",
+        "Exploring entrepreneurship"
+      ],
+      "fitScore": 86,
+      "timingScore": 91,
+      "signals": {
+        "estimatedAssets": "$2.1M",
+        "nextEvent": "Equity unlock March",
+        "relationship": "Cold"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.480Z",
+      "priorityScore": 89
+    },
+    {
+      "firstName": "Dr. Karen",
+      "lastName": "Albright",
+      "email": "k.albright@carterheartinstitute.com",
+      "phone": "6028880234",
+      "title": "Cardiologist, Partner",
+      "company": "Carter Heart Institute",
+      "city": "Phoenix",
+      "state": "AZ",
+      "niche": "Physicians & Surgeons",
+      "nicheId": "physicians",
+      "estimatedAUM": "3.8M",
+      "reasonCodes": [
+        "Practice partnership buy-in",
+        "Disability insurance gap",
+        "High income estate gap"
+      ],
+      "fitScore": 89,
+      "timingScore": 82,
+      "signals": {
+        "estimatedAssets": "$3.8M",
+        "nextEvent": "Partnership renewal Q2",
+        "relationship": "Cold"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.480Z",
+      "priorityScore": 86
+    },
+    {
+      "firstName": "Dr. Samuel",
+      "lastName": "Obi",
+      "email": "sobi@miamiorthopedics.com",
+      "phone": "3058887612",
+      "title": "Orthopedic Surgeon",
+      "company": "Miami Orthopedics Group",
+      "city": "Miami",
+      "state": "FL",
+      "niche": "Physicians & Surgeons",
+      "nicheId": "physicians",
+      "estimatedAUM": "2.7M",
+      "reasonCodes": [
+        "Private practice owner",
+        "No trust structure",
+        "Recent medical school loan payoff"
+      ],
+      "fitScore": 84,
+      "timingScore": 79,
+      "signals": {
+        "estimatedAssets": "$2.7M",
+        "nextEvent": "Practice expansion planning",
+        "relationship": "Cold"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.480Z",
+      "priorityScore": 82
+    },
+    {
+      "firstName": "Justine",
+      "lastName": "Carmichael",
+      "email": "jcarmichael@carmichaeltrails.com",
+      "phone": "7207720934",
+      "title": "CEO & Founder",
+      "company": "Carmichael Outdoor Ventures",
+      "city": "Denver",
+      "state": "CO",
+      "niche": "Business Owners",
+      "nicheId": "business-owners",
+      "estimatedAUM": "2.2M",
+      "reasonCodes": [
+        "Series A closed",
+        "Founder liquidity event pending",
+        "No wealth advisor"
+      ],
+      "fitScore": 87,
+      "timingScore": 83,
+      "signals": {
+        "estimatedAssets": "$2.2M",
+        "nextEvent": "Series A close April",
+        "relationship": "Cold"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.480Z",
+      "priorityScore": 85
+    },
+    {
+      "firstName": "Leonard",
+      "lastName": "Fitch",
+      "email": "lfitch@fitchmfg.com",
+      "phone": "3125551098",
+      "title": "Owner & President",
+      "company": "Fitch Manufacturing Co.",
+      "city": "Chicago",
+      "state": "IL",
+      "niche": "Business Owners",
+      "nicheId": "business-owners",
+      "estimatedAUM": "5.4M",
+      "reasonCodes": [
+        "Business succession planning signal",
+        "401K maxed  no brokerage",
+        "SBA loan payoff 2025"
+      ],
+      "fitScore": 93,
+      "timingScore": 88,
+      "signals": {
+        "estimatedAssets": "$5.4M",
+        "nextEvent": "Succession review Q3",
+        "relationship": "Cold"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.480Z",
+      "priorityScore": 91
+    },
+    {
+      "firstName": "Adriana",
+      "lastName": "Martinez",
+      "email": "adriana@dallascharity.org",
+      "phone": "9725550321",
+      "title": "Board Chair",
+      "company": "Dallas Arts & Culture Foundation",
+      "city": "Dallas",
+      "state": "TX",
+      "niche": "Charity Board Members",
+      "nicheId": "charity-board-members",
+      "estimatedAUM": "6.1M",
+      "reasonCodes": [
+        "Board chair appointment",
+        "DAF donor",
+        "Estate planning gap detected"
+      ],
+      "fitScore": 90,
+      "timingScore": 76,
+      "signals": {
+        "estimatedAssets": "$6.1M",
+        "nextEvent": "Annual gala  April",
+        "relationship": "Cold"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.480Z",
+      "priorityScore": 83
+    },
+    {
+      "firstName": "Thomas",
+      "lastName": "Reinhardt",
+      "email": "t.reinhardt@reinhardtcpa.com",
+      "phone": "4697771234",
+      "title": "CPA & Partner",
+      "company": "Reinhardt Tax Group",
+      "city": "Dallas",
+      "state": "TX",
+      "niche": "Business Owners",
+      "nicheId": "business-owners",
+      "estimatedAUM": "1.9M",
+      "reasonCodes": [
+        "CPA with high-net-worth clients",
+        "No RIA relationship",
+        "Recent firm partnership"
+      ],
+      "fitScore": 79,
+      "timingScore": 72,
+      "signals": {
+        "estimatedAssets": "$1.9M",
+        "nextEvent": "Tax season wrap April",
+        "relationship": "Cold"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.480Z",
+      "priorityScore": 76
+    },
+    {
+      "firstName": "Grace",
+      "lastName": "Nakamura",
+      "email": "gnakamura@stratexcorp.com",
+      "phone": "3109990871",
+      "title": "Former Chief AI Officer",
+      "company": "StratEx Corp (restructured 2025)",
+      "city": "Los Angeles",
+      "state": "CA",
+      "niche": "AI-Displaced Executives",
+      "nicheId": "ai-displaced-executives",
+      "estimatedAUM": "3.5M",
+      "reasonCodes": [
+        "AI org restructure",
+        "Board seat at startup",
+        "Equity portfolio  no advisor"
+      ],
+      "fitScore": 91,
+      "timingScore": 89,
+      "signals": {
+        "estimatedAssets": "$3.5M",
+        "nextEvent": "Board meeting April 10",
+        "relationship": "Cold"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.480Z",
+      "priorityScore": 90
+    },
+    {
+      "firstName": "Harold",
+      "lastName": "Svensson",
+      "email": "harold@svenssonflyco.com",
+      "phone": "6025559834",
+      "title": "Private Pilot & Owner",
+      "company": "Svensson Flight Co.",
+      "city": "Scottsdale",
+      "state": "AZ",
+      "niche": "Aircraft Owners",
+      "nicheId": "aircraft-owners",
+      "estimatedAUM": "3.3M",
+      "reasonCodes": [
+        "King Air 350 owner",
+        "Business aviation group member",
+        "No current advisor"
+      ],
+      "fitScore": 85,
+      "timingScore": 77,
+      "signals": {
+        "estimatedAssets": "$3.3M",
+        "nextEvent": "Plane sale & upgrade Q3",
+        "relationship": "Cold"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.480Z",
+      "priorityScore": 81
+    },
+    {
+      "firstName": "Priscilla",
+      "lastName": "Dolan",
+      "email": "pdolan@miamimedgroup.com",
+      "phone": "3054440293",
+      "title": "Neurologist",
+      "company": "Miami Medical Group",
+      "city": "Miami",
+      "state": "FL",
+      "niche": "Physicians & Surgeons",
+      "nicheId": "physicians",
+      "estimatedAUM": "2.1M",
+      "reasonCodes": [
+        "High earner",
+        "Malpractice coverage gap",
+        "Student loan forgiveness completed"
+      ],
+      "fitScore": 82,
+      "timingScore": 80,
+      "signals": {
+        "estimatedAssets": "$2.1M",
+        "nextEvent": "Contract renewal May",
+        "relationship": "Cold"
+      },
+      "status": "pending_review",
+      "source": "Alfred Wealth Trigger Miner",
+      "alfredQueuedAt": "2026-04-09T14:51:16.480Z",
+      "priorityScore": 81
+    }
+  ]
+}

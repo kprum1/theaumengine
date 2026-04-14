@@ -1,41 +1,42 @@
 ---
 name: alfred_lead_ingest
 description: >
-  Complete spec for Alfred (OpenClaw) to prepare, validate, and POST a new batch of
-  leads into The AUM Engine routing pipeline via the `alfredIngest` Cloud Function.
-  Covers required field schema, niche ID map, validation rules, the POST format,
-  how to verify success, and how to diagnose failures.
+  Complete spec for Alfred (OpenClaw) to prepare and validate a new batch of leads
+  for The AUM Engine routing pipeline. Alfred produces a JSON file matching the
+  required schema and drops it in the handoff location. The operator or Antigravity
+  then runs the authenticated local ingest script. Alfred never holds API keys.
 ---
 
 # Alfred Lead Ingest — AUM Engine Skill
 
-**Who runs this:** Alfred (OpenClaw)  
+**Who runs this:** Alfred (OpenClaw) — prepares the batch file only  
+**Who runs the ingest:** Operator (Kosal) or Antigravity — runs the local script with service account  
 **When to run:** Any time the routing queue is empty or the operator requests a new batch.  
-**Endpoint:** `alfredIngest` Cloud Function (HTTP POST, array format)  
-**Priority:** Leads POSTed via `alfredIngest` get routing priority `60` (vs `50` for CSV/standard ingest).  
-**Idempotency:** Built in — SHA-256 hash of `(firstName + lastName + email + phone)`. Duplicate POSTs are silently skipped.
+**Security model:** Alfred has NO API key access. He prepares a validated JSON file and hands it off. The operator authenticates and ingests via Admin SDK locally — no external API surface exposed.  
+**Idempotency:** Built in — SHA-256 hash of `(firstName + lastName + email + phone)`. Duplicates are silently skipped.
 
 ---
 
-## 1. CHECK BEFORE STARTING
+## 1. WORKFLOW OVERVIEW
 
-Always run the audit first:
-
-```bash
-export PATH="/opt/homebrew/bin:$PATH"
-cd /Users/kosalprum/Documents/AdvDiamondMining
-node scripts/audit_leads.js
+```
+Alfred                         Operator / Antigravity
+──────────────────────         ──────────────────────────────────────
+1. Research + source leads
+2. Build JSON batch file
+3. Validate against schema (§2)
+4. Drop file here:
+   scripts/staging/
+   alfred_batch_YYYY_MM_DD.json
+                                5. Run audit_leads.js → confirm 10/10
+                                6. Run ingest_alfred_batch.js
+                                   (uses serviceAccountKey — local only)
+                                7. Confirm leads in routing_queue
+                                8. Routing engine assigns within 5 min
 ```
 
-Must return `10/10 🟢 All systems go` before ingesting a new batch. If anything is red, fix it first.
-
-Also check the routing queue is empty (or near empty):
-
-```bash
-node scripts/check_queue.js
-```
-
-If `queued` count > 0, wait for `processRoutingQueue` to drain it (runs every 5 min automatically) before adding more.
+**Alfred never touches the API key, service account, or Firestore directly.**  
+His only deliverable is a correctly-formatted JSON file in `scripts/staging/`.
 
 ---
 
@@ -126,7 +127,7 @@ The `signals` object powers the advisor's lead drawer — what they see when the
 
 ## 5. FULL EXAMPLE PAYLOAD
 
-This is what Alfred should POST to `alfredIngest`:
+This is the JSON file Alfred should write to `scripts/staging/alfred_batch_YYYY_MM_DD.json`:
 
 ```json
 [
@@ -189,28 +190,53 @@ This is what Alfred should POST to `alfredIngest`:
 
 ---
 
-## 6. HOW TO POST
+## 6. ALFRED'S HANDOFF — WHERE TO DROP THE FILE
 
-Alfred posts directly to the deployed Cloud Function endpoint. The API key is stored as `AUM_ALFRED_API_KEY` in Firebase Function config.
+Alfred writes his completed JSON batch file to:
 
-**Operator must provide Alfred the endpoint and key — they are NOT stored in this file for security.**
-
-The POST format:
 ```
-POST https://us-central1-theaumengine.cloudfunctions.net/alfredIngest
-Content-Type: application/json
-x-alfred-key: <AUM_ALFRED_API_KEY>
-
-[ ...array of lead objects... ]
+/Users/kosalprum/Documents/AdvDiamondMining/scripts/staging/
+alfred_batch_YYYY_MM_DD.json
 ```
 
-**Batch size:** 10–50 leads per POST is optimal. The function ingests all, writes each to `master_leads` and `routing_queue`, and `processRoutingQueue` picks them up within 5 minutes.
+Naming convention: `alfred_batch_2026_04_14.json` (ISO date, no spaces).
+
+Alfred then **notifies the operator** (via handoff doc or message) that the file is ready.
+
+> ⚠️ **Alfred does not run any scripts himself. He does not POST to any endpoint. He does not touch the service account key.** His job ends when the file is written and the operator is notified.
 
 ---
 
-## 7. HOW TO VERIFY SUCCESS
+## 6b. OPERATOR INGEST STEP (Kosal / Antigravity)
 
-After POSTing, run the audit:
+Once Alfred drops the file, the operator runs:
+
+```bash
+export PATH="/opt/homebrew/bin:$PATH"
+cd /Users/kosalprum/Documents/AdvDiamondMining
+
+# 1. Confirm file is there
+ls scripts/staging/
+
+# 2. Run audit first
+node scripts/audit_leads.js
+
+# 3. Ingest Alfred's batch (uses serviceAccountKey — local only, never exposed)
+node scripts/lead_ingest_agent.js --file scripts/staging/alfred_batch_YYYY_MM_DD.json
+
+# 4. Confirm routing
+node scripts/check_queue.js
+```
+
+The ingest script uses `serviceAccountKey.json` (Admin SDK) — bypasses all HTTP endpoints entirely. No API key needed, no external surface exposed.
+
+**Batch size:** 10–50 leads per file is optimal. `processRoutingQueue` picks them up within 5 minutes automatically.
+
+---
+
+## 7. HOW TO VERIFY SUCCESS (Operator)
+
+After running the ingest script:
 
 ```bash
 export PATH="/opt/homebrew/bin:$PATH"
@@ -219,11 +245,11 @@ node scripts/audit_leads.js
 ```
 
 Watch for:
-- `master_leads` count increased by the number of leads POSTed
-- `routing_queue` shows new `queued` items (or they'll already be `assigned` if engine ran)
+- `master_leads` count increased by the number of leads in Alfred's file
+- `routing_queue` shows new `queued` items (or already `assigned` if engine ran)
 - `lead_assignments` count increases within 5–10 minutes
 
-Also check the routing logs for `eligibility_empty` events — those indicate a niche mismatch. If you see them, check the `nicheId` on the failing leads.
+Also check the routing logs for `eligibility_empty` events — those indicate a niche mismatch. If you see them, check the `nicheId` on the failing leads against §3.
 
 ---
 
@@ -267,13 +293,22 @@ Based on current pilot advisor capacity:
 
 ## 10. HANDOFF NOTES
 
-- `serviceAccountKey.json` lives at `scripts/serviceAccountKey.json` — never commit
+### Alfred's Rules (non-negotiable)
+- ✅ Alfred writes a JSON file to `scripts/staging/` — that is his ONLY output
+- ✅ Alfred notifies the operator when the file is ready
+- ❌ Alfred does NOT hold or use the `AUM_ALFRED_API_KEY`
+- ❌ Alfred does NOT call any Cloud Function endpoints directly
+- ❌ Alfred does NOT touch `serviceAccountKey.json`
+- ❌ Alfred does NOT run any Node.js scripts in the project
+
+### Technical Notes (for operator / Antigravity)
+- `serviceAccountKey.json` lives at `scripts/serviceAccountKey.json` — never commit, never share
 - Firebase CLI: `/usr/local/bin/firebase` — always `export PATH="/opt/homebrew/bin:$PATH"` first
-- The `alfredIngest` endpoint accepts arrays only — do NOT POST a single object
-- All leads land as `advisorStatus: New` — routing happens automatically
-- The `priorityScore` stored in `master_leads` = `round((fitScore + timingScore) / 2)`
-- Idempotency key = `SHA-256(firstName + lastName + email + phone)` — exact dupes are silently skipped
+- All leads land as `advisorStatus: New` — routing is automatic
+- `priorityScore` stored in `master_leads` = `round((fitScore + timingScore) / 2)`
+- Idempotency key = `SHA-256(firstName + lastName + email + phone)` — exact dupes silently skipped
+- Staging files can be deleted after confirmed ingest
 
 ---
 
-*Skill written 2026-04-13 by Antigravity (Big Nate). Alfred: read §3 and §9 first — niche coverage and batch composition are the two most likely places to get it wrong.*
+*Skill written 2026-04-13 by Antigravity (Big Nate). Revised 2026-04-13: Alfred prepares batch files only — no API key access per security policy. Alfred: read §3 and §9 first.*
