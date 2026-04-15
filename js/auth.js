@@ -141,20 +141,33 @@ auth.onAuthStateChanged(async (user) => {
     if (adminNavItem)    adminNavItem.style.display    = isOp ? 'flex'  : 'none';
     if (adminNavSection) adminNavSection.style.display = isOp ? 'block' : 'none';
 
+    // C18-1: Manager Console — operator only (advisors should not see team-level data)
+    const managerNavItem = document.getElementById('nav-manager-console');
+    if (managerNavItem) managerNavItem.style.display = isOp ? 'flex' : 'none';
+
     // Security Sentinel nav — revealed only if sentinel_enabled flag is true
+    // AND the current user is the operator (M4 fix: role-gate Security Sentinel).
     // loadSentinelConfig() (called from initWithUserData in app.js) sets
     // window.SENTINEL_ENABLED asynchronously; we check after a short delay.
     const sentinelNavItem    = document.getElementById('nav-security-sentinel');
     const sentinelNavSection = document.getElementById('sentinel-nav-section');
     setTimeout(() => {
-      const sentinelOn = window.SENTINEL_ENABLED === true;
+      const sentinelOn = window.SENTINEL_ENABLED === true && isOp;
       if (sentinelNavItem)    sentinelNavItem.style.display    = sentinelOn ? 'flex'  : 'none';
       if (sentinelNavSection) sentinelNavSection.style.display = sentinelOn ? 'block' : 'none';
-      if (sentinelOn) console.info('[auth.js] Sentinel nav revealed.');
+      if (sentinelOn) console.info('[auth.js] Sentinel nav revealed (operator only).');
     }, 1500);
 
     if (typeof navigate === 'function') navigate('command-center');
     if (typeof bindPageEvents === 'function') bindPageEvents();
+
+    // Show first-run onboarding wizard for new advisors (onboarding.js)
+    if (typeof checkAndShowOnboarding === 'function') checkAndShowOnboarding();
+
+    // ── SLA Breach Banner (C21) ────────────────────────────────────────────
+    // Non-blocking: query lead_assignments for this advisor's stale new leads.
+    // If any are >7 days old with no outreach, inject a dismissible red banner.
+    _checkAndShowSlaBanner(user.uid).catch(() => {});
 
     // Load Alfred's Firestore prospects and merge into the live PROSPECTS array
     if (typeof loadProspectsFromFirestore === 'function') {
@@ -356,3 +369,237 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+  // ======================================================
+  // ACCOUNT MANAGEMENT MODAL
+  // ======================================================
+
+  // ── Open/Close ────────────────────────────────────────
+  window.openAccountModal = function() {
+    const overlay = document.getElementById('account-modal-overlay');
+    if (!overlay) return;
+    overlay.style.display = 'flex';
+
+    // Hydrate with current user data
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const name    = user.displayName || user.email.split('@')[0];
+    const email   = user.email || '';
+    const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    const provider = user.providerData?.[0]?.providerId === 'google.com' ? 'Google' : 'Email / Password';
+    const lastSignIn = user.metadata?.lastSignInTime
+      ? new Date(user.metadata.lastSignInTime).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+      : '—';
+
+    // Avatar
+    const avatarEl = document.getElementById('acct-avatar');
+    if (avatarEl) avatarEl.textContent = initials;
+
+    // Name / email display row
+    const nameDisp  = document.getElementById('acct-name-display');
+    const emailDisp = document.getElementById('acct-email-display');
+    if (nameDisp)  nameDisp.textContent  = name;
+    if (emailDisp) emailDisp.textContent = email;
+
+    // Profile panel fields
+    const nameInput = document.getElementById('acct-display-name-input');
+    const emailRO   = document.getElementById('acct-email-readonly');
+    if (nameInput) nameInput.value = user.displayName || '';
+    if (emailRO)   emailRO.textContent = email;
+
+    // Security panel session info
+    const sessEmail    = document.getElementById('acct-session-email');
+    const sessProv     = document.getElementById('acct-session-provider');
+    const sessLastSign = document.getElementById('acct-session-lastsignin');
+    if (sessEmail)    sessEmail.textContent    = email;
+    if (sessProv)     sessProv.textContent     = provider;
+    if (sessLastSign) sessLastSign.textContent = lastSignIn;
+
+    // Reset messages + tab to Profile
+    switchAccountTab('profile');
+    _clearAccountMsg('profile');
+    _clearAccountMsg('security');
+
+    // Focus name input
+    setTimeout(() => { if (nameInput) nameInput.focus(); }, 80);
+  };
+
+  window.closeAccountModal = function() {
+    const overlay = document.getElementById('account-modal-overlay');
+    if (overlay) overlay.style.display = 'none';
+  };
+
+  // ── Tab Switch ─────────────────────────────────────────
+  window.switchAccountTab = function(tab) {
+    const tabs   = { profile: 'acct-tab-profile',   security: 'acct-tab-security'   };
+    const panels = { profile: 'acct-panel-profile', security: 'acct-panel-security' };
+    Object.keys(tabs).forEach(t => {
+      const btn = document.getElementById(tabs[t]);
+      const pnl = document.getElementById(panels[t]);
+      const active = t === tab;
+      if (btn) {
+        btn.style.borderBottomColor = active ? 'var(--blue)' : 'transparent';
+        btn.style.color             = active ? 'var(--blue)' : 'var(--text-muted)';
+      }
+      if (pnl) pnl.style.display = active ? 'block' : 'none';
+    });
+  };
+
+  // ── Profile: Save Display Name ─────────────────────────
+  window.saveDisplayName = async function() {
+    const user = auth.currentUser;
+    if (!user) return;
+    const input = document.getElementById('acct-display-name-input');
+    const newName = input?.value.trim();
+    if (!newName) { _showAccountMsg('profile', 'Please enter a display name.', 'error'); return; }
+
+    const btn = document.getElementById('acct-save-name-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+    try {
+      await user.updateProfile({ displayName: newName });
+      // Sync sidebar
+      updateUserDisplay(auth.currentUser);
+      // Sync modal header
+      const nameDisp = document.getElementById('acct-name-display');
+      if (nameDisp) nameDisp.textContent = newName;
+      // Sync avatar initials
+      const initials = newName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+      const avatarEl = document.getElementById('acct-avatar');
+      if (avatarEl) avatarEl.textContent = initials;
+      const sidebarAvatar = document.getElementById('user-avatar');
+      if (sidebarAvatar) sidebarAvatar.textContent = initials;
+
+      _showAccountMsg('profile', '✅ Display name updated!', 'success');
+      if (typeof showToast === 'function') showToast('Display name updated ✅', '👤');
+    } catch(e) {
+      _showAccountMsg('profile', 'Could not update name. Please try again.', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+    }
+  };
+
+  // ── Security: Send Password Reset ─────────────────────
+  window.sendAccountPasswordReset = async function() {
+    const user = auth.currentUser;
+    if (!user?.email) return;
+
+    const btn = document.getElementById('acct-reset-btn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+    try {
+      await auth.sendPasswordResetEmail(user.email);
+      _showAccountMsg('security', `✅ Reset email sent to ${user.email}. Check your inbox.`, 'success');
+    } catch(e) {
+      _showAccountMsg('security', 'Could not send reset email. Please try again.', 'error');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '📧 Send Password Reset Email'; }
+    }
+  };
+
+  // ── Internal helpers ───────────────────────────────────
+  function _showAccountMsg(panel, text, type) {
+    const id = panel === 'profile' ? 'acct-profile-msg' : 'acct-security-msg';
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text;
+    el.style.display = 'block';
+    el.style.background = type === 'success' ? 'rgba(52,211,153,0.12)' : 'rgba(244,63,94,0.10)';
+    el.style.color      = type === 'success' ? 'var(--emerald)'         : 'var(--rose)';
+    el.style.border     = `1px solid ${type === 'success' ? 'rgba(52,211,153,0.25)' : 'rgba(244,63,94,0.2)'}`;
+  }
+  function _clearAccountMsg(panel) {
+    const id = panel === 'profile' ? 'acct-profile-msg' : 'acct-security-msg';
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  }
+
+  // Close on Escape (add to existing keydown listener)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const overlay = document.getElementById('account-modal-overlay');
+      if (overlay && overlay.style.display !== 'none') closeAccountModal();
+    }
+  });
+
+// ── SLA Breach Banner — C21 ──────────────────────────────────────────────
+// Checks this advisor's lead_assignments for new leads > 7 days old.
+// Injects a dismissible amber/red banner at the top of #page-content.
+async function _checkAndShowSlaBanner(uid) {
+  if (!uid || typeof firebase === 'undefined') return;
+  const db = firebase.firestore();
+  const SLA_DAYS = 7;
+  const threshold = new Date(Date.now() - SLA_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  // Short delay to let the page render first
+  await new Promise(r => setTimeout(r, 1200));
+
+  let snap;
+  try {
+    snap = await db.collection('lead_assignments')
+      .where('ownerUid', '==', uid)
+      .where('status', '==', 'new')
+      .get();
+  } catch (e) { return; }
+
+  const stale = snap.docs.filter(d => {
+    const assigned = d.data().assignedAt || d.data().createdAt || '';
+    return assigned && assigned < threshold;
+  });
+
+  if (!stale.length) return;
+
+  // Remove any existing banner first (prevents duplicates on re-auth)
+  const existing = document.getElementById('sla-breach-banner');
+  if (existing) existing.remove();
+
+  const count  = stale.length;
+  const plural = count !== 1;
+  const banner = document.createElement('div');
+  banner.id = 'sla-breach-banner';
+  banner.setAttribute('role', 'alert');
+  banner.innerHTML = `
+    <span style="font-size:16px;">⏰</span>
+    <span style="flex:1;">
+      <strong>${count} lead${plural ? 's' : ''}</strong> ${plural ? 'have' : 'has'} not been contacted in
+      <strong>${SLA_DAYS}+ days</strong>. Open your pipeline and initiate outreach today.
+    </span>
+    <button onclick="document.getElementById('sla-breach-banner').remove()"
+      aria-label="Dismiss SLA alert"
+      style="background:none;border:none;color:inherit;cursor:pointer;opacity:.7;font-size:18px;line-height:1;padding:0 0 0 12px;"
+      title="Dismiss">✕</button>
+  `;
+
+  Object.assign(banner.style, {
+    display:        'flex',
+    alignItems:     'center',
+    gap:            '10px',
+    padding:        '12px 18px',
+    background:     'linear-gradient(90deg,rgba(248,113,113,0.14),rgba(251,146,60,0.10))',
+    border:         '1px solid rgba(248,113,113,0.35)',
+    borderRadius:   '10px',
+    color:          '#fca5a5',
+    fontSize:       '13px',
+    fontWeight:     '500',
+    lineHeight:     '1.5',
+    marginBottom:   '18px',
+    animation:      'fadeInDown 0.35s ease',
+    cursor:         'default',
+  });
+
+  // Inject at top of #page-content (the main scrollable area)
+  const target = document.getElementById('page-content') || document.getElementById('main-content');
+  if (target) {
+    target.insertBefore(banner, target.firstChild);
+  }
+
+  // Auto-dismiss when the user navigates to a different page
+  const _navObs = new MutationObserver(() => {
+    const b = document.getElementById('sla-breach-banner');
+    if (b) b.style.opacity = '0';
+    setTimeout(() => { const b2 = document.getElementById('sla-breach-banner'); if (b2) b2.remove(); }, 300);
+    _navObs.disconnect();
+  });
+  if (target) _navObs.observe(target, { childList: true });
+}
+

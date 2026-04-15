@@ -27,7 +27,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/main.css?v=10" />
+  <link rel="stylesheet" href="css/main.css?v=13" />
 </head>
 <body>
 
@@ -428,6 +428,9 @@
           <a href="#" onclick="openAuthModal();return false">Pilot Login</a>
           <a href="#offer">Founding Offer</a>
           <a href="#faq">FAQ</a>
+          <a href="mailto:hello@theaumengine.com" title="Contact support">Support</a>
+          <a href="#" onclick="openPublicLegalModal('privacy');return false">Privacy Policy</a>
+          <a href="#" onclick="openPublicLegalModal('terms');return false">Terms</a>
         </div>
         <div class="pub-footer-copy">
           © 2026 The AUM Engine. Pilot access only.
@@ -542,7 +545,7 @@
       <a href="#" class="nav-item active" data-page="command-center" id="nav-command-center">
         <svg viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.9"/><rect x="11" y="2" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.5"/><rect x="2" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.5"/><rect x="11" y="11" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.3"/></svg>
         Command Center
-        <span class="nav-badge">3</span>
+        <span class="nav-badge" id="nav-cmd-badge" title="Active alerts requiring your attention — hot leads, stale follow-ups, and booking opportunities">3</span>
       </a>
       <a href="#" class="nav-item" data-page="prospect-mine" id="nav-prospect-mine">
         <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="10" r="2" fill="currentColor" opacity="0.4"/></svg>
@@ -556,7 +559,7 @@
       <a href="#" class="nav-item" data-page="niche-mapping" id="nav-niche-mapping">
         <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10" cy="10" r="1.5" fill="currentColor"/><path d="M10 3l1.5 2.6M10 3l-1.5 2.6" stroke="currentColor" stroke-width="1" stroke-linecap="round" opacity="0.5"/></svg>
         Niche Mapping
-        <span class="nav-badge" style="background:var(--emerald)">New</span>
+        <span class="nav-badge" style="background:var(--emerald)" title="Niche Mapping is a new feature — complete your 5-stage assessment to configure your Ideal Client Profile">New</span>
       </a>
 
       <div class="nav-section-label" style="margin-top:16px">OUTREACH</div>
@@ -578,12 +581,14 @@
          onclick="navigate('ed-disclosure');return false"
          title="Send this link to prospects to begin their intake profile">
         <svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M3 17c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14 4l1 1.5M16 7h1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/></svg>
-        Client Intake (ED)
-        <span class="nav-badge" style="background:var(--amber)">Pilot</span>
+         Client Intake
+         <span style="font-size:9.5px;font-weight:600;color:var(--text-muted);margin-left:2px" title="Engagement Disclosure — a consent-first intake form sent to prospects before your first meeting">(ED)</span>
+        <span class="nav-badge" style="background:var(--amber)" title="Pilot feature — Engagement Disclosure intake link for client consent">Pilot</span>
       </a>
 
       <div class="nav-section-label" style="margin-top:16px">INTELLIGENCE</div>
-      <a href="#" class="nav-item" data-page="manager-console" id="nav-manager-console">
+      <!-- Manager Console nav — hidden by default, shown only to operator by auth.js -->
+      <a href="#" class="nav-item" data-page="manager-console" id="nav-manager-console" style="display:none">
         <svg viewBox="0 0 20 20" fill="none"><path d="M2 16l4-8 3 4 3-6 4 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Manager Console
       </a>
@@ -615,14 +620,18 @@
     </nav>
 
     <div class="sidebar-footer">
-      <div class="rep-card">
+      <div class="rep-card" id="user-chip" onclick="openAccountModal()" style="cursor:pointer;transition:background 0.15s" title="Manage your account">
         <div class="rep-avatar" id="user-avatar">BN</div>
         <div class="rep-info">
           <span class="rep-name" id="user-display-name">Pilot User</span>
           <span class="rep-role" id="user-display-email">Loading…</span>
         </div>
-        <div class="rep-status"></div>
+        <div class="rep-status" style="margin-left:auto;font-size:11px;color:var(--text-muted);opacity:0.6">⚙</div>
       </div>
+      <a href="mailto:hello@theaumengine.com" class="theme-toggle" style="display:flex;align-items:center;gap:7px;color:var(--text-muted);text-decoration:none" title="Email support — hello@theaumengine.com">
+        <span style="font-size:13px;font-weight:700;color:var(--blue)">?</span>
+        <span style="font-size:11px;font-weight:600">Help &amp; Support</span>
+      </a>
       <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleTheme()">
         <span class="theme-toggle-icon" id="theme-icon">☀️</span>
         <span id="theme-label">Light Mode</span>
@@ -633,6 +642,91 @@
       </button>
     </div>
   </aside>
+
+  <!-- ===== ACCOUNT MANAGEMENT MODAL ===== -->
+  <div id="account-modal-overlay" class="modal-overlay" onclick="if(event.target===this)closeAccountModal()" style="display:none;align-items:center;justify-content:center">
+    <div class="modal-box" style="max-width:460px;width:100%;padding:0;overflow:hidden">
+      <!-- Header -->
+      <div style="padding:22px 24px 18px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:var(--text-primary)">My Account</div>
+          <div style="font-size:11.5px;color:var(--text-muted);margin-top:2px">Profile &amp; security settings</div>
+        </div>
+        <button onclick="closeAccountModal()" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px 8px;border-radius:6px">✕</button>
+      </div>
+
+      <!-- Avatar + name row -->
+      <div style="padding:20px 24px 0;display:flex;align-items:center;gap:14px">
+        <div id="acct-avatar" style="width:48px;height:48px;border-radius:12px;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;flex-shrink:0">BN</div>
+        <div>
+          <div id="acct-name-display" style="font-size:14px;font-weight:700;color:var(--text-primary)">Pilot User</div>
+          <div id="acct-email-display" style="font-size:12px;color:var(--text-muted);margin-top:2px">Loading…</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:0;padding:16px 24px 0;border-bottom:1px solid var(--border-subtle)">
+        <button id="acct-tab-profile" onclick="switchAccountTab('profile')"
+          style="background:none;border:none;border-bottom:2px solid var(--blue);padding:6px 14px 10px;font-size:12.5px;font-weight:600;color:var(--blue);cursor:pointer;font-family:inherit;margin-bottom:-1px">
+          Profile
+        </button>
+        <button id="acct-tab-security" onclick="switchAccountTab('security')"
+          style="background:none;border:none;border-bottom:2px solid transparent;padding:6px 14px 10px;font-size:12.5px;font-weight:600;color:var(--text-muted);cursor:pointer;font-family:inherit;margin-bottom:-1px">
+          Security
+        </button>
+      </div>
+
+      <!-- Profile Panel -->
+      <div id="acct-panel-profile" style="padding:20px 24px 24px">
+        <div style="margin-bottom:16px">
+          <label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Display Name</label>
+          <div style="display:flex;gap:8px">
+            <input id="acct-display-name-input" class="form-input" placeholder="e.g. John Smith" style="flex:1;font-size:13px">
+            <button onclick="saveDisplayName()" class="btn btn-primary" style="padding:8px 16px;font-size:12.5px" id="acct-save-name-btn">Save</button>
+          </div>
+          <div style="font-size:10.5px;color:var(--text-muted);margin-top:5px">This name appears in your outreach drafts and the sidebar.</div>
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Email Address</label>
+          <div class="form-input" id="acct-email-readonly" style="font-size:13px;background:var(--bg-subtle,rgba(0,0,0,0.04));cursor:default;color:var(--text-secondary)">Loading…</div>
+          <div style="font-size:10.5px;color:var(--text-muted);margin-top:5px">Email is managed by your authentication provider and cannot be changed here.</div>
+        </div>
+        <div id="acct-profile-msg" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-top:4px"></div>
+      </div>
+
+      <!-- Security Panel -->
+      <div id="acct-panel-security" style="padding:20px 24px 24px;display:none">
+        <div style="background:rgba(96,165,250,0.07);border:1px solid rgba(96,165,250,0.2);border-left:3px solid var(--blue);border-radius:8px;padding:12px 14px;margin-bottom:18px">
+          <div style="font-size:12px;font-weight:600;color:var(--text-primary);margin-bottom:3px">🔒 Password Reset</div>
+          <div style="font-size:11.5px;color:var(--text-muted);line-height:1.6">We'll send a secure reset link to your registered email. Click the link to set a new password — no current password required.</div>
+        </div>
+        <button onclick="sendAccountPasswordReset()" id="acct-reset-btn" class="btn btn-secondary" style="width:100%;margin-bottom:14px">
+          📧 Send Password Reset Email
+        </button>
+        <div id="acct-security-msg" style="display:none;font-size:12px;padding:8px 12px;border-radius:8px;margin-bottom:14px"></div>
+        <div style="border-top:1px solid var(--border-subtle);padding-top:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Session Info</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:space-between;font-size:12px">
+              <span style="color:var(--text-muted)">Signed in as</span>
+              <span id="acct-session-email" style="color:var(--text-primary);font-weight:600">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px">
+              <span style="color:var(--text-muted)">Auth method</span>
+              <span id="acct-session-provider" style="color:var(--text-primary)">—</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px">
+              <span style="color:var(--text-muted)">Last sign-in</span>
+              <span id="acct-session-lastsignin" style="color:var(--text-primary)">—</span>
+            </div>
+          </div>
+        </div>
+        <button onclick="closeAccountModal();document.getElementById('logout-btn').click()" class="btn btn-ghost" style="width:100%;margin-top:18px;color:var(--rose);border-color:rgba(244,63,94,0.2)">
+          Sign Out of All Devices
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Main Content -->
   <main class="main-content" id="main-content">
@@ -656,7 +750,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <!-- ── App Scripts ── -->
-<script src="js/data.js?v=20260409e"></script>
+<script src="js/data.js?v=20260415c"></script>
 <script src="js/niche_engine.js?v=20260407p"></script>
 <script src="js/db.js?v=20260412c"></script>
 <script src="js/admin.js?v=20260413c"></script>
@@ -665,9 +759,10 @@
 <script src="js/outreach_controller.js?v=20260410a"></script>
 <script src="js/ed_intake_engine.js?v=20260408c"></script>
 <script src="js/planning_agent.js?v=20260408e"></script>
-<script src="js/pages.js?v=20260410c"></script>
-<script src="js/sentinel.js?v=20260410e"></script>
-<script src="js/app.js?v=20260410f"></script>
-<script src="js/auth.js?v=20260410c"></script>
+<script src="js/pages.js?v=20260415g"></script>
+<script src="js/onboarding.js?v=20260415b"></script>
+<script src="js/sentinel.js?v=20260415a"></script>
+<script src="js/app.js?v=20260415i"></script>
+<script src="js/auth.js?v=20260415j"></script>
 </body>
 </html>

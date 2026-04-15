@@ -1405,6 +1405,10 @@ body.app-mode {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 /* ===== Highlight gem metric ===== */
 .gem-metric {
@@ -3766,4 +3770,75 @@ body.app-mode {
   --color-ed: #b45309;
   --color-ed-light: rgba(180, 83, 9, 0.08);
   --color-ed-border: rgba(180, 83, 9, 0.22);
+}
+
+/* ================================================================
+   GENERAL PURPOSE MODAL OVERLAY (Account, future modals)
+   ================================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1200;
+  animation: fadeInOverlay 0.2s ease;
+}
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.modal-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 18px;
+  box-shadow: var(--shadow-elevated), 0 0 60px rgba(0,0,0,0.4);
+  animation: slideUpModal 0.22s cubic-bezier(0.34,1.56,0.64,1);
+  margin: 20px;
+}
+@keyframes slideUpModal {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── User chip hover (sidebar footer) ── */
+#user-chip:hover {
+  background: var(--bg-elevated);
+  border-radius: 10px;
+}
+
+/* ================================================================
+   CSS TOOLTIP — [data-tooltip] attribute (C18-4)
+   Renders in all browsers including automated test environments.
+   Usage: <element data-tooltip="Your tooltip text">
+   ================================================================ */
+[data-tooltip] {
+  position: relative;
+}
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+  max-width: 280px;
+  white-space: normal;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  z-index: 9000;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+}
+[data-tooltip]:hover::after {
+  opacity: 1;
 }
