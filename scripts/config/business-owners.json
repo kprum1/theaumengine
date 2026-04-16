@@ -2,10 +2,10 @@
   "nicheId": "business-owners",
   "nicheName": "Business Owners",
   "aumFloor": "$500K+",
-  "outputPrefix": "alfred_batch_biz_owners",
-  "requiredFields": ["source", "sourceUrl", "city", "state"],
-  "allowedEntityTypes": ["individual", "business"],
-  "rejectIfContains": ["franchise corp", "national chain", "publicly traded"],
-  "minConfidenceScore": 0.65,
-  "notes": "Primary sources: State SoS filings, BBB, NAICS codes. Business must have identifiable individual owner. Solo practitioners, LLC owners, and S-corp operators preferred."
+  "outputPrefix": "alfred_batch_sba_business_owners",
+  "requiredFields": ["source", "sourceUrl", "city", "state", "externalId"],
+  "allowedEntityTypes": ["individual", "business", "unknown"],
+  "rejectIfContains": ["franchise corp", "mcdonalds", "subway", "united states", "federal government", "city of", "county of", "state of"],
+  "minConfidenceScore": 0.55,
+  "notes": "externalId = SBA-{businessname}-{zip}. Loan amount directly correlates to revenue: $250K loan ≈ $700K–$1.25M revenue. Status PIF (paid in full) = highest timing score — owner is now cash-positive with no debt. Lower minConfidenceScore reflects that borrname is a business name, not an individual."
 }
