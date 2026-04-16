@@ -143,10 +143,17 @@ async function loadAssignedLeadsFromFirestore(uid) {
         const lead = leadSnap.data();
 
         // Map lead_assignment + master_lead → PROSPECTS schema
-        const name   = (lead.fullName || '').trim();
-        const parts  = name.split(' ');
-        const first  = parts[0] || 'Unknown';
-        const last   = parts.slice(1).join(' ') || '';
+        // For person-level leads (physicians, dentists, etc.): use firstName + lastName
+        // For org-level leads (SBA business, HUD project, law firm): use company as display name
+        const personFirst = (lead.firstName || '').trim();
+        const personLast  = (lead.lastName  || '').trim();
+        const personName  = (lead.fullName  || (personFirst + ' ' + personLast).trim());
+        const orgName     = (lead.company   || lead.firmName || '').trim();
+        const isOrgLead   = !personFirst && !personName && !!orgName;
+
+        const displayName = personName || orgName || 'Unknown Lead';
+        const first = isOrgLead ? orgName  : (personFirst || displayName.split(' ')[0] || 'Unknown');
+        const last  = isOrgLead ? ''       : (personLast  || displayName.split(' ').slice(1).join(' ') || '');
 
         return {
           // Identity
@@ -157,11 +164,11 @@ async function loadAssignedLeadsFromFirestore(uid) {
           // Name fields pages.js expects
           firstName:     first,
           lastName:      last,
-          name:          name,
+          name:          displayName,
 
           // Role / company
-          title:         lead.jobTitle         || lead.title    || '',
-          company:       lead.company          || lead.employer || '',
+          title:         lead.title    || lead.jobTitle    || (isOrgLead ? lead.firmTierLabel || '' : ''),
+          company:       lead.company  || lead.firmName    || lead.employer || '',
           location:      [lead.city, lead.state].filter(Boolean).join(', '),
 
           // Scores (from assignment doc if present, else defaults)
