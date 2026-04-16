@@ -1,0 +1,11 @@
+{
+  "nicheId": "physicians",
+  "nicheName": "Physicians & Surgeons",
+  "aumFloor": "$1M+",
+  "outputPrefix": "alfred_batch_npi_physicians",
+  "requiredFields": ["source", "sourceUrl", "city", "state", "externalId"],
+  "allowedEntityTypes": ["individual", "business"],
+  "rejectIfContains": ["hospital group", "medical center llc", "health system"],
+  "minConfidenceScore": 0.75,
+  "notes": "externalId = NPI number. sourceUrl must resolve to npiregistry.cms.hhs.gov. Individual providers (NPI-1) only."
+}

@@ -36,7 +36,7 @@ const STATE     = getArg('--state') || null;
 const LIMIT     = parseInt(getArg('--limit') || '100', 10);
 const DRY_RUN   = hasFlag('--dry-run');
 
-const STAGING_DIR = path.join(__dirname, 'staging');
+const STAGING_DIR = path.join(__dirname, 'staging', 'raw');
 const TODAY       = new Date().toISOString().split('T')[0];
 
 // ── NPI Taxonomy Codes ───────────────────────────────────────
@@ -282,15 +282,15 @@ async function main() {
     // Write output
     if (!fs.existsSync(STAGING_DIR)) fs.mkdirSync(STAGING_DIR, { recursive: true });
 
-    const outputFile = path.join(STAGING_DIR, `alfred_batch_npi_${nicheId}_${TODAY}.json`);
+    const outputFile = path.join(STAGING_DIR, `alfred_batch_npi_${nicheId}_${TODAY}.raw.json`);
     fs.writeFileSync(outputFile, JSON.stringify(leads, null, 2), 'utf8');
     const sizeKB = (fs.statSync(outputFile).size / 1024).toFixed(1);
 
-    console.log(`\n[NPI Agent] ✅ Batch written: ${path.basename(outputFile)} (${sizeKB} KB)`);
+    console.log(`\n[NPI Agent] ✅ Raw batch written: ${path.basename(outputFile)} (${sizeKB} KB)`);
     console.log('\n── Next steps ──────────────────────────────────────');
-    console.log(`  1. Audit:  node scripts/audit_leads.js`);
-    console.log(`  2. Enrich: node scripts/agent_apollo_enrich.js --file staging/${path.basename(outputFile)}`);
-    console.log(`  3. Ingest: node scripts/lead_ingest_agent.js --file staging/${path.basename(outputFile)}`);
+    console.log(`  1. Scrub:  node scripts/scrub_leads.js --file ${outputFile}`);
+    console.log(`  2. Review: node scripts/scrub_leads.js --file ${outputFile} --review-only`);
+    console.log(`  3. Ingest: node scripts/lead_ingest_agent.js --file <scrubbed path>`);
   }
 }
 

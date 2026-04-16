@@ -1,0 +1,11 @@
+{
+  "nicheId": "business-owners",
+  "nicheName": "Business Owners",
+  "aumFloor": "$500K+",
+  "outputPrefix": "alfred_batch_biz_owners",
+  "requiredFields": ["source", "sourceUrl", "city", "state"],
+  "allowedEntityTypes": ["individual", "business"],
+  "rejectIfContains": ["franchise corp", "national chain", "publicly traded"],
+  "minConfidenceScore": 0.65,
+  "notes": "Primary sources: State SoS filings, BBB, NAICS codes. Business must have identifiable individual owner. Solo practitioners, LLC owners, and S-corp operators preferred."
+}

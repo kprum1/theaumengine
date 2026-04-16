@@ -37,7 +37,7 @@ const DAYS    = parseInt(getArg('--days') || '60', 10);
 const LIMIT   = parseInt(getArg('--limit') || '50', 10);
 const DRY_RUN = hasFlag('--dry-run');
 
-const STAGING_DIR = path.join(__dirname, 'staging');
+const STAGING_DIR = path.join(__dirname, 'staging', 'raw');
 const TODAY       = new Date().toISOString().split('T')[0];
 const START_DATE  = new Date(Date.now() - DAYS * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -396,7 +396,7 @@ async function main() {
   let totalWritten = 0;
   for (const [mode, leads] of Object.entries(allLeads)) {
     if (!leads || !leads.length) continue;
-    const outputFile = path.join(STAGING_DIR, `alfred_batch_sec_${mode}_${TODAY}.json`);
+    const outputFile = path.join(STAGING_DIR, `alfred_batch_sec_${mode}_${TODAY}.raw.json`);
     fs.writeFileSync(outputFile, JSON.stringify(leads, null, 2), 'utf8');
     const sizeKB = (fs.statSync(outputFile).size / 1024).toFixed(1);
     console.log(`\n[SEC Agent] ✅ ${mode}: ${leads.length} leads → ${path.basename(outputFile)} (${sizeKB} KB)`);
@@ -405,12 +405,11 @@ async function main() {
 
   console.log(`\n[SEC Agent] ✅ Total: ${totalWritten} leads across ${Object.keys(allLeads).length} modes`);
   console.log('\n── Next steps ──────────────────────────────────────');
-  console.log('  ⚠️  8-K and proxy leads need name resolution:');
-  console.log('     Open the sourceUrl in the lead, find the executive names,');
-  console.log('     update firstName/lastName, then run enrichment.');
-  console.log('  1. Enrich: node scripts/agent_apollo_enrich.js');
-  console.log('  2. Audit:  node scripts/audit_leads.js');
-  console.log('  3. Ingest: node scripts/lead_ingest_agent.js');
+  console.log('  ⚠️  8-K and proxy leads flag needsNameResolution: true');
+  console.log('     Open sourceUrl, extract exec name, update firstName/lastName.');
+  console.log(`  1. Scrub:  node scripts/scrub_leads.js --file scripts/staging/raw/alfred_batch_sec_*_${TODAY}.raw.json`);
+  console.log('  2. Review: add --review-only flag to see top candidates');
+  console.log('  3. Ingest: node scripts/lead_ingest_agent.js --file <scrubbed path>');
 }
 
 main().catch(err => {

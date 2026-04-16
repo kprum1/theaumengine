@@ -49,9 +49,9 @@ const TMP_DIR      = path.join(os.tmpdir(), 'faa_aircraft');
 const ZIP_PATH     = path.join(os.tmpdir(), 'faa_aircraft.zip');
 const MASTER_FILE  = path.join(TMP_DIR, 'MASTER.txt');
 const ACFTREF_FILE = path.join(TMP_DIR, 'ACFTREF.txt');
-const STAGING_DIR  = path.join(__dirname, 'staging');
+const STAGING_DIR  = path.join(__dirname, 'staging', 'raw');
 const TODAY        = new Date().toISOString().split('T')[0];
-const OUTPUT_FILE  = path.join(STAGING_DIR, `alfred_batch_faa_${TODAY}.json`);
+const OUTPUT_FILE  = path.join(STAGING_DIR, `alfred_batch_faa_${TODAY}.raw.json`);
 
 // ── HNW aircraft manufacturer codes (from ACFTREF.txt MFR field) ──
 // These manufacturers produce aircraft typically valued $300K–$30M+
@@ -396,13 +396,13 @@ async function main() {
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(leads, null, 2), 'utf8');
   const sizeKB = (fs.statSync(OUTPUT_FILE).size / 1024).toFixed(1);
 
-  console.log(`[FAA Agent] ✅ Batch written: ${path.basename(OUTPUT_FILE)} (${sizeKB} KB)`);
+  console.log(`[FAA Agent] ✅ Raw batch written: ${path.basename(OUTPUT_FILE)} (${sizeKB} KB)`);
   console.log(`[FAA Agent] 📂 Location: ${OUTPUT_FILE}`);
   console.log('');
   console.log('── Next steps ──────────────────────────────────────');
-  console.log('  1. Run audit:  node scripts/audit_leads.js');
-  console.log('  2. Enrich:     node scripts/agent_apollo_enrich.js --file ' + path.basename(OUTPUT_FILE));
-  console.log('  3. Ingest:     node scripts/lead_ingest_agent.js --file staging/' + path.basename(OUTPUT_FILE));
+  console.log('  1. Scrub:  node scripts/scrub_leads.js --file ' + OUTPUT_FILE);
+  console.log('  2. Review: node scripts/scrub_leads.js --file ' + OUTPUT_FILE + ' --review-only');
+  console.log('  3. Ingest: node scripts/lead_ingest_agent.js --file <scrubbed path>');
   console.log('');
 }
 

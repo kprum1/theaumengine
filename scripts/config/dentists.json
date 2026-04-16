@@ -1,0 +1,11 @@
+{
+  "nicheId": "dentists",
+  "nicheName": "Dentists & Specialists",
+  "aumFloor": "$750K+",
+  "outputPrefix": "alfred_batch_npi_dentists",
+  "requiredFields": ["source", "sourceUrl", "city", "state", "externalId"],
+  "allowedEntityTypes": ["individual"],
+  "rejectIfContains": ["dental corp", "dental management", "dso group", "dental partners"],
+  "minConfidenceScore": 0.70,
+  "notes": "externalId = NPI number. Individual dentists only (NPI-1). DSO-affiliated clinics should be flagged, not auto-rejected — they may still have individual owners."
+}

@@ -1,0 +1,11 @@
+{
+  "nicheId": "aircraft-owners",
+  "nicheName": "Aircraft Owners",
+  "aumFloor": "$1M+",
+  "outputPrefix": "alfred_batch_faa",
+  "requiredFields": ["source", "sourceUrl", "city", "state", "externalId"],
+  "allowedEntityTypes": ["individual", "business"],
+  "rejectIfContains": ["government", "flight school", "charter", "airlines", "air service", "flight academy"],
+  "minConfidenceScore": 0.75,
+  "notes": "externalId = FAA N-number. sourceUrl must resolve to registry.faa.gov."
+}

@@ -1,0 +1,11 @@
+{
+  "nicheId": "ai-displaced-executives",
+  "nicheName": "AI-Displaced Executives",
+  "aumFloor": "$500K+",
+  "outputPrefix": "alfred_batch_warn_ai_displaced",
+  "requiredFields": ["source", "sourceUrl", "city", "state"],
+  "allowedEntityTypes": ["individual", "unknown"],
+  "rejectIfContains": ["fast food", "retail associate", "warehouse worker"],
+  "minConfidenceScore": 0.60,
+  "notes": "WARN Act leads are company-level, not individual-level. State is known; name requires LinkedIn/manual resolution. Lower minConfidenceScore reflects expected needsEnrichment=true for all records. Timing score is high — act within 90 days of layoff announcement."
+}

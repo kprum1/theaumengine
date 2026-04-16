@@ -1,0 +1,11 @@
+{
+  "nicheId": "csuite-executives",
+  "nicheName": "C-Suite Executives",
+  "aumFloor": "$2M+",
+  "outputPrefix": "alfred_batch_sec_csuite",
+  "requiredFields": ["source", "sourceUrl", "city", "state"],
+  "allowedEntityTypes": ["individual", "unknown"],
+  "rejectIfContains": ["holding company", "spac", "shell company"],
+  "minConfidenceScore": 0.65,
+  "notes": "externalId = SEC CIK or Form 4 accession number. Many 8-K leads will have needsNameResolution:true — those stay in scrubbed but flagged for manual lookup before ingest."
+}
