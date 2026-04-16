@@ -7,7 +7,7 @@ const db = admin.firestore();
 
 async function audit() {
   console.log('\n╔══════════════════════════════════════════════════════════╗');
-  console.log('║   AUM ENGINE — LEADS ENGINE AUDIT (Sprint 4)            ║');
+  console.log('║   AUM ENGINE — LEADS ENGINE AUDIT (Sprint 5)            ║');
   console.log('║   ' + new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' }) + ' CT');
   console.log('╚══════════════════════════════════════════════════════════╝\n');
 
@@ -71,8 +71,8 @@ async function audit() {
   else Object.entries(laStatusBreakdown).sort().forEach(([s, n]) =>
     console.log('    ' + s.padEnd(22) + ': ' + n));
 
-  // al_assignments archive reference
-  console.log('\n  al_assignments (frozen archive): ' + alSnap.size + ' docs (read-only — all migrated to lead_assignments)');
+  // al_assignments: intentionally purged in Sprint 5 (demo data removed)
+  console.log('\n  al_assignments (purged Sprint 5): ' + alSnap.size + ' docs' + (alSnap.size === 0 ? ' ✅ Clean — demo data removed' : ' ⚠️  Still has data'));
 
   // Location check: city/state lives in master_leads (the source of truth for lead data)
   const mlMissingLocation = [];
@@ -140,14 +140,14 @@ async function audit() {
   const checks = [
     ['Total leads assigned across all advisors > 0',   grandTotal > 0],
     ['All master_leads have city/state',               mlMissingLocation.length === 0],
-    ['All 5 advisors provisioned',                      pilotAdvisorsSnap.size >= 5],
+    ['All 6 advisors provisioned (5 pilot + Kosal)',    advisorPoolSnap.size >= 6],
     ['All advisors eligible for routing',               advisorPoolSnap.docs.every(d => d.data().eligibleForRouting)],
     ['No pending routing_queue items',                  (qStatus['pending'] || 0) === 0],
     ['No failed routing_queue items',                   (qStatus['failed']  || 0) === 0],
     ['master_leads has docs (CF path)',                  masterLeadsSnap.size > 0],
     ['masterLeads archived (schema unified)',             masterLeadsCCSnap.size === 0],
     ['Every pilot advisor has ≥1 lead',                 pilotAdvisorsSnap.docs.every(d => (combined[d.id]?.la || 0) > 0)],
-    ['Sprint 4: al_assignments frozen (>=30 migrated)', alSnap.size >= 30 && leadAssignSnap.size >= 77],
+    ['Sprint 5: al_assignments purged (demo data gone)', alSnap.size === 0],
   ];
 
   checks.forEach(([label, pass]) => {
