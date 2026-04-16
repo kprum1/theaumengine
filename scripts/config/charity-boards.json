@@ -1,0 +1,11 @@
+{
+  "nicheId": "charity-boards",
+  "nicheName": "Charity Board Members",
+  "aumFloor": "$2M+",
+  "outputPrefix": "alfred_batch_990_charity_boards",
+  "requiredFields": ["source", "sourceUrl", "city", "state", "externalId"],
+  "allowedEntityTypes": ["individual", "business", "unknown"],
+  "rejectIfContains": ["government", "federal", "state of", "city of", "county of"],
+  "minConfidenceScore": 0.60,
+  "notes": "externalId = EIN. Org-level leads arrive with needsNameResolution:true. Lower minConfidenceScore reflects expected unknown entityType before name resolution. After name extraction, confidenceScore will rise above 0.80 on individual records. One org = multiple leads (one per board member extracted)."
+}
