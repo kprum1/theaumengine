@@ -54,7 +54,10 @@ let nichePath         = null; // { macro, meso, micro, topNiches } — built aft
 let nichePreviewScores = null; // preliminary scores from macro-only
 function _saveAnswersCache() {
   // Dual-write: localStorage (instant) + Firestore (cross-device)
-  try { localStorage.setItem('aumNicheAnswers', JSON.stringify(nicheAnswers)); } catch(e){}
+  try {
+    localStorage.setItem('aumNicheAnswers', JSON.stringify(nicheAnswers));
+    localStorage.setItem('aumNicheStage', String(nicheWizardStage));
+  } catch(e){}
   if (typeof saveNicheAnswersToFirestore === 'function' && typeof currentUID !== 'undefined' && currentUID) {
     saveNicheAnswersToFirestore(currentUID, nicheAnswers);
   }
@@ -65,8 +68,18 @@ function _loadAnswersCache() {
     return raw ? JSON.parse(raw) : {};
   } catch(e) { return {}; }
 }
+function _loadStageCache() {
+  try {
+    const s = localStorage.getItem('aumNicheStage');
+    return s !== null ? parseInt(s, 10) : 0;
+  } catch(e) { return 0; }
+}
 function _clearAnswersCache() {
-  try { localStorage.removeItem('aumNicheAnswers'); localStorage.removeItem('aumNicheProfile'); } catch(e){}
+  try {
+    localStorage.removeItem('aumNicheAnswers');
+    localStorage.removeItem('aumNicheProfile');
+    localStorage.removeItem('aumNicheStage');
+  } catch(e){}
 }
 
 // ── Firestore Bootstrap — called by auth.js after login ─────────────────────
@@ -175,8 +188,15 @@ function navigate(page) {
       nichePath         = savedProfile.path || null;
       nicheWizardStage  = 4;
     } else {
-      const cached = _loadAnswersCache();
-      if (Object.keys(cached).length > 0) { nicheAnswers = cached; }
+      const cached      = _loadAnswersCache();
+      const cachedStage = _loadStageCache();
+      if (Object.keys(cached).length > 0) {
+        nicheAnswers     = cached;
+        // Restore stage — advisor resumes where they left off
+        if (cachedStage > 0 && cachedStage < 4) {
+          nicheWizardStage = cachedStage;
+        }
+      }
     }
   }
 
@@ -204,6 +224,7 @@ function renderPage() {
     'ed-disclosure'  : typeof pageEdDisclosure  === 'function' ? pageEdDisclosure  : pageCommandCenter,
     'ed-intake'      : typeof pageEdIntake      === 'function' ? pageEdIntake      : pageCommandCenter,
     'privacy'        : typeof pagePrivacyPolicy  === 'function' ? pagePrivacyPolicy  : pageCommandCenter,
+    'terms'          : typeof pageTermsOfService  === 'function' ? pageTermsOfService : pageCommandCenter,
     // ── SECURITY SENTINEL ───────────────────────────────────────
     'security-sentinel': typeof pageSentinelDashboard === 'function' ? pageSentinelDashboard : pageCommandCenter,
   };
@@ -236,9 +257,172 @@ function startMining() {
 
 function selectNiche(id) {
   activeNiche = id;
-  document.querySelectorAll('.niche-card').forEach(c=>c.classList.remove('active'));
-  const el = document.getElementById('niche-'+id);
+  document.querySelectorAll('.niche-card').forEach(c => c.classList.remove('active'));
+  const el = document.getElementById('niche-' + id);
   if (el) el.classList.add('active');
+  openNicheDrawer(id);
+}
+
+// ── Niche Prospect Drawer ──────────────────────────────────────
+// Slide-in panel showing all prospects in a niche.
+// Click any prospect → opens full detail drawer via openDrawer().
+function openNicheDrawer(nicheId) {
+  const niche = NICHES.find(n => n.id === nicheId);
+  if (!niche) return;
+
+  const prospects = PROSPECTS.filter(p => p.nicheId === nicheId)
+    .sort((a, b) => b.priorityScore - a.priorityScore);
+
+  // Tear down any existing instance
+  document.getElementById('niche-prospect-drawer')?.remove();
+  document.getElementById('niche-drawer-backdrop')?.remove();
+
+  // Backdrop
+  const backdrop = document.createElement('div');
+  backdrop.id = 'niche-drawer-backdrop';
+  backdrop.onclick = closeNicheDrawer;
+  backdrop.style.cssText = [
+    'position:fixed;inset:0;z-index:600;',
+    'background:rgba(0,0,0,0.35);backdrop-filter:blur(2px);',
+    'animation:nd-fade-in 0.2s ease;',
+  ].join('');
+  document.body.appendChild(backdrop);
+
+  // Status color map
+  const statusColors = {
+    'New':'var(--blue)','Contacted':'var(--blue)','Engaged':'var(--emerald)',
+    'Nurture':'var(--amber)','Meeting Requested':'#f59e0b','Booked':'var(--emerald)',
+    'Dead':'var(--text-muted)','Snoozed':'var(--text-muted)',
+  };
+
+  const booked  = prospects.filter(p => p.status === 'Booked').length;
+  const engaged = prospects.filter(p => ['Engaged','Meeting Requested','Booked'].includes(p.status)).length;
+
+  const prospectsHTML = prospects.length === 0
+    ? `<div style="padding:32px 20px;text-align:center">
+        <div style="font-size:28px;margin-bottom:10px">💎</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:6px">No prospects mined yet</div>
+        <div style="font-size:11.5px;color:var(--text-muted);line-height:1.6">Run the Prospect Mine Agent to generate leads for this niche.</div>
+      </div>`
+    : prospects.map(p => {
+        const color = statusColors[p.status] || 'var(--text-muted)';
+        const initials = typeof getInitials === 'function' ? getInitials(p.firstName, p.lastName) : (p.firstName[0]+p.lastName[0]).toUpperCase();
+        const avatarCls = typeof getAvatarClass === 'function' ? getAvatarClass(p.lastName) : 'av-blue';
+        return `<div class="nd-prospect-row" onclick="event.stopPropagation();closeNicheDrawer();openDrawer('${p.id}')" id="nd-row-${p.id}">
+          <div class="nd-avatar ${avatarCls}">${initials}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12.5px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.firstName} ${p.lastName}</div>
+            <div style="font-size:10.5px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title || ''}${p.company ? ' · ' + p.company : ''}</div>
+            <div style="font-size:10px;margin-top:3px;font-weight:600;color:${color}">${p.status}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;margin-left:8px">
+            <div style="font-size:18px;font-weight:900;color:var(--blue);line-height:1">${p.priorityScore}</div>
+            <div style="font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-top:2px">Priority</div>
+          </div>
+        </div>`;
+      }).join('');
+
+  // Drawer element
+  const drawer = document.createElement('div');
+  drawer.id = 'niche-prospect-drawer';
+  drawer.style.cssText = [
+    'position:fixed;top:0;right:0;bottom:0;z-index:700;',
+    'width:340px;max-width:92vw;',
+    'background:var(--bg-card);border-left:1px solid var(--border-default);',
+    'display:flex;flex-direction:column;',
+    'box-shadow:-8px 0 40px rgba(0,0,0,0.35);',
+    'animation:nd-slide-in 0.25s cubic-bezier(.22,1,.36,1);',
+  ].join('');
+
+  drawer.innerHTML = `
+    <style>
+      @keyframes nd-fade-in  { from{opacity:0}to{opacity:1} }
+      @keyframes nd-slide-in { from{transform:translateX(100%)}to{transform:translateX(0)} }
+      .nd-prospect-row {
+        display:flex;align-items:center;gap:12px;
+        padding:12px 18px;cursor:pointer;
+        border-bottom:1px solid var(--border-subtle);
+        transition:background .15s;
+      }
+      .nd-prospect-row:hover { background:rgba(96,165,250,0.06); }
+      .nd-avatar {
+        width:34px;height:34px;border-radius:8px;
+        display:flex;align-items:center;justify-content:center;
+        font-size:11px;font-weight:800;flex-shrink:0;
+      }
+    </style>
+
+    <!-- Header -->
+    <div style="padding:18px 18px 14px;border-bottom:1px solid var(--border-default)">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">${niche.icon}</span>
+          <div>
+            <div style="font-size:15px;font-weight:800;color:var(--text-primary)">${niche.name}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${prospects.length} prospect${prospects.length!==1?'s':''} · ${booked} booked · ${engaged} engaged</div>
+          </div>
+        </div>
+        <button onclick="closeNicheDrawer()" title="Close"
+          style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:18px;padding:4px 6px;border-radius:6px;line-height:1;transition:background .15s"
+          onmouseover="this.style.background='var(--bg-elevated)'"
+          onmouseout="this.style.background='none'">✕</button>
+      </div>
+      <!-- Stats strip -->
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <div style="flex:1;background:var(--bg-elevated);border-radius:8px;padding:8px 10px;text-align:center">
+          <div style="font-size:20px;font-weight:900;color:var(--blue)">${prospects.length}</div>
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted)">Total</div>
+        </div>
+        <div style="flex:1;background:var(--bg-elevated);border-radius:8px;padding:8px 10px;text-align:center">
+          <div style="font-size:20px;font-weight:900;color:var(--emerald)">${engaged}</div>
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted)">Engaged</div>
+        </div>
+        <div style="flex:1;background:var(--bg-elevated);border-radius:8px;padding:8px 10px;text-align:center">
+          <div style="font-size:20px;font-weight:900;color:var(--amber)">${booked}</div>
+          <div style="font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted)">Booked</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subheader -->
+    <div style="padding:8px 18px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)">Prospects — ranked by priority</div>
+      <button
+        onclick="closeNicheDrawer();setFilter('niche','${nicheId}');navigate('lead-scoreboard')"
+        style="font-size:10px;font-weight:600;color:var(--blue);background:none;border:none;cursor:pointer;padding:3px 6px;border-radius:5px;transition:background .15s"
+        onmouseover="this.style.background='rgba(96,165,250,0.1)'"
+        onmouseout="this.style.background='none'">View All →</button>
+    </div>
+
+    <!-- Prospect list -->
+    <div style="flex:1;overflow-y:auto">${prospectsHTML}</div>
+
+    <!-- Footer CTA -->
+    <div style="padding:12px 18px;border-top:1px solid var(--border-subtle)">
+      <button
+        onclick="closeNicheDrawer();startMining()"
+        style="width:100%;padding:10px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--violet));border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s"
+        onmouseover="this.style.opacity='.88'"
+        onmouseout="this.style.opacity='1'">
+        💎 Mine More ${niche.name} Prospects
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(drawer);
+
+  // Escape key closes drawer
+  const keyHandler = e => {
+    if (e.key === 'Escape') { closeNicheDrawer(); document.removeEventListener('keydown', keyHandler); }
+  };
+  document.addEventListener('keydown', keyHandler);
+}
+
+function closeNicheDrawer() {
+  const drawer   = document.getElementById('niche-prospect-drawer');
+  const backdrop = document.getElementById('niche-drawer-backdrop');
+  if (drawer)   { drawer.style.transition = 'transform .2s ease'; drawer.style.transform = 'translateX(100%)'; setTimeout(() => drawer?.remove(), 200); }
+  if (backdrop) { backdrop.style.transition = 'opacity .2s'; backdrop.style.opacity = '0'; setTimeout(() => backdrop?.remove(), 200); }
 }
 
 // ===== NICHE WIZARD v2.0 (macro → meso → micro → results) =====
@@ -518,6 +702,7 @@ function applyProfileToSettings() {
     'Inheritance Recipients':   'inheritance-recipients',
     'Real Estate Developers':   'real-estate-developers',
     'Charity Boards':           'charity-board-members',
+    'Pro Athletes':             'pro-athletes',
   };
 
   const discoveredNicheIds = (nicheProfile.top3 || [])
@@ -921,7 +1106,37 @@ function openBookingLinksBatch() {
   }
 
   // Pull Calendly / booking link from ICP config or use placeholder
-  const calLink = ICP_CONFIG?.bookingLink || '[YOUR_CALENDLY_LINK]';
+  const calLink = ICP_CONFIG?.bookingLink || localStorage.getItem('aum_booking_link') || '';
+  const calLinkMissing = !calLink || calLink === '[YOUR_CALENDLY_LINK]';
+
+  // C18-2: Block outreach if booking link not configured — prevents [YOUR_CALENDLY_LINK] reaching prospects
+  if (calLinkMissing) {
+    const modal = document.createElement('div');
+    modal.id = 'batch-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;';
+    modal.innerHTML = `
+      <div style="background:var(--bg-card);border:1px solid rgba(251,191,36,0.3);border-radius:18px;max-width:460px;width:100%;padding:32px;box-shadow:0 32px 80px rgba(0,0,0,0.5);text-align:center;">
+        <div style="font-size:36px;margin-bottom:14px">📅</div>
+        <div style="font-size:16px;font-weight:800;color:var(--text-primary);margin-bottom:8px">Set Your Booking Link First</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.7;margin-bottom:20px">
+          Your Calendly (or booking) link isn't configured yet.<br>
+          Without it, outreach messages will contain a broken placeholder<br>instead of your real scheduling link.
+        </div>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <button onclick="document.getElementById('batch-modal').remove();navigate('settings')"
+            style="padding:10px 20px;background:var(--gem-gradient);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer">
+            ⚙ Set Booking Link in Settings
+          </button>
+          <button onclick="document.getElementById('batch-modal').remove()"
+            style="padding:10px 16px;background:none;border:1px solid var(--border-default);border-radius:8px;font-size:13px;color:var(--text-muted);font-family:inherit;cursor:pointer">
+            Cancel
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    return;
+  }
 
   const modal = document.createElement('div');
   modal.id = 'batch-modal';
@@ -944,6 +1159,7 @@ function openBookingLinksBatch() {
       <div style="padding:16px 24px;display:flex;flex-direction:column;gap:14px">
         ${leads.map(p => {
           const bookingDraft = `Hi ${p.firstName},\n\nExcited to connect. Here's a link to grab a time that works for you:\n${calLink}\n\nThe call is 20–30 minutes. Feel free to pick whatever slot works best — I'll come prepared with a few thoughts relevant to your situation.\n\nLooking forward to it,\n[Your Name]`;
+
           return `
           <div style="background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:12px;padding:16px">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
@@ -1454,6 +1670,139 @@ function switchTab(btn, groupId) {
   btn.classList.add('active');
 }
 
+// ── Send Confirmation Modal (#5 Perplexity Audit fix) ─────────
+// Called by "Send Now" button in Outreach Studio.
+// Shows a preview of the full draft + prospect info before any action.
+function showSendConfirmModal() {
+  document.getElementById('send-confirm-modal')?.remove();
+
+  const state   = window._outreachState || {};
+  const prospect = PROSPECTS.find(p => p.id === state.prospectId) || PROSPECTS[0];
+  if (!prospect) { showToast('No prospect selected', '⚠️'); return; }
+
+  const draftEl  = document.getElementById('draft-body');
+  const draftText = draftEl?.innerText || draftEl?.textContent || getDraft(prospect, state.channel || 'email');
+  const channel  = state.channel || 'email';
+  const variant  = state.activeVariant || 'A';
+  const stage    = (state.stage || 'first_touch').replace(/_/g, ' ');
+  const chanIcons = { email:'✉️', linkedin:'💼', call:'📞', voicemail:'📣' };
+  const chanIcon  = chanIcons[channel] || '📤';
+  const varLabels = { A:'Direct', B:'Soft', C:'Insight-Led' };
+
+  const modal = document.createElement('div');
+  modal.id = 'send-confirm-modal';
+  modal.style.cssText = `
+    position:fixed;inset:0;z-index:9999;
+    background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;animation:fadeIn 0.18s ease;
+  `;
+  modal.innerHTML = `
+    <div style="
+      background:var(--bg-card);
+      border:1px solid var(--border-default);
+      border-radius:18px;
+      padding:28px 28px 24px;
+      width:100%;max-width:540px;
+      max-height:90vh;overflow-y:auto;
+      box-shadow:0 28px 80px rgba(0,0,0,0.5);
+      animation:ob-slide-up 0.25s ease;
+    ">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+        <div>
+          <div style="font-size:17px;font-weight:800;color:var(--text-primary);margin-bottom:4px">
+            Ready to send to ${prospect.firstName} ${prospect.lastName}?
+          </div>
+          <div style="font-size:11.5px;color:var(--text-muted)">
+            ${chanIcon} ${channel.charAt(0).toUpperCase()+channel.slice(1)}
+            &nbsp;·&nbsp; Variant ${variant} — ${varLabels[variant] || variant}
+            &nbsp;·&nbsp; ${stage}
+          </div>
+        </div>
+        <button onclick="document.getElementById('send-confirm-modal').remove()"
+          style="background:none;border:none;font-size:20px;color:var(--text-muted);cursor:pointer;padding:2px 6px;border-radius:6px;flex-shrink:0;margin-left:12px">✕</button>
+      </div>
+
+      <!-- Prospect info strip -->
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
+        background:rgba(96,165,250,0.07);border:1px solid rgba(96,165,250,0.18);
+        border-radius:10px;margin-bottom:14px">
+        <div style="width:36px;height:36px;border-radius:8px;background:var(--blue);
+          display:flex;align-items:center;justify-content:center;font-size:12px;
+          font-weight:800;color:#fff;flex-shrink:0">
+          ${getInitials(prospect.firstName, prospect.lastName)}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12.5px;font-weight:700;color:var(--text-primary)">${prospect.firstName} ${prospect.lastName}</div>
+          <div style="font-size:10.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${prospect.title} · ${prospect.city}, ${prospect.state}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:16px;font-weight:900;color:var(--emerald)">${prospect.priorityScore}</div>
+          <div style="font-size:9px;color:var(--text-muted)">Priority</div>
+        </div>
+      </div>
+
+      <!-- Draft preview -->
+      <div style="font-size:10px;font-weight:700;color:var(--text-muted);letter-spacing:.08em;
+        text-transform:uppercase;margin-bottom:6px">Draft Preview</div>
+      <div style="
+        background:var(--bg-elevated);
+        border:1px solid var(--border-subtle);
+        border-radius:10px;
+        padding:14px 16px;
+        font-size:12px;
+        line-height:1.75;
+        color:var(--text-secondary);
+        white-space:pre-wrap;
+        max-height:200px;
+        overflow-y:auto;
+        margin-bottom:18px;
+        font-family:inherit;
+      ">${draftText}</div>
+
+      <!-- Compliance note -->
+      <div style="font-size:11px;color:var(--text-muted);padding:8px 12px;
+        background:rgba(52,211,153,0.07);border-radius:8px;margin-bottom:18px;line-height:1.5">
+        ✅ <strong>You're in control.</strong> This copies the draft to your clipboard — paste it into your email client or LinkedIn. Nothing sends automatically from this platform.
+      </div>
+
+      <!-- Action buttons -->
+      <div style="display:flex;gap:8px">
+        <button id="confirm-send-btn" onclick="
+          (() => {
+            const draftEl = document.getElementById('draft-body');
+            const text = draftEl?.innerText || draftEl?.textContent || '';
+            navigator.clipboard?.writeText(text).catch(() => {});
+            osLogOutcome({sent:true,variant:window._outreachState?.activeVariant}).then(() => _showReplyTapper());
+            document.getElementById('send-confirm-modal')?.remove();
+            showToast('Draft copied — paste into your email client to send', '📋');
+          })()"
+          style="
+            flex:1;padding:11px 16px;
+            background:linear-gradient(135deg,var(--blue),#6366f1);
+            color:#fff;border:none;border-radius:10px;
+            font-size:13px;font-weight:700;cursor:pointer;
+            box-shadow:0 4px 14px rgba(99,102,241,0.3);
+          ">📋 Copy Draft & Mark Sent</button>
+        <button onclick="document.getElementById('send-confirm-modal').remove()"
+          style="
+            padding:11px 18px;
+            background:var(--bg-elevated);
+            border:1px solid var(--border-default);
+            border-radius:10px;
+            color:var(--text-secondary);
+            font-size:13px;font-weight:600;cursor:pointer;
+          ">Cancel</button>
+      </div>
+    </div>
+  `;
+
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+
 function showToast(msg, icon='💎') {
   const container = document.getElementById('toast-container');
   const t = document.createElement('div');
@@ -1469,6 +1818,66 @@ function bindPageEvents() {
   if (_boundOverlay) overlay.removeEventListener('click', _boundOverlay);
   _boundOverlay = closeDrawer;
   overlay.addEventListener('click', _boundOverlay);
+
+  // Sync Command Center alert badge with live ALERTS count
+  _updateNavAlertBadge();
+  // Sync Niche Mapping badge with completion state
+  _updateNicheBadge();
+}
+
+// Updates the red "3" badge on Command Center nav item to reflect ALERTS.length
+function _updateNavAlertBadge() {
+  const badge = document.getElementById('nav-cmd-badge');
+  if (!badge) return;
+  const count = (typeof ALERTS !== 'undefined' && Array.isArray(ALERTS)) ? ALERTS.length : 0;
+  const tooltipText = `${count} alert${count !== 1 ? 's' : ''} requiring your attention — hot leads, stale follow-ups, and booking opportunities`;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.title = tooltipText;                  // native browser tooltip
+    badge.setAttribute('data-tooltip', tooltipText); // CSS tooltip (C18-4 fix)
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// Updates Niche Mapping nav badge to reflect completion state (#P4 fix — C20)
+function _updateNicheBadge() {
+  const badge = document.querySelector('#nav-niche-mapping .nav-badge');
+  if (!badge) return;
+
+  // Check for a completed profile
+  const savedProfile = loadSavedNicheProfile ? loadSavedNicheProfile() : null;
+  if (savedProfile && savedProfile.completedAt) {
+    const date = new Date(savedProfile.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const tip  = `Niche assessment completed ${date} — top match: ${savedProfile.top3?.[0]?.name || 'see results'}. Click to view or retake.`;
+    badge.textContent = '✓ Done';
+    badge.style.background = 'var(--emerald)';
+    badge.title = tip;                       // native browser tooltip
+    badge.setAttribute('data-tooltip', tip); // CSS tooltip system (C18-4)
+    return;
+  }
+
+  // Check for in-progress answers
+  try {
+    const raw = localStorage.getItem('aumNicheAnswers');
+    const answers = raw ? JSON.parse(raw) : {};
+    if (Object.keys(answers).length > 0) {
+      const tip = 'You have a niche assessment in progress — click to resume';
+      badge.textContent = 'In Progress';
+      badge.style.background = 'var(--amber)';
+      badge.title = tip;
+      badge.setAttribute('data-tooltip', tip);
+      return;
+    }
+  } catch(e) {}
+
+  // Default: New
+  const tip = 'Complete the 5-stage assessment to configure your Ideal Client Profile';
+  badge.textContent = 'New';
+  badge.style.background = 'var(--emerald)';
+  badge.title = tip;
+  badge.setAttribute('data-tooltip', tip);
 }
 
 // ===== NAV BINDINGS =====
@@ -1521,4 +1930,84 @@ function openDemoEmail() {
     "Looking forward to the conversation!"
   );
   window.open(`mailto:${to}?subject=${subject}&body=${body}`, '_self');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PUBLIC LEGAL MODAL — Privacy Policy & Terms (no login required)
+// Triggered from public landing page footer. Uses inline modal over public shell.
+// ─────────────────────────────────────────────────────────────────────────────
+function openPublicLegalModal(type) {
+  const existing = document.getElementById('public-legal-overlay');
+  if (existing) existing.remove();
+
+  const isPrivacy = type === 'privacy';
+  const title     = isPrivacy ? 'Privacy Policy' : 'Terms of Service';
+  const subtitle  = isPrivacy
+    ? 'How The AUM Engine collects, uses, and protects your information'
+    : 'Pilot phase terms governing your use of The AUM Engine';
+
+  const privacyContent = `
+    <p style="font-size:11px;color:#64748b;margin-bottom:16px">Last updated: April 15, 2026 · Pilot Phase</p>
+    <h3 style="font-size:13px;font-weight:700;margin:0 0 6px">Who We Are</h3>
+    <p>The AUM Engine is operated by Fin-Tegration Consulting, LLC. Questions? <a href="mailto:hello@theaumengine.com" style="color:#3b82f6">hello@theaumengine.com</a>.</p>
+    <h3 style="font-size:13px;font-weight:700;margin:16px 0 6px">What We Collect</h3>
+    <p><strong>Account data:</strong> Name, email, and credentials. <strong>Platform usage:</strong> Prospect interactions, outreach drafts, niche assessment responses. <strong>Prospect data:</strong> Publicly sourced household information — never sold. <strong>Technical data:</strong> Browser type, IP, session IDs for security.</p>
+    <h3 style="font-size:13px;font-weight:700;margin:16px 0 6px">How We Use Your Data</h3>
+    <p>To operate the platform, route prospects, generate outreach drafts, and communicate with you. We do <strong>not</strong> sell your data or use it for advertising.</p>
+    <h3 style="font-size:13px;font-weight:700;margin:16px 0 6px">Data Storage & Security</h3>
+    <p>Stored in Google Firebase (Firestore). Role-based access controls isolate advisor data per account.</p>
+    <h3 style="font-size:13px;font-weight:700;margin:16px 0 6px">Your Rights</h3>
+    <p>Request a copy, correction, or deletion of your data anytime by emailing <a href="mailto:hello@theaumengine.com" style="color:#3b82f6">hello@theaumengine.com</a>. Deletion requests processed within 30 days.</p>
+    <h3 style="font-size:13px;font-weight:700;margin:16px 0 6px">Cookies & Local Storage</h3>
+    <p>We use browser localStorage for preferences (theme, ICP settings). No third-party tracking cookies. Firebase uses session cookies for auth only.</p>
+    <h3 style="font-size:13px;font-weight:700;margin:16px 0 6px">Changes</h3>
+    <p>Material changes notified by email with 7 days' notice before taking effect.</p>`;
+
+  const termsContent = `
+    <p style="font-size:11px;color:#64748b;margin-bottom:16px">Last updated: April 15, 2026 · Pilot Phase</p>
+    <h3 style="font-size:13px;font-weight:700;margin:0 0 6px">1. Acceptance</h3>
+    <p>By using The AUM Engine, you agree to these Terms. The Platform is operated by Fin-Tegration Consulting, LLC.</p>
+    <h3 style="font-size:13px;font-weight:700;margin:16px 0 6px">2. Pilot Access</h3>
+    <p>Access is individually granted and may be revoked. Terms, pricing, and features may change with 7 days' notice.</p>
+    <h3 style="font-size:13px;font-weight:700;margin:16px 0 6px">3. Use of the Platform</h3>
+    <p>Use only for lawful purposes consistent with financial services regulations. You are responsible for reviewing all AI-generated outreach before sending. <strong>Nothing sends automatically.</strong></p>
+    <h3 style="font-size:13px;font-weight:700;margin:16px 0 6px">4. Prospect Data</h3>
+    <p>Prospect data is from public records. Do not misuse, share, or use in violation of CAN-SPAM, TCPA, or state privacy laws.</p>
+    <h3 style="font-size:13px;font-weight:700;margin:16px 0 6px">5. No Guarantee of Results</h3>
+    <p>The Platform supports your prospecting — it does not guarantee meetings or clients. The 30-day guarantee applies to advisors who engage as designed per their pilot agreement.</p>
+    <h3 style="font-size:13px;font-weight:700;margin:16px 0 6px">6–9. IP, Liability, Termination, Governing Law</h3>
+    <p>Platform IP belongs to Fin-Tegration Consulting, LLC. Liability capped at 3 months' fees. Either party may terminate with 30 days' notice. Governed by Kansas law; disputes resolved in Johnson County, KS.</p>
+    <h3 style="font-size:13px;font-weight:700;margin:16px 0 6px">10. Contact</h3>
+    <p><a href="mailto:hello@theaumengine.com" style="color:#3b82f6">hello@theaumengine.com</a></p>`;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'public-legal-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:99999;
+    background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);
+    display:flex;align-items:center;justify-content:center;
+    animation:ob-fade-in 0.2s ease;
+  `;
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `
+    <div style="
+      background:#fff;color:#1e293b;
+      border-radius:16px;padding:32px 36px 28px;
+      width:100%;max-width:600px;max-height:85vh;overflow-y:auto;
+      box-shadow:0 24px 80px rgba(0,0,0,0.3);
+      position:relative;font-size:12.5px;line-height:1.75;
+    ">
+      <button onclick="document.getElementById('public-legal-overlay').remove()"
+        style="position:absolute;top:16px;right:20px;background:none;border:none;
+               cursor:pointer;font-size:20px;color:#64748b;line-height:1">×</button>
+      <div style="font-size:11px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">The AUM Engine</div>
+      <div style="font-size:20px;font-weight:800;color:#0f172a;margin-bottom:4px">${title}</div>
+      <div style="font-size:12px;color:#64748b;margin-bottom:24px;border-bottom:1px solid #e2e8f0;padding-bottom:16px">${subtitle}</div>
+      <div style="color:#475569">${isPrivacy ? privacyContent : termsContent}</div>
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:11px;color:#94a3b8;text-align:center">
+        The AUM Engine · Fin-Tegration Consulting, LLC · Pilot Phase ·
+        <a href="mailto:hello@theaumengine.com" style="color:#3b82f6">hello@theaumengine.com</a>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
 }

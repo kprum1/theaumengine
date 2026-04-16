@@ -131,6 +131,7 @@ function _inferPlanningPain(nicheId, reasonCodes, signals) {
     'inheritance-recipients': ['sudden wealth', 'estate settlement', 'investment deployment'],
     'real-estate-developers': ['1031 exchange', 'concentration risk', 'deal-level tax planning'],
     'law-partners':           ['K-1 complexity', 'partner buyout', 'uneven income'],
+    'pro-athletes':           ['signing bonus deployment', 'career-window income planning', 'post-career income transition'],
   };
 
   const nichePain = painMap[nicheId] || painMap['business-owners'];
@@ -261,6 +262,13 @@ const CadenceAgent = {
       { touch: 3, day: 12, channel: 'email',    theme: 'DAF + charitable trust strategy',             cta: 'send_short_guide' },
       { touch: 4, day: 20, channel: 'email',    theme: 'Legacy planning — follow-up',                cta: 'compare_notes' },
       { touch: 5, day: 28, channel: 'call',     theme: 'Final — philanthropic planning call',        cta: 'soft_permission' },
+    ],
+    pro_athlete: [
+      { touch: 1, day: 0,  channel: 'email',    theme: 'Career-window wealth planning intro',              cta: 'brief_intro_call' },
+      { touch: 2, day: 4,  channel: 'linkedin',  theme: 'Connect — athlete financial planning niche',       cta: 'reply_if_relevant' },
+      { touch: 3, day: 9,  channel: 'email',    theme: 'Follow-up — signing bonus & income spike guide',   cta: 'send_short_guide' },
+      { touch: 4, day: 16, channel: 'call',     theme: 'Quick call — post-career transition planning',     cta: 'brief_intro_call' },
+      { touch: 5, day: 24, channel: 'email',    theme: 'Final — career window checklist',                  cta: 'soft_permission' },
     ],
     _default: [
       { touch: 1, day: 0,  channel: 'email',    theme: 'First-touch — introduce your niche specialty', cta: 'brief_intro_call' },

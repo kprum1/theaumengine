@@ -27,7 +27,6 @@ service cloud.firestore {
     match /lead_assignments/{id} {
       // Advisors can read and update ONLY their own assignments.
       // Operator (kosal@fin-tegration.com) can read all.
-      // create/delete still locked to service accounts.
       allow read:   if request.auth != null
                     && (resource.data.ownerUid == request.auth.uid
                         || request.auth.token.email == 'kosal@fin-tegration.com');
@@ -35,7 +34,10 @@ service cloud.firestore {
                     && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['advisorStatus', 'advisorFeedback', 'advisorFeedbackNotes',
                                    'feedbackAt', 'updatedAt']);
-      allow create, delete: if false;  // service account only
+      // Advisors can create docs for their own intake acceptances (advisorUid must match UID)
+      allow create: if request.auth != null
+                    && request.resource.data.advisorUid == request.auth.uid;
+      allow delete: if false;  // service account only
     }
     match /routing_queue/{id} {
       allow read: if false;
@@ -176,14 +178,15 @@ service cloud.firestore {
     // Phase 2: Cloud Function gateway accepts public POST, writes via Admin SDK.
     match /ed_situations/{docId} {
       allow create: if request.auth != null;
-      // Read: assigned advisor or operator only
+      // Read: assigned/referring advisor or operator only
       allow read: if isOperator()
                || (request.auth != null
                    && (request.auth.uid == resource.data.referringAdvisorUid
                     || request.auth.uid == resource.data.assignedAdvisorUid));
-      // Status updates: assigned advisor only, restricted fields
+      // Status updates: referring OR assigned advisor (both may update during intake flow)
       allow update: if request.auth != null
-                    && request.auth.uid == resource.data.assignedAdvisorUid
+                    && (request.auth.uid == resource.data.referringAdvisorUid
+                     || request.auth.uid == resource.data.assignedAdvisorUid)
                     && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['status', 'assignedAdvisorUid', 'statusUpdatedAt']);
       allow delete: if false;

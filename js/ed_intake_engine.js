@@ -47,16 +47,41 @@ const ED_QUESTIONS_LITE = [
   },
   {
     id: 'lq2', phase: 1, phaseLabel: 'Your Situation',
-    text: 'Which best describes your primary wealth source?',
-    type: 'single', field: 'wealthSource',
+    text: 'Which best describes your primary wealth source? Select all that apply.',
+    type: 'multi', field: 'wealthSource', maxSelect: 3,
     options: [
-      { value: 'business_sale',    label: 'Selling or exiting a business',         score: { urgency: 5, complexity: 5 } },
-      { value: 'business_equity',  label: 'Active business owner (not yet exiting)',score: { urgency: 4, complexity: 4 } },
-      { value: 'corporate_equity', label: 'Corporate equity / RSUs',               score: { urgency: 4, complexity: 4 } },
-      { value: 'inheritance',      label: 'Inheritance or windfall',               score: { urgency: 4, complexity: 4 } },
-      { value: 'real_estate',      label: 'Real estate / development',             score: { urgency: 3, complexity: 4 } },
-      { value: 'professional_inc', label: 'Professional income (MD, JD, other)',   score: { urgency: 3, complexity: 3 } },
-      { value: 'other',            label: 'Other / combination',                   score: { urgency: 2, complexity: 3 } },
+      { value: 'business_sale',      label: 'Selling or exiting a business',                               score: { urgency: 5, complexity: 5 } },
+      { value: 'business_equity',    label: 'Active business owner (not yet exiting)',                     score: { urgency: 4, complexity: 4 } },
+      { value: 'corporate_equity',   label: 'Corporate equity / RSUs',                                    score: { urgency: 4, complexity: 4 } },
+      { value: 'inheritance',        label: 'Inheritance or windfall',                                    score: { urgency: 4, complexity: 4 } },
+      { value: 'real_estate',        label: 'Real estate / development',                                  score: { urgency: 3, complexity: 4 } },
+      { value: 'professional_inc',   label: 'Professional practice income (MD, JD, DDS, other)',          score: { urgency: 3, complexity: 3 } },
+      { value: 'athlete_income',     label: 'Athletic contract / signing bonus / endorsement income',     score: { urgency: 5, complexity: 4 } },
+      { value: 'trade_business',     label: 'Trade business / self-employment (HVAC, electrical, etc.)',  score: { urgency: 3, complexity: 3 } },
+      { value: 'partnership_k1',     label: 'Partnership income / K-1 / law firm equity',                score: { urgency: 4, complexity: 5 } },
+      { value: 'deferred_comp',      label: 'Deferred comp / NQDC / executive equity plan',              score: { urgency: 4, complexity: 5 } },
+      { value: 'charitable_daf',     label: 'Charitable giving / foundation / DAF strategy',             score: { urgency: 3, complexity: 4 } },
+      { value: 'aviation_lifestyle', label: 'Aviation / lifestyle asset wealth (aircraft, collectibles)', score: { urgency: 2, complexity: 3 } },
+      { value: 'other',              label: 'Other / combination',                                        score: { urgency: 2, complexity: 3 } },
+    ]
+  },
+  {
+    id: 'lq2b', phase: 1, phaseLabel: 'Your Situation',
+    text: 'Which best describes your primary profession or career? Select up to 2.',
+    type: 'multi', field: 'profession', maxSelect: 2,
+    options: [
+      { value: 'athlete_active',   label: '🏆 Professional athlete (active)',                          score: { fit: 5, urgency: 5 } },
+      { value: 'athlete_retired',  label: '🏆 Recently retired from professional sports',              score: { fit: 5, urgency: 4 } },
+      { value: 'physician',        label: '👩‍⚕️ Physician / surgeon',                                   score: { fit: 4, urgency: 3 } },
+      { value: 'dentist',          label: '🦷 Dentist / dental or medical specialist',                 score: { fit: 4, urgency: 3 } },
+      { value: 'attorney',         label: '⚖️ Attorney / law firm partner',                            score: { fit: 4, urgency: 3 } },
+      { value: 'executive',        label: '👔 Corporate executive (C-Suite, VP, Director)',            score: { fit: 4, urgency: 3 } },
+      { value: 'business_owner',   label: '🏢 Business owner / entrepreneur',                         score: { fit: 4, urgency: 4 } },
+      { value: 'trade_owner',      label: '🔧 Skilled trade business owner (HVAC, electrical, etc.)',  score: { fit: 3, urgency: 3 } },
+      { value: 'real_estate_dev',  label: '🏗️ Real estate developer / operator',                      score: { fit: 4, urgency: 3 } },
+      { value: 'nonprofit_board',  label: '🎗️ Nonprofit board member / foundation trustee',           score: { fit: 3, urgency: 2 } },
+      { value: 'aircraft_owner',   label: '✈️ Pilot / aircraft owner',                                score: { fit: 3, urgency: 2 } },
+      { value: 'w2_professional',  label: '🚀 High-earning W-2 professional (not yet in above)',      score: { fit: 3, urgency: 2 } },
     ]
   },
   {
@@ -124,16 +149,19 @@ const ED_QUESTIONS_LITE = [
   },
   {
     id: 'lq8', phase: 2, phaseLabel: 'Planning Priorities',
-    text: 'Have you experienced a significant financial event in the last 18 months?',
-    type: 'multi', field: 'recentEvents', maxSelect: 5,
+    text: 'Have you experienced a significant financial event in the last 18 months? Select all that apply.',
+    type: 'multi', field: 'recentEvents', maxSelect: 6,
     options: [
-      { value: 'business_sold',    label: '🤝 Sold or exited a business',          score: { urgency: 5 } },
-      { value: 'equity_vested',    label: '📈 Significant equity or RSU vested',   score: { urgency: 4 } },
-      { value: 'inherited',        label: '💰 Received an inheritance or gift',    score: { urgency: 5 } },
-      { value: 'real_estate_tx',   label: '🏠 Major real estate sale or purchase', score: { urgency: 3 } },
-      { value: 'job_change',       label: '💼 Changed employers or career',        score: { urgency: 3 } },
-      { value: 'marriage_divorce', label: '💍 Marriage or divorce',                score: { urgency: 4 } },
-      { value: 'none',             label: 'None of the above',                    score: {} },
+      { value: 'business_sold',     label: '🤝 Sold or exited a business',                     score: { urgency: 5 } },
+      { value: 'equity_vested',     label: '📈 Significant equity or RSU vested',              score: { urgency: 4 } },
+      { value: 'inherited',         label: '💰 Received an inheritance or gift',               score: { urgency: 5 } },
+      { value: 'real_estate_tx',    label: '🏠 Major real estate sale or purchase',            score: { urgency: 3 } },
+      { value: 'job_change',        label: '💼 Changed employers or career',                   score: { urgency: 3 } },
+      { value: 'marriage_divorce',  label: '💍 Marriage or divorce',                           score: { urgency: 4 } },
+      { value: 'athlete_contract',  label: '🏆 Signed a new sports contract or signing bonus', score: { urgency: 5 } },
+      { value: 'athlete_free_agent',label: '🏆 Currently in free agency or contract talks',   score: { urgency: 5 } },
+      { value: 'athlete_retired',   label: '🏆 Recently retired from professional sports',     score: { urgency: 5 } },
+      { value: 'none',              label: 'None of the above',                     score: {} },
     ]
   },
   {
@@ -245,15 +273,16 @@ const EdProfileGenerator = {
       completedAt:     now,
       version:         'ed-human-v1',
 
-      wealthTier:      answers.wealthTier || '',
-      wealthSource:    answers.wealthSource || '',
-      lifeStage:       answers.lifeStage || '',
-      advisorStatus:   answers.advisorStatus || '',
-      topPriority:     answers.topPriority || '',
-      urgencyTiming:   answers.urgencyTiming || '',
+      wealthTier:        answers.wealthTier || '',
+      wealthSource:      Array.isArray(answers.wealthSource) ? answers.wealthSource : (answers.wealthSource ? [answers.wealthSource] : []),
+      profession:        answers.profession || [],
+      lifeStage:         answers.lifeStage || '',
+      advisorStatus:     answers.advisorStatus || '',
+      topPriority:       answers.topPriority || '',
+      urgencyTiming:     answers.urgencyTiming || '',
       primaryChallenges: answers.primaryChallenges || [],
-      recentEvents:    answers.recentEvents || [],
-      meetingIntent:   answers.meetingIntent || '',
+      recentEvents:      answers.recentEvents || [],
+      meetingIntent:     answers.meetingIntent || '',
 
       opportunityScore:  scores.total,
       situationScore:    scores.total,
@@ -283,16 +312,34 @@ const EdProfileGenerator = {
       accumulating: 'in the wealth accumulation phase',
       preserving: 'focused on wealth preservation',
     };
+    const professionMap = {
+      athlete_active:  'active professional athlete',
+      athlete_retired: 'recently retired professional athlete',
+      physician:       'physician / surgeon',
+      dentist:         'dentist / specialist',
+      attorney:        'attorney / law firm partner',
+      executive:       'corporate executive',
+      business_owner:  'business owner',
+      trade_owner:     'skilled trade business owner',
+      real_estate_dev: 'real estate developer',
+      nonprofit_board: 'nonprofit board member',
+      aircraft_owner:  'pilot / aircraft owner',
+      w2_professional: 'high-earning W-2 professional',
+    };
 
-    const wealth  = wealthMap[profile.wealthTier]  || 'an undisclosed amount';
-    const stage   = stageMap[profile.lifeStage]     || 'an active planning phase';
-    const urgent  = profile.urgencyTiming === 'now' || profile.urgencyTiming === 'months_3';
-    const challenges = (profile.primaryChallenges || []).slice(0, 2).join(' and ');
+    const wealth      = wealthMap[profile.wealthTier] || 'an undisclosed amount';
+    const stage       = stageMap[profile.lifeStage]   || 'an active planning phase';
+    const urgent      = profile.urgencyTiming === 'now' || profile.urgencyTiming === 'months_3';
+    const challenges  = (profile.primaryChallenges || []).slice(0, 2).join(' and ');
+    const professions = (profile.profession || []).map(p => professionMap[p] || p).join(' / ');
+    const sources     = (profile.wealthSource || []).map(s => s.replace(/_/g, ' ')).join(', ');
 
     return `${profile.firstName} is ${stage} with approximately ${wealth} in investable wealth. ` +
+      (professions ? `Primary profession: ${professions}. ` : '') +
+      (sources     ? `Wealth sources: ${sources}. ` : '') +
       `Primary focus: ${profile.topPriority?.replace(/_/g, ' ') || 'financial planning'}. ` +
-      (challenges ? `Key challenges: ${challenges.replace(/_/g, ' ')}. ` : '') +
-      (urgent ? `This situation is URGENT — they need to act within 3 months. ` : '') +
+      (challenges  ? `Key challenges: ${challenges.replace(/_/g, ' ')}. ` : '') +
+      (urgent      ? `This situation is URGENT — they need to act within 3 months. ` : '') +
       `Situation Score: ${profile.situationScore}/100 (${profile.scoreLabel}). ` +
       `Meeting intent: ${profile.meetingIntent?.replace(/_/g, ' ') || 'exploring options'}.`;
   },
@@ -327,7 +374,11 @@ const EdIntakeEngine = {
 
     try {
       const params = new URLSearchParams(window.location.search);
-      this._referringAdvisorUid = params.get('ref') || null;
+      // ?ref= is present when a prospect uses the advisor's shared intake link.
+      // When an advisor starts intake directly from the cockpit, fall back to currentUID
+      // so referringAdvisorUid is never null (required for Firestore rule matching).
+      this._referringAdvisorUid = params.get('ref')
+        || (typeof currentUID !== 'undefined' && currentUID ? currentUID : null);
     } catch(e) { this._referringAdvisorUid = null; }
 
     this._sessionId = `ed_${Date.now()}`;

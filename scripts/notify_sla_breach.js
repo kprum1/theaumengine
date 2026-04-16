@@ -4,8 +4,8 @@
 'use strict';
 
 const admin  = require('firebase-admin');
-// Resolve @sendgrid/mail from functions/ since it's not installed in scripts/
-const sgMail = require(require.resolve('@sendgrid/mail', { paths: [require('path').join(__dirname, '../functions')] }));
+// Resolve resend from functions/ node_modules (not installed in scripts/)
+const { Resend } = require(require.resolve('resend', { paths: [require('path').join(__dirname, '../functions')] }));
 const fs     = require('fs');
 const path   = require('path');
 
@@ -23,14 +23,14 @@ if (fs.existsSync(envPath)) {
   });
 }
 
-const DRY_RUN   = process.argv.includes('--dry-run');
-const SG_KEY    = process.env.SENDGRID_API_KEY;
-const CAN_SEND  = SG_KEY && !SG_KEY.includes('YOUR_SENDGRID');
-const FROM_EMAIL = 'hello@theaumengine.com';
-const FROM_NAME  = 'The AUM Engine';
-const SLA_DAYS   = 7;
+const DRY_RUN    = process.argv.includes('--dry-run');
+const RESEND_KEY = process.env.RESEND_API_KEY;
+const CAN_SEND   = RESEND_KEY && RESEND_KEY.startsWith('re_');
+const FROM_EMAIL  = 'hello@theaumengine.com';
+const FROM_NAME   = 'The AUM Engine';
+const SLA_DAYS    = 7;
 
-if (CAN_SEND) sgMail.setApiKey(SG_KEY);
+const resend = CAN_SEND ? new Resend(RESEND_KEY) : null;
 
 // ── Build the HTML alert email ──────────────────────────────────────────────
 function buildAlertHTML(advisorName, leads) {
@@ -94,7 +94,7 @@ async function run() {
   console.log('║   AUM ENGINE — SLA Breach Notifier                      ║');
   console.log('║   ' + new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' }) + ' CT');
   console.log('╚══════════════════════════════════════════════════════════╝');
-  console.log(`  Mode: ${DRY_RUN ? '🔵 DRY RUN (no emails sent)' : CAN_SEND ? '🟢 LIVE (SendGrid)' : '🟡 DRY RUN — SendGrid key not set'}\n`);
+  console.log(`  Mode: ${DRY_RUN ? '🔵 DRY RUN (no emails sent)' : CAN_SEND ? '🟢 LIVE (Resend)' : '🟡 DRY RUN — RESEND_API_KEY not set'}\n`);
 
   // ── 1. Fetch all routing_logs for SLA breaches ──────────────────────────
   const logsSnap = await db.collection('routing_logs')
@@ -172,7 +172,7 @@ async function run() {
       skipped++;
     } else {
       try {
-        await sgMail.send({ from: { name: FROM_NAME, email: FROM_EMAIL }, to: email, subject, text, html });
+        await resend.emails.send({ from: `${FROM_NAME} <${FROM_EMAIL}>`, to: email, subject, text, html });
         console.log(`  ✅ Sent → ${email} (${leads.length} breach${leads.length !== 1 ? 'es' : ''})`);
         sent++;
       } catch (e) {
@@ -204,7 +204,7 @@ async function run() {
     console.log(`  ❌ Failed:  ${failed}`);
   } else {
     console.log(`  🔵 DRY RUN — ${skipped} email(s) would have been sent`);
-    console.log(`  ⚠️  To send for real: set SENDGRID_API_KEY in functions/.env then re-run without --dry-run`);
+    console.log(`  ⚠️  To send for real: ensure RESEND_API_KEY is set in functions/.env then re-run without --dry-run`);
   }
   console.log('');
   process.exit(0);

@@ -266,7 +266,13 @@ async function _hydrateSentinelDashboard() {
     const scanEl = document.getElementById('sentinel-last-scan');
     if (scanEl && org.last_scan_at) {
       scanEl.textContent = 'Last scan: ' + _relativeDate(org.last_scan_at);
+    } else if (scanEl) {
+      scanEl.textContent = 'Last scan: just now';
     }
+
+    // ✅ Dismiss the loading message now that data is live
+    const loadingEl = document.getElementById('sentinel-loading-msg');
+    if (loadingEl) loadingEl.remove();
 
     console.info(`[Sentinel] Dashboard hydrated — ${findings.length} findings, ${tasks.length} tasks`);
 
@@ -338,10 +344,9 @@ function _renderShell() {
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(99,102,241,0.15);display:flex;align-items:center;gap:10px">
         <div style="width:6px;height:6px;border-radius:50%;background:var(--violet);box-shadow:0 0 8px var(--violet);animation:pulse 2s infinite;flex-shrink:0"></div>
         <span style="font-size:11.5px;color:var(--text-muted)">
-          Read-only intelligence in v1. Active remediation, behavioral anomaly detection, and zero-trust enforcement —
-          <strong style="color:var(--violet)">soon to be powered by Mythos.</strong>
+          This dashboard is read-only intelligence. Active threat remediation, behavioral anomaly detection, and automated policy enforcement are coming in a future sprint via <strong style="color:var(--violet)">Mythos</strong> — the platform's active security layer.
         </span>
-        <span style="margin-left:auto;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(139,92,246,0.12);color:var(--violet);white-space:nowrap;flex-shrink:0">Mythos · Coming Soon</span>
+        <span style="margin-left:auto;font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(139,92,246,0.12);color:var(--violet);white-space:nowrap;flex-shrink:0" title="Mythos is the AUM Engine's active remediation engine — automated policy enforcement, anomaly detection, and zero-trust controls. Expected Sprint 3.">Mythos · Sprint 3</span>
       </div>
     </div>
 

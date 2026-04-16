@@ -1,0 +1,30 @@
+wing: advdiamondmining
+rooms:
+- name: css
+  description: Files from css/
+  keywords:
+  - css
+  - css
+- name: documentation
+  description: Files from docs/
+  keywords:
+  - documentation
+  - docs
+- name: scripts
+  description: Files from scripts/
+  keywords:
+  - scripts
+  - scripts
+- name: functions
+  description: Files from functions/
+  keywords:
+  - functions
+  - functions
+- name: design
+  description: Files from assets/
+  keywords:
+  - design
+  - assets
+- name: general
+  description: Files that don't fit other rooms
+  keywords: []

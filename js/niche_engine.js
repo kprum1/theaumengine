@@ -27,6 +27,7 @@ const NICHE_MAP = {
   n10: { name: 'Inheritance Recipients',   icon: '💰',  color: '#facc15', cluster: 'money-in-motion'        },
   n11: { name: 'Real Estate Developers',   icon: '🏗️',  color: '#f97316', cluster: 'owners-builders'        },
   n12: { name: 'Charity Boards',           icon: '🎗️',  color: '#2dd4bf', cluster: 'community-influence'    },
+  n13: { name: 'Pro Athletes',              icon: '🏆',  color: '#f43f5e', cluster: 'sports-entertainment'   },
 };
 
 // ===== LAYER 1: MACRO — always shown (8 questions) =====
@@ -53,13 +54,13 @@ const MACRO_QUESTIONS = [
     id: 'm4', layer: 'macro', zone: 'service',
     text: 'How strong is your team at solving complex planning issues beyond investment allocation?',
     options: ['We focus on investments mainly', 'Some planning depth', 'Solid planning capability', 'Strong complex planning', 'Deep multi-discipline expertise'],
-    nicheWeights: { n2:1.1, n3:1.0, n4:1.0, n6:1.0, n7:1.2, n8:1.1, n10:1.2, n11:1.0 },
+    nicheWeights: { n2:1.1, n3:1.0, n4:1.0, n6:1.0, n7:1.2, n8:1.1, n10:1.2, n11:1.0, n13:1.0 },
   },
   {
     id: 'm5', layer: 'macro', zone: 'market',
     text: 'How deep is the affluent-household opportunity in your geography or natural service reach?',
     options: ['Very limited', 'Some opportunity', 'Moderate base', 'Strong market', 'Dense high-wealth metro'],
-    nicheWeights: { n1:0.8, n2:1.0, n3:1.0, n5:0.9, n6:1.0, n9:0.8, n11:1.0, n12:0.8 },
+    nicheWeights: { n1:0.8, n2:1.0, n3:1.0, n5:0.9, n6:1.0, n9:0.8, n11:1.0, n12:0.8, n13:0.7 },
   },
   {
     id: 'm6', layer: 'macro', zone: 'fit',
@@ -77,7 +78,13 @@ const MACRO_QUESTIONS = [
     id: 'm8', layer: 'macro', zone: 'service',
     text: 'How comfortable are you advising around taxes, exits, estate complexity, equity comp, or sudden liquidity events?',
     options: ['Not my strength', 'Basic familiarity', 'Moderate capability', 'Confident advisor', 'Expert — I lead these conversations'],
-    nicheWeights: { n3:1.1, n6:1.0, n7:1.2, n10:1.2, n11:1.1, n4:1.0, n2:0.9 },
+    nicheWeights: { n3:1.1, n6:1.0, n7:1.2, n10:1.2, n11:1.1, n4:1.0, n2:0.9, n13:1.1 },
+  },
+  {
+    id: 'm9', layer: 'macro', zone: 'access',
+    text: 'How directly connected are you to professional athletes, sports entertainers, or the professionals who work with them — agents, coaches, team staff, or player union representatives?',
+    options: ['No connection at all', 'Vague awareness of the space', 'One or two indirect contacts', 'A few warm connections', 'Active relationships — this is a real channel for me'],
+    nicheWeights: { n13:1.6, n1:0.4, n6:0.3 },
   },
 ];
 
@@ -154,6 +161,12 @@ const MESO_QUESTIONS = [
     text: 'How concentrated is your geography in privately held businesses, trade entrepreneurs, and property operators?',
     options: ['Very sparse', 'Some presence', 'Moderate density', 'Rich ecosystem', 'Dense — core of my market'],
     nicheWeights: { n3:1.0, n9:1.0, n11:1.1 },
+  },
+  {
+    id: 'c13', layer: 'meso', cluster: 'sports-entertainment', zone: 'access',
+    text: 'Do you have relationships with professional athletes, sports agents, trainers, team staff, or player union connections (NBPA, NFLPA, MLBPA, etc.)?',
+    options: ['None', 'Very loose awareness', 'A contact or two', 'Moderate access into that community', 'Active relationships — warm network'],
+    nicheWeights: { n13:1.8 },
   },
 ];
 
@@ -315,6 +328,28 @@ const MICRO_QUESTIONS = [
     options: ['Stagnant', 'Minimal', 'Moderate', 'Active', 'Boom market'],
     nicheWeights: { n11:1.1 } },
 
+  // PRO ATHLETES (n13) — 3 questions
+  { id: 'pa1', layer: 'micro', niche: 'n13', zone: 'fit',
+    text: 'Do you have personal experience — as a former athlete, coach, sports professional, or family member — that gives you credibility in the athletic community?',
+    options: ['None at all', 'Played recreational sports', 'Collegiate athlete', 'Minor professional experience', 'Direct pro or coaching background'],
+    nicheWeights: { n13:1.5 } },
+  { id: 'pa2', layer: 'micro', niche: 'n13', zone: 'service',
+    text: 'How capable is your team at advising on short-career wealth windows — signing bonuses, contract structuring, early income spikes, and post-career income transitions?',
+    options: ['Not our focus', 'Basic familiarity', 'Moderate capability', 'Confident in contract income planning', 'Expert — I lead these conversations regularly'],
+    nicheWeights: { n13:1.4 } },
+  { id: 'pa3', layer: 'micro', niche: 'n13', zone: 'access',
+    text: 'How strong is your access to college and professional sports communities — agents, financial advisors to players, union reps, or team chaplains/counselors?',
+    options: ['None', 'Vague awareness', 'One or two contacts', 'Warm relationships', 'Active embedded network'],
+    nicheWeights: { n13:1.4 } },
+  { id: 'pa4', layer: 'micro', niche: 'n13', zone: 'service',
+    text: 'How well do you understand the financial planning arc of a 5–10 year peak-earning career — where a 25-year-old\'s income needs to fund 50+ more years of life?',
+    options: ['Not my area', 'Basic awareness', 'I\'ve thought through this', 'I\'ve advised on this', 'I have a framework and process built for this'],
+    nicheWeights: { n13:1.5 } },
+  { id: 'pa5', layer: 'micro', niche: 'n13', zone: 'fit',
+    text: 'Have you personally advised, managed assets for, or built an active referral relationship with a current or former professional athlete?',
+    options: ['Never', 'Explored the idea but no client', 'One conversation that didn\'t convert', 'One or two athlete clients', 'Active athlete client base or strong referral stream'],
+    nicheWeights: { n13:1.8 } },
+
   // CHARITY BOARDS (n12) — 3 questions
   { id: 'cbd1', layer: 'micro', niche: 'n12', zone: 'access',
     text: 'How active are you personally in charitable, nonprofit, or donor communities that include affluent board members?',
@@ -425,7 +460,7 @@ function _scoreRaw(questions, answers) {
     const val = ansIdx + 1; // 0-indexed → 1-5
     const zw = NICHE_ZONE_CONFIG[q.zone]?.weight || 1.0;
     Object.entries(q.nicheWeights || {}).forEach(([nId, nw]) => {
-      if (!nicheScores[nId] !== undefined) nicheScores[nId] = 0;
+      if (nicheScores[nId] === undefined) nicheScores[nId] = 0;
       const contrib = val * zw * nw;
       nicheScores[nId] = (nicheScores[nId] || 0) + contrib;
       if (!zoneScores[nId]) zoneScores[nId] = { fit: 0, focus: 0, market: 0, access: 0, service: 0 };
@@ -491,6 +526,7 @@ const _messagingAngles = {
   n10: 'Lead with "sudden wealth" empathy. Inheritance recipients are often overwhelmed. Position around clarity, coordination, and protection — not performance.',
   n11: 'Lead with deal fluency. Real estate developers respect advisors who understand 1031s, DSTs, concentration risk, and the long-term exit transition.',
   n12: 'Lead with charitable planning mastery. Board members want their philanthropy as optimized as their personal finances — show you can handle both sides of the ledger.',
+  n13: 'Lead with career-window urgency. Pro athletes have short earning windows and complex income spikes — show you understand contract income, signing bonuses, and the post-career transition before everyone else does.',
 };
 
 const _icpTemplates = {
@@ -506,7 +542,12 @@ const _icpTemplates = {
   n10: { primaryNiche:'Inheritance Recipients',  minAssets:'$1M',  professions:'Beneficiary, trust beneficiary, estate heir', lifeEventTriggers:'Inheritance received, estate settlement, trust distribution' },
   n11: { primaryNiche:'Real Estate Developers',  minAssets:'$2M',  professions:'Developer, operator, syndicator, builder', lifeEventTriggers:'Property sale, 1031 exchange window, partnership exit, re-investment' },
   n12: { primaryNiche:'Charity Boards',          minAssets:'$2M',  professions:'Nonprofit board member, foundation trustee, major donor', lifeEventTriggers:'Major gift commitment, estate planning, DAF setup' },
+  n13: { primaryNiche:'Pro Athletes',             minAssets:'$1M',  professions:'Professional athlete, minor leaguer, coach, sports agent client', lifeEventTriggers:'Signing bonus, contract year, free agency, career-ending injury, retirement' },
 };
+
+// Minimum normalized score (0–100) a niche must reach to appear in Top 3 results.
+// Niches below this threshold have no real signal from the advisor's answers.
+const NICHE_MIN_SCORE_THRESHOLD = 15;
 
 function generateNicheProfile(scores, path) {
   const ranked = Object.entries(scores.nicheScores)
@@ -518,7 +559,11 @@ function generateNicheProfile(scores, path) {
       ...NICHE_MAP[id],
     }));
 
-  const top3 = ranked.slice(0, 3);
+  // Only include niches that have meaningful signal — skip those at or near zero
+  const qualified = ranked.filter(n => n.score >= NICHE_MIN_SCORE_THRESHOLD);
+  const top3 = qualified.length >= 3
+    ? qualified.slice(0, 3)
+    : ranked.slice(0, 3); // fallback: show top 3 if nothing clears threshold
   const topId = top3[0]?.id || 'n3';
 
   return {

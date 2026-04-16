@@ -23,6 +23,7 @@ const PERSONA_TYPES = {
   'charity-boards':           'charity_board',
   'charity-board-members':    'charity_board',
   'yacht-owners':             'yacht_owner',
+  'pro-athletes':             'pro_athlete',
 };
 
 // ── TRIGGER SIGNALS → trigger type ───────────────────────────
@@ -103,6 +104,12 @@ const ANGLE_MATRIX = {
     exit_liquidity:  { angle: 'exit_liquidity',           cta: 'brief_intro_call' },
     retirement:      { angle: 'yacht_lifestyle',          cta: 'compare_notes'    },
   },
+  pro_athlete: {
+    general_intro:   { angle: 'athlete_wealth_window',   cta: 'brief_intro_call' },
+    retirement:      { angle: 'athlete_wealth_window',   cta: 'compare_notes'    },
+    rsu_vest:        { angle: 'athlete_wealth_window',   cta: 'send_short_guide' },
+    exit_liquidity:  { angle: 'athlete_wealth_window',   cta: 'brief_intro_call' },
+  },
 };
 
 // ── ANGLE METADATA (for UI display) ──────────────────────────
@@ -121,6 +128,7 @@ const ANGLE_META = {
   deal_fluency:           { label: 'Deal Fluency',             why: '1031s, DSTs, and concentration risk need someone who understands real estate tax strategy' },
   general_niche_intro:    { label: 'Niche Introduction',       why: 'Warm, observation-based intro establishes relevance without pressure' },
   yacht_lifestyle:        { label: 'Yacht & Maritime Wealth',  why: 'USCG-documented vessel ownership signals $2M+ AUM — lead with lifestyle fluency, not finance-first' },
+  athlete_wealth_window:  { label: 'Career Window Planning',   why: 'Athletes have short, intense earning windows — advisors who lead with urgency and income planning earn instant credibility' },
 };
 
 // ── CTA LANGUAGE ─────────────────────────────────────────────
@@ -343,6 +351,21 @@ const _TEMPLATES = {
              body:`${firstName},\n\nI specialize in working with clients who own private vessels — not because of the boat itself, but because of what tends to surround it: serious wealth, planning gaps, and a lifestyle worth protecting.\n\nNot sure if you're working with an advisor now, but happy to ${cta}.\n\n[Your Name]` },
         C: { id:'C', label:'Insight-Led', subject:`What I see most vessel owners overlook`,
              body:`${firstName},\n\nOwning a documented vessel at your level usually means the wealth picture around it is significant — and often under-coordinated. Insurance gaps, estate titling, concentrated assets.\n\nI work specifically with clients who want that picture managed as well as the vessel itself is.\n\nHappy to ${cta}.\n\n[Your Name]` },
+      };
+      return variants[tone] || variants.A;
+    },
+  },
+
+    athlete_wealth_window: (ctx, strategy, tone) => {
+      const { firstName, city, state } = ctx.prospect;
+      const cta = strategy.ctaMeta.full;
+      const variants = {
+        A: { id:'A', label:'Direct', subject:`Financial planning for professional athletes`,
+             body:`${firstName},\n\nI work with professional and recently retired athletes on the financial side of a career that, by design, is short.\n\nSigning bonuses, contract income spikes, off-season cash flow, and the post-career transition — these require planning most advisors don't specialize in.\n\nWorth ${cta} to see if we're a fit?\n\n[Your Name]` },
+        B: { id:'B', label:'Soft', subject:`A thought on the financial side of a playing career`,
+             body:`${firstName},\n\nI specialize in financial planning for athletes who are either in the middle of their career or just coming out the other side.\n\nThe window to build long-term wealth from a playing career is narrow — most advisors don't frame it that way until it's already closing.\n\nHappy to ${cta} if it might be useful.\n\n[Your Name]` },
+        C: { id:'C', label:'Insight-Led', subject:`One thing most athletes hear too late`,
+             body:`${firstName},\n\nThe most common thing I hear from athletes I work with after their career ends: "I wish I'd had this conversation three years ago."\n\nSigning bonus deployment, income planning during a contract year, post-career cash flow — all of it requires advance thinking.\n\nHappy to ${cta}.\n\n[Your Name]` },
       };
       return variants[tone] || variants.A;
     },

@@ -750,19 +750,43 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <!-- ── App Scripts ── -->
-<script src="js/data.js?v=20260415c"></script>
-<script src="js/niche_engine.js?v=20260407p"></script>
+<script src="js/data.js?v=20260416a"></script>
+<script src="js/niche_engine.js?v=20260416a"></script>
 <script src="js/db.js?v=20260412c"></script>
-<script src="js/admin.js?v=20260413c"></script>
-<script src="js/outreach_agent.js?v=20260409a"></script>
+<script src="js/admin.js?v=20260416a"></script>
+<script src="js/outreach_agent.js?v=20260416a"></script>
 <script src="js/funnel_tracker.js?v=20260409a"></script>
-<script src="js/outreach_controller.js?v=20260410a"></script>
-<script src="js/ed_intake_engine.js?v=20260408c"></script>
+<script src="js/outreach_controller.js?v=20260416a"></script>
+<script src="js/ed_intake_engine.js?v=20260416b"></script>
 <script src="js/planning_agent.js?v=20260408e"></script>
-<script src="js/pages.js?v=20260415g"></script>
-<script src="js/onboarding.js?v=20260415b"></script>
+<script src="js/pages.js?v=20260416c"></script>
+<script src="js/onboarding.js?v=20260416a"></script>
 <script src="js/sentinel.js?v=20260415a"></script>
-<script src="js/app.js?v=20260415i"></script>
-<script src="js/auth.js?v=20260415j"></script>
+<script src="js/app.js?v=20260416a"></script>
+<script src="js/auth.js?v=20260415k"></script>
+<script>
+// C23-1: Path-based deep link handler for /privacy and /terms
+// Firebase hosting rewrites all paths to index.html (SPA mode).
+// Detect /privacy and /terms at load time and show the correct page.
+(function() {
+  const path = window.location.pathname.replace(/\/$/, '').toLowerCase();
+  const legalPages = { '/privacy': 'privacy', '/terms': 'terms' };
+  const target = legalPages[path];
+  if (!target) return;
+  // Replace URL with clean root (no redirect — just clean the bar)
+  history.replaceState(null, '', '/');
+  // Wait for auth.js to boot, then open the legal modal (works for unauthenticated users)
+  // OR navigate() if the user is already authenticated.
+  window._deepLinkLegalPage = target;
+  document.addEventListener('DOMContentLoaded', function() {
+    // Small delay so openPublicLegalModal is defined by app.js
+    setTimeout(function() {
+      if (typeof openPublicLegalModal === 'function') {
+        openPublicLegalModal(target);
+      }
+    }, 200);
+  });
+})();
+</script>
 </body>
 </html>

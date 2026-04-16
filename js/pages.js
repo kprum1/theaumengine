@@ -32,7 +32,7 @@ function pageCommandCenter() {
   const activeSitId = window._alActiveSituationId || null;
 
   // Approved assignments (already accepted by advisor)
-  const approved = assignments.filter(a => a.status === 'approved' || a.status === 'pending_review').slice(0, 5);
+  const approved = assignments.filter(a => ['approved','pending_review','al_accepted'].includes(a.status)).slice(0, 5);
 
   const briefPanelHTML = (() => {
     // No situations at all
@@ -182,7 +182,7 @@ function pageCommandCenter() {
     </div>
   </div>
 
-  <!-- My Activity — auto-loads from Firestore, scoped to this advisor -->
+  <!-- My Activity — pre-populated from localStorage, overwritten by Firestore -->
   <div id="my-activity-strip" style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
     <div style="flex:1;min-width:110px;background:var(--bg-card);border:1px solid var(--border-default);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:10px">
       <span style="font-size:20px">&#x2709;&#xFE0F;</span>
@@ -201,6 +201,26 @@ function pageCommandCenter() {
       <div><div style="font-size:22px;font-weight:900;color:var(--violet)" id="my-stat-rate">&#x2014;</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-top:2px">Contact Rate</div></div>
     </div>
   </div>
+  <script>
+  // Bug #6 fix — hydrate activity strip from localStorage immediately (no Firestore wait)
+  (function _hydrateActivityStrip() {
+    try {
+      const log = JSON.parse(localStorage.getItem('aumOutreachLog') || '[]');
+      const sent     = log.filter(e => e.sent).length;
+      const replied  = log.filter(e => e.outcome && ['reply','positive','meeting'].includes(e.outcome)).length;
+      const meetings = log.filter(e => e.outcome === 'meeting').length;
+      const rate     = sent > 0 ? Math.round((replied / sent) * 100) : 0;
+      const s = document.getElementById('my-stat-sent');
+      const r = document.getElementById('my-stat-replied');
+      const m = document.getElementById('my-stat-meetings');
+      const c = document.getElementById('my-stat-rate');
+      if (s) s.textContent = sent     > 0 ? sent     : '—';
+      if (r) r.textContent = replied  > 0 ? replied  : '—';
+      if (m) m.textContent = meetings > 0 ? meetings : '—';
+      if (c) c.textContent = sent     > 0 ? rate + '%' : '—';
+    } catch(e) { /* silently degrade */ }
+  })();
+  </script>
 
   <div class="section">
     <div class="grid-21" style="gap:16px">
@@ -273,7 +293,7 @@ function pageProspectMine() {
   <div class="page-header">
     <div class="page-header-left">
       <div class="page-title">Prospect Mine 💎</div>
-      <div class="page-subtitle">AI-powered niche prospecting — find your next best client</div>
+      <div class="page-subtitle">AI-powered niche prospecting — find your next best client &nbsp;·&nbsp; <span data-tooltip="Alfred is the AUM Engine's AI prospecting agent — he researches, scores, and assembles curated households in your niche from public records and enrichment sources. He never contacts prospects directly; that's always you." style="color:var(--blue);font-weight:600;cursor:help;font-size:11px">Who is Alfred? ⓘ</span></div>
     </div>
     <div class="page-actions">
       <button class="btn btn-secondary" onclick="triggerCSVImport()">⬆ Import CSV</button>
@@ -291,7 +311,7 @@ function pageProspectMine() {
             <span class="niche-card-icon">${n.icon}</span>
             <div class="niche-card-name">${n.name}</div>
             <div class="niche-card-desc">${n.desc}</div>
-            <span class="niche-card-count" style="color:${n.color}">${n.count}</span>
+            <span class="niche-card-count" style="color:${n.color}">${PROSPECTS.filter(p=>p.nicheId===n.id).length}</span>
           </div>`).join('')}
         </div>
       </div>
@@ -373,7 +393,7 @@ function pageLeadScoreboard() {
     </div>`:`
     <div class="table-wrap">
       <table class="data-table">
-        <thead><tr><th>Rank</th><th>Prospect</th><th>Niche</th><th>Signals</th><th>Fit</th><th>Timing</th><th>Priority</th><th>Status</th><th>Rep</th><th>Last Activity</th><th>Feedback</th><th>Action</th></tr></thead>
+        <thead><tr><th>Rank</th><th>Prospect</th><th>Niche</th><th>Signals</th><th>Fit</th><th>Timing</th><th>Priority</th><th>Status</th><th style="min-width:120px">Rep / Activity</th><th style="min-width:72px">Rate</th><th style="min-width:60px">Action</th></tr></thead>
         <tbody id="scoreboard-body">
           ${list.map((p,i)=>{
             const e    = getEnrichment(p.id);
@@ -399,9 +419,11 @@ function pageLeadScoreboard() {
             <td>${getScoreBar(p.timingScore,'#a78bfa')}</td>
             <td>${getScoreBar(p.priorityScore,'#34d399')}</td>
             <td>${getStatusPill(p.status)}</td>
-            <td style="font-size:11px;color:var(--text-muted)">${p.assignedRep}</td>
-            <td style="font-size:11px;color:var(--text-muted)">${p.lastActivity}</td>
-            <td onclick="event.stopPropagation()">
+            <td style="font-size:10.5px;color:var(--text-muted);min-width:120px">
+              <div style="font-weight:600;color:var(--text-secondary)">${p.assignedRep}</div>
+              <div style="font-size:10px;margin-top:1px">${p.lastActivity}</div>
+            </td>
+            <td onclick="event.stopPropagation()" style="min-width:72px">
               <div class="fb-inline">
                 <button class="fb-btn-sm ${(FEEDBACK_STORE[p.id]==='up')?'fb-active-up':''}" id="fb-up-${p.id}"
                   onclick="saveFeedback('${p.id}','up')" title="Quality lead">👍</button>
@@ -526,13 +548,13 @@ function pageOutreachStudio() {
           <div class="message-body" id="draft-body" contenteditable="true">${getDraft(prospect,activeOutreachType)}</div>
         </div>
         <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn btn-primary" style="flex:1" onclick="osLogOutcome({sent:true,variant:window._outreachState?.activeVariant}).then(()=>_showReplyTapper());const draftText=document.getElementById('draft-body')?.innerText||'';navigator.clipboard?.writeText(draftText).catch(()=>{});showToast('Draft copied — paste into your email client to send','📋')">Send Now</button>
+          <button class="btn btn-primary" style="flex:1" id="send-now-btn" onclick="showSendConfirmModal()">Send Now</button>
           <button class="btn btn-secondary" onclick="showToast('Added to cadence — follow up on schedule','📅')">Add to Sequence</button>
           <button class="btn btn-ghost" onclick="showToast('Template saved','✅')">Save Template</button>
         </div>
         <div id="reply-tapper-zone" style="margin-top:10px"></div>
         <div style="margin-top:20px">
-          <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Agent Cadence \u2014 click Generate to build sequence</div></div>
+          <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Outreach Cadence <span style="font-size:10px;color:var(--text-muted);font-weight:400">— AI-suggested multi-touch follow-up schedule · click Generate to build</span></div></div>
           <div id="cadence-sequence">
             ${[['Day 0','\u2709\ufe0f','First-touch email',true],['Day 3','\ud83d\udcbc','LinkedIn connection',false],
                ['Day 9','\u2709\ufe0f','Follow-up email \u2014 value add',false],['Day 16','\ud83d\udce3','Voicemail \u2014 brief and low-pressure',false],
@@ -946,9 +968,11 @@ function pageNicheMapping() {
   // ── STAGE 1: QUICK PREVIEW ────────────────────────────────────────────────
   if (stage === 1 && nichePreviewScores) {
     const ps = nichePreviewScores;
-    const previewRanked = Object.entries(ps.nicheScores)
-      .sort((a,b) => b[1]-a[1]).slice(0,3)
+    const _previewAllRanked = Object.entries(ps.nicheScores)
+      .sort((a,b) => b[1]-a[1])
       .map(([id,score]) => ({ id, score, ...NICHE_MAP[id] }));
+    const _previewQualified = _previewAllRanked.filter(n => n.score >= (typeof NICHE_MIN_SCORE_THRESHOLD !== 'undefined' ? NICHE_MIN_SCORE_THRESHOLD : 15));
+    const previewRanked = (_previewQualified.length >= 3 ? _previewQualified : _previewAllRanked).slice(0, 3);
     const zoneOrder = ['fit','focus','market','access','service'];
     const totalMesoMicro = (path ? path.meso.length + path.micro.length : 0);
 
@@ -1091,6 +1115,7 @@ function pageNicheMapping() {
         <div class="page-subtitle">Adaptive assessment → top 3 niche matches + generated ICP profile · ~5–7 minutes</div>
       </div>
       <div class="page-actions">
+        ${totalAnswered > 0 ? `<button class="btn btn-ghost" onclick="_saveAnswersCache();nicheWizardStage=0;showToast('Progress saved — pick up right where you left off','💾');navigate('command-center')">💾 Save & Exit</button>` : ''}
         ${saved ? `<button class="btn btn-ghost" onclick="viewSavedProfile()">View Last Results</button>` : ''}
       </div>
     </div>
@@ -1130,6 +1155,7 @@ function pageNicheMapping() {
     </div>
     <div class="page-actions">
       <button class="btn btn-ghost" onclick="backNicheWizard()">← Back</button>
+      <button class="btn btn-ghost" onclick="_saveAnswersCache();nicheWizardStage=0;showToast('Progress saved — pick up right where you left off','💾');navigate('command-center')">💾 Save & Exit</button>
     </div>
   </div>
   <div class="wizard-shell">
@@ -1167,7 +1193,7 @@ function pageSettings() {
   return `
   <div class="page-header">
     <div class="page-header-left"><div class="page-title">Settings &amp; ICP</div>
-      <div class="page-subtitle">Define your ideal client profile and configure agent rules</div></div>
+      <div class="page-subtitle">Ideal Client Profile (ICP) — define who you serve best, and configure how the engine routes and mines leads for you</div></div>
     <div class="page-actions">
       <button class="btn btn-secondary" onclick="saveAdvisorProfile()">Save Profile</button>
       <button class="btn btn-primary" onclick="saveICP()">Save ICP</button>
@@ -1192,11 +1218,31 @@ function pageSettings() {
             <input class="form-input" id="icp-prof" value="${cfg.professions}"></div>
           <div class="form-group"><label class="form-label">Life Event Triggers</label>
             <input class="form-input" id="icp-events" value="${cfg.lifeEventTriggers}"></div>
-          <div class="form-group"><label class="form-label">Messaging Angle</label>
-            <textarea class="form-textarea" id="icp-message">${cfg.messagingAngle}</textarea></div>
+          <div class="form-group">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
+              <label class="form-label" style="margin-bottom:0">Messaging Angle</label>
+              <span id="icp-message-count" style="font-size:10.5px;color:var(--text-muted);font-variant-numeric:tabular-nums">
+                ${(cfg.messagingAngle||'').length} / 150 chars
+              </span>
+            </div>
+            <textarea class="form-textarea" id="icp-message"
+              placeholder="e.g. 'Simplify your equity comp before IPO lock-up expires — keep more of what you've earned.'"
+              oninput="(function(el){
+                const len = el.value.length;
+                const counter = document.getElementById('icp-message-count');
+                if (counter) {
+                  counter.textContent = len + ' / 150 chars';
+                  counter.style.color = len > 300 ? 'var(--rose)' : len > 150 ? 'var(--amber)' : 'var(--text-muted)';
+                }
+              })(this)"
+            >${cfg.messagingAngle}</textarea>
+            <div style="font-size:10.5px;color:var(--text-muted);margin-top:5px;line-height:1.5">
+              💡 Keep it under 150 chars — this drives your AI-generated outreach subject lines and opening hooks. One clear pain point or opportunity works best.
+            </div>
+          </div>
         </div>
 
-        <div class="section-header" style="margin-top:20px"><div class="section-title"><div class="section-title-dot"></div>Advisor Routing Profile &nbsp;<span style="font-size:10px;color:var(--blue);font-weight:700;letter-spacing:0.06em;background:rgba(96,165,250,0.12);padding:2px 8px;border-radius:20px">PHASE B</span></div></div>
+        <div class="section-header" style="margin-top:20px"><div class="section-title"><div class="section-title-dot"></div>Advisor Routing Profile &nbsp;<span style="font-size:10px;color:var(--text-secondary);font-weight:600;letter-spacing:0.04em;background:rgba(96,165,250,0.1);padding:2px 8px;border-radius:20px" title="This profile tells the AUM Engine which leads to route to you based on your niche, geography, licensing, and capacity.">Lead Routing Config</span></div></div>
         <div class="card">
           <div style="font-size:11px;color:var(--text-muted);line-height:1.6;margin-bottom:16px;padding:10px 12px;background:rgba(96,165,250,0.06);border-radius:8px;border-left:3px solid var(--blue)">
             This profile powers the lead routing engine — it determines which leads you're eligible to receive based on your niche, geography, licensing, and capacity.
@@ -1231,7 +1277,32 @@ function pageSettings() {
             <input class="form-input" id="ap-firm" value="${ap.firmName||''}"></div>
           <div class="form-group"><label class="form-label">Primary Office (City, State)</label>
             <input class="form-input" id="ap-office" value="${ap.officeLocations&&ap.officeLocations[0]?ap.officeLocations[0].city+', '+ap.officeLocations[0].state:''}" placeholder="Phoenix, AZ"></div>
-          <button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="saveAdvisorProfile()">💾 Save Routing Profile</button>
+          <div class="form-group">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
+              <label class="form-label" style="margin-bottom:0">📅 Booking Link <span style="color:var(--rose);font-size:11px;font-weight:600">Required for outreach</span></label>
+            </div>
+            <input class="form-input" id="ap-booking-link"
+              type="url"
+              value="${ICP_CONFIG?.bookingLink || localStorage.getItem('aum_booking_link') || ''}"
+              placeholder="https://calendly.com/yourname/30min"
+              oninput="(function(el){\n                const warn = document.getElementById('ap-booking-link-warn');\n                if (warn) warn.style.display = el.value.trim() ? 'none' : 'block';\n              })(this)">
+            <div id="ap-booking-link-warn" style="font-size:11px;color:var(--amber);margin-top:5px;${(ICP_CONFIG?.bookingLink || localStorage.getItem('aum_booking_link')) ? 'display:none' : ''}">
+              ⚠️ Booking link not set — advisors cannot send outreach booking emails without this.
+            </div>
+            <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Calendly, Acuity, or any scheduling URL. Embedded in all outreach emails.</div>
+          </div>
+          <button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="(async function(){
+            const bookLink = document.getElementById('ap-booking-link')?.value?.trim();
+            if (bookLink && bookLink.startsWith('http')) {
+              if (typeof ICP_CONFIG !== 'undefined') ICP_CONFIG.bookingLink = bookLink;
+              try { localStorage.setItem('aum_booking_link', bookLink); } catch(e) {}
+              if (typeof saveBookingLink === 'function' && typeof currentUID !== 'undefined' && currentUID) {
+                await saveBookingLink(currentUID, bookLink).catch(()=>{});
+              }
+            }
+            saveAdvisorProfile();
+          })()">💾 Save Routing Profile</button>
+
         </div>
       </div>
       <div>
@@ -1244,13 +1315,11 @@ function pageSettings() {
              {name:'Outreach Agent',desc:'Drafts personalized messaging per prospect',status:'Active'},
              {name:'Nurture Agent',desc:'Manages unready leads and reactivation logic',status:'Beta'},
              {name:'Meeting Prep Agent',desc:'Generates pre-meeting dossiers',status:'Active'},
-             {name:'Manager Agent',desc:'Summarizes team performance and conversion insights',status:'Active'},
-             {name:'Identity Resolution Agent',desc:'Dedupes and matches contacts to global master record',status:'Building'},
-             {name:'Routing Orchestrator',desc:'Assigns leads exclusively by niche fit + ICP + capacity',status:'Building'}]
+             {name:'Manager Agent',desc:'Summarizes team performance and conversion insights',status:'Active'}]
             .map(a=>`<div class="signal-row">
               <div><div class="signal-value" style="font-size:12px;font-weight:600">${a.name}</div>
               <div style="font-size:10.5px;color:var(--text-muted)">${a.desc}</div></div>
-              <span class="status-pill ${a.status==='Active'?'pill-booked':a.status==='Building'?'pill-nurture':'pill-new'}">${a.status}</span>
+              <span class="status-pill ${a.status==='Active'?'pill-booked':a.status==='Beta'?'pill-nurture':'pill-new'}">${a.status}</span>
             </div>`).join('')}
         </div>
         <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Team Members</div></div>
@@ -1304,7 +1373,7 @@ function pageEdDisclosure() {
         </div></div>
         <div style="display:flex;gap:14px;align-items:flex-start"><span style="font-size:18px;flex-shrink:0">🗑️</span><div>
           <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:3px">Client rights</div>
-          <div style="font-size:12.5px;color:var(--text-secondary);line-height:1.7">Clients may request deletion at any time by emailing <a href="mailto:kosal@fin-tegration.com" style="color:var(--blue)">kosal@fin-tegration.com</a>. Profiles are retained 90 days then purged.</div>
+          <div style="font-size:12.5px;color:var(--text-secondary);line-height:1.7">Clients may request deletion at any time by emailing <a href="mailto:${(window._advisorProfile?.email || window._currentUser?.email || 'support@theaumengine.com')}" style="color:var(--blue)">${(window._advisorProfile?.email || window._currentUser?.email || 'your advisor')}</a>. Profiles are retained 90 days then purged.</div>
         </div></div>
       </div>
       <div style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:10px;padding:16px;margin-bottom:20px">
@@ -1326,9 +1395,16 @@ function pageEdDisclosure() {
       </div>
     </div>
     <div style="padding:12px 16px;background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.2);border-radius:10px;font-size:11.5px;color:var(--text-secondary);line-height:1.6">
-      <strong style="color:var(--amber)">🔗 Advisor intake link:</strong> Share
-      <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px;font-size:10.5px">theaumengine.com#ed-disclosure?ref=YOUR_UID</code>
-      with prospects. Replace <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px;font-size:10.5px">YOUR_UID</code> with your Firebase UID.
+      <strong style="color:var(--amber)">🔗 Your intake link:</strong> Share this link with prospects — it already has your UID embedded.
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap">
+        <code id="intake-link-code" style="background:var(--bg-elevated);padding:4px 8px;border-radius:4px;font-size:10.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${window.location.origin}/#ed-disclosure?ref=${typeof currentUID !== 'undefined' && currentUID ? currentUID : '(loading…)'}</code>
+        <button onclick="(function(){
+          const uid = typeof currentUID !== 'undefined' && currentUID ? currentUID : '';
+          if (!uid) { if(typeof showToast==='function') showToast('Sign in first to get your link','⚠️'); return; }
+          const link = window.location.origin + '/#ed-disclosure?ref=' + uid;
+          navigator.clipboard ? navigator.clipboard.writeText(link).then(()=>{ if(typeof showToast==='function') showToast('Intake link copied!','✅'); }) : (document.getElementById('intake-link-code').select && document.getElementById('intake-link-code').select());
+        })()" style="background:var(--blue);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">📋 Copy Link</button>
+      </div>
     </div>
   </div>`;
 }
@@ -1501,7 +1577,7 @@ function _renderEdCompletionScreen(profile) {
     </div>
     <button class="btn btn-primary" onclick="navigate('command-center')" style="min-width:180px">View in Command Center \u2192</button>
     <div style="font-size:10.5px;color:var(--text-muted);line-height:1.6;padding:12px 8px 0">
-      Questions? <a href="mailto:kosal@fin-tegration.com" style="color:var(--blue)">kosal@fin-tegration.com</a>
+      Questions? <a href="mailto:${(window._advisorProfile?.email || window._currentUser?.email || 'support@theaumengine.com')}" style="color:var(--blue)">${(window._advisorProfile?.email || window._currentUser?.email || 'Contact your advisor')}</a>
     </div>
   </div>`;
 }
@@ -1523,9 +1599,9 @@ function pagePrivacyPolicy() {
         ['3. Who Can See It','Only the matched advisor (identified by <code>?ref=</code> URL) and the platform operator (Fin-Tegration). Not shared with third parties, advertisers, or other advisors.'],
         ['4. Consent Logging','When a prospect consents, we record the timestamp, disclosure version, and referring advisor UID. This record is write-once and cannot be altered.'],
         ['5. Data Retention','Profiles and consent logs are retained for <strong>90 days</strong> from submission, then permanently deleted.'],
-        ['6. Client Rights','Clients may request <strong>deletion</strong> by emailing <a href="mailto:kosal@fin-tegration.com" style="color:var(--blue)">kosal@fin-tegration.com</a> with subject "Data Deletion Request." Confirmed within 5 business days.'],
+        ['6. Client Rights','Clients may request <strong>deletion</strong> by emailing <a href="mailto:${window._advisorProfile?.email || window._currentUser?.email || \'support@theaumengine.com\'}" style="color:var(--blue)">${window._advisorProfile?.email || window._currentUser?.email || \'support@theaumengine.com\'}</a> with subject "Data Deletion Request." Confirmed within 5 business days.'],
         ['7. Security','All data is stored in Google Firestore with encryption at rest and in transit. Access is controlled by Firebase Auth and Firestore security rules scoped to the matched advisor.'],
-        ['8. Contact','Fin-Tegration \u00b7 <a href="mailto:kosal@fin-tegration.com" style="color:var(--blue)">kosal@fin-tegration.com</a> \u00b7 <a href="https://theaumengine.com" style="color:var(--blue)" target="_blank">theaumengine.com</a>'],
+        ['8. Contact',`Fin-Tegration \u00b7 <a href="mailto:${window._advisorProfile?.email || window._currentUser?.email || 'support@theaumengine.com'}" style="color:var(--blue)">${window._advisorProfile?.email || window._currentUser?.email || 'support@theaumengine.com'}</a> \u00b7 <a href="https://theaumengine.com" style="color:var(--blue)" target="_blank">theaumengine.com</a>`],
       ].map(([title,body]) => `<div style="margin-bottom:28px"><div style="font-size:14px;font-weight:800;color:var(--text-primary);margin-bottom:10px">${title}</div><div style="font-size:13px;color:var(--text-secondary);line-height:1.8">${body}</div></div>`).join('<hr style="border:none;border-top:1px solid var(--border-subtle);margin:0 0 28px">')}
     </div>
   </div>`;
@@ -1534,7 +1610,27 @@ function pagePrivacyPolicy() {
 // ── SECURITY SENTINEL (Sprint 1) ─────────────────────────────
 // Thin wrapper — delegates to js/sentinel.js to keep pages.js
 // clean. Registered in app.js pageMap as 'security-sentinel'.
+// M4 FIX: Role-gated to operator only — advisors see access-denied.
 function pageSentinelDashboard() {
+  // Operator check — kosal@fin-tegration.com or admin flag in profile
+  const userEmail = window._currentUser?.email || '';
+  const isOp = userEmail === 'kosal@fin-tegration.com'
+             || window._advisorProfile?.role === 'operator'
+             || window._advisorProfile?.isOperator === true;
+  if (!isOp) {
+    return `
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="page-title">🛡️ Security Sentinel</div>
+        <div class="page-subtitle">Trust &amp; exposure monitoring</div>
+      </div>
+    </div>
+    <div class="empty-state" style="margin-top:40px">
+      <div class="empty-state-icon">🔒</div>
+      <div class="empty-state-title">Operator Access Required</div>
+      <div class="empty-state-sub">This module is restricted to platform operators.<br>Contact your operator if you need access.</div>
+    </div>`;
+  }
   if (typeof renderSentinelPage === 'function') {
     return renderSentinelPage();
   }
@@ -1550,5 +1646,182 @@ function pageSentinelDashboard() {
     <div class="empty-state-icon">🛡️</div>
     <div class="empty-state-title">Sentinel module not loaded</div>
     <div class="empty-state-sub">Check that sentinel.js is included in index.html before app.js.</div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PRIVACY POLICY — v20260415g
+// ─────────────────────────────────────────────────────────────────────────────
+function pagePrivacyPolicy() {
+  return `
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Privacy Policy</div>
+      <div class="page-subtitle">How The AUM Engine collects, uses, and protects your information</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-ghost" onclick="navigate('command-center')">← Back to Cockpit</button>
+    </div>
+  </div>
+  <div class="section">
+    <div class="card" style="max-width:760px;padding:32px 36px;line-height:1.8">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:24px">Last updated: April 15, 2026 · Pilot Phase</div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">Who We Are</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        The AUM Engine is an advisor growth platform operated by Fin-Tegration Consulting, LLC
+        (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;). We help independent Financial Professionals
+        find, engage, and serve right-fit households in their chosen niches. Questions? Email us at
+        <a href="mailto:hello@theaumengine.com" style="color:var(--blue)">hello@theaumengine.com</a>.
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">What We Collect</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        <strong>Account data:</strong> Your name, email address, and authentication credentials, collected when you create an account.<br><br>
+        <strong>Platform usage data:</strong> Prospect interaction logs, outreach drafts you generate or approve, pipeline status changes, and niche assessment responses. This data is stored in your account and used to power the cockpit and improve routing.<br><br>
+        <strong>Prospect data:</strong> Information about households you prospect (names, titles, geography, estimated wealth signals) sourced from public records and enrichment providers. This data is used exclusively to power your advisory workflow — it is never sold or shared with third parties.<br><br>
+        <strong>Technical data:</strong> Browser type, IP address, and session identifiers for security, fraud prevention, and platform diagnostics.
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">How We Use Your Data</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        We use your data to:<br>
+        &bull; Operate and improve The AUM Engine platform<br>
+        &bull; Route qualified prospects to your account based on your niche and ICP settings<br>
+        &bull; Generate AI-assisted outreach drafts tailored to each prospect<br>
+        &bull; Provide security monitoring and account management<br>
+        &bull; Communicate with you about your account, platform updates, and support requests<br><br>
+        We do <strong>not</strong> sell your personal data or prospect data to third parties. We do not use your data for advertising.
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">Data Storage &amp; Security</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        Your data is stored in Google Firebase (Firestore), protected by Google Cloud&rsquo;s enterprise-grade security infrastructure.
+        Authentication uses Firebase Auth with email/password and Google OAuth. We enforce role-based access controls so advisor data is
+        isolated per account. Platform operators have administrative access for routing and support purposes only.
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">Your Rights</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        You may request a copy of your data, ask us to correct inaccurate information, or request deletion of your account and associated
+        data at any time by emailing <a href="mailto:hello@theaumengine.com" style="color:var(--blue)">hello@theaumengine.com</a>.
+        Data deletion requests are processed within 30 days.
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">Cookies &amp; Local Storage</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        The AUM Engine uses browser localStorage to persist your preferences (theme, niche profile, ICP settings) and session state
+        between logins. We do not use third-party tracking cookies. Firebase uses session cookies for authentication state only.
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">Changes to This Policy</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        We&rsquo;ll notify pilot advisors of material changes to this policy by email at least 7 days before they take effect.
+        Continued use of the platform after that date constitutes acceptance of the updated policy.
+      </div>
+
+      <div style="font-size:12px;color:var(--text-muted);border-top:1px solid var(--border-subtle);padding-top:20px;margin-top:8px">
+        Questions? <a href="mailto:hello@theaumengine.com" style="color:var(--blue)">hello@theaumengine.com</a> &middot;
+        The AUM Engine is operated by Fin-Tegration Consulting, LLC &middot; Pilot Phase &middot;
+        <a href="#" onclick="navigate('terms');return false" style="color:var(--blue)">Terms of Service</a>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TERMS OF SERVICE — v20260415g
+// ─────────────────────────────────────────────────────────────────────────────
+function pageTermsOfService() {
+  return `
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">Terms of Service</div>
+      <div class="page-subtitle">Pilot phase terms governing your use of The AUM Engine</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-ghost" onclick="navigate('command-center')">← Back to Cockpit</button>
+    </div>
+  </div>
+  <div class="section">
+    <div class="card" style="max-width:760px;padding:32px 36px;line-height:1.8">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:24px">Last updated: April 15, 2026 · Pilot Phase</div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">1. Acceptance of Terms</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        By accessing or using The AUM Engine platform (&ldquo;the Platform&rdquo;), you agree to be bound by these Terms of Service.
+        If you do not agree, do not access or use the Platform. The Platform is operated by Fin-Tegration Consulting, LLC.
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">2. Pilot Access</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        The AUM Engine is currently in a gated pilot phase. Access is granted individually by the operator and may be revoked at any time.
+        Pilot features, pricing, and terms are subject to change as the platform evolves. You will be notified of material changes
+        with at least 7 days&rsquo; notice.
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">3. Use of the Platform</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        You agree to use the Platform only for lawful business purposes consistent with applicable financial services regulations.
+        You are solely responsible for:<br>
+        &bull; Reviewing and approving all AI-generated outreach drafts before sending to any prospect<br>
+        &bull; Ensuring your outreach and prospecting activities comply with FINRA, SEC, and state regulations applicable to your practice<br>
+        &bull; Protecting your account credentials and not sharing access with unauthorized users<br>
+        &bull; The accuracy of any ICP settings, niche selections, or prospect data you import<br><br>
+        <strong>Nothing in the Platform sends outreach automatically.</strong> All messages require your explicit review and approval.
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">4. Prospect Data</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        Prospect data provided through the Platform is sourced from publicly available records and enrichment services.
+        This data is provided to support your prospecting workflow only. You agree not to misuse prospect data, share it
+        with unauthorized parties, or use it in violation of applicable privacy laws (including CAN-SPAM, TCPA, and state equivalents).
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">5. No Guarantee of Results</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        The AUM Engine provides tools and data to support your prospecting efforts — it does not guarantee specific outcomes,
+        including prospect responses, meetings booked, or clients acquired. The 30-day &ldquo;first-meetings or we comp month two&rdquo;
+        guarantee is available to founding-cohort advisors who engage with the system as designed and is subject to the conditions
+        outlined in your individual pilot agreement.
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">6. Intellectual Property</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        The Platform, including its design, architecture, AI systems, and prospect scoring methodology, is the exclusive property of
+        Fin-Tegration Consulting, LLC. You receive a limited, non-transferable license to use the Platform during your active subscription.
+        You may not copy, reverse-engineer, or redistribute any part of the Platform.
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">7. Limitation of Liability</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        To the maximum extent permitted by law, Fin-Tegration Consulting, LLC shall not be liable for any indirect, incidental,
+        or consequential damages arising from your use of the Platform. Our total liability to you shall not exceed the fees
+        paid by you in the 3 months preceding the claim.
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">8. Termination</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        Either party may terminate access to the Platform with 30 days&rsquo; written notice. We reserve the right to suspend or
+        terminate access immediately for violation of these Terms or misuse of the Platform.
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">9. Governing Law</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        These Terms are governed by the laws of the State of Kansas, without regard to conflict of law principles.
+        Any disputes shall be resolved through binding arbitration in Johnson County, Kansas.
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:8px">10. Contact</div>
+      <div style="font-size:12.5px;color:var(--text-secondary);margin-bottom:20px">
+        Questions about these Terms? Email us at
+        <a href="mailto:hello@theaumengine.com" style="color:var(--blue)">hello@theaumengine.com</a>.
+      </div>
+
+      <div style="font-size:12px;color:var(--text-muted);border-top:1px solid var(--border-subtle);padding-top:20px;margin-top:8px">
+        The AUM Engine is operated by Fin-Tegration Consulting, LLC · Pilot Phase ·
+        <a href="#" onclick="navigate('privacy');return false" style="color:var(--blue)">Privacy Policy</a>
+      </div>
+    </div>
   </div>`;
 }

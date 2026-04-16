@@ -18,20 +18,25 @@ const NOTES_STORE    = JSON.parse(localStorage.getItem('aumEngineNotes')    || '
 const FEEDBACK_STORE = JSON.parse(localStorage.getItem('aumEngineFeedback') || '{}');
 
 // ===== NICHES =====
+// IMPORTANT: nicheId values must exactly match what PROSPECTS[] reference.
+// Mapping: n1=Aircraft Owners, n2=Business Owners, n3=Charity Boards,
+// n4=Inheritance Recipients, n5=Physicians & Surgeons, n6=HENRYs,
+// n7=AI-Displaced Executives, n8–n13=pipeline niches (not yet in PROSPECTS)
+// n13=Pro Athletes (added 2026-04-16)
 const NICHES = [
   { id: 'n1',  icon: '✈️',  name: 'Aircraft Owners',          desc: 'Private pilots & aircraft owners in affluent zip codes',                                               count: 47,  color: '#60a5fa' },
-  { id: 'n2',  icon: '👩‍⚕️',name: 'Physicians & Surgeons',    desc: 'Practice owners and partners nearing peak earning years',                                              count: 61,  color: '#fb7185' },
-  { id: 'n3',  icon: '🏢',  name: 'Business Owners',          desc: 'SMB owners age 50–65 near succession planning',                                                       count: 89,  color: '#a78bfa' },
-  { id: 'n4',  icon: '⚖️',  name: 'Law Partners',             desc: 'Equity partners with uneven cash flow, K-1 complexity, and partnership buyout timelines',             count: 22,  color: '#f59e0b' },
-  { id: 'n5',  icon: '🚀',  name: 'HENRYs',                   desc: 'High Earner Not Rich Yet — W2 professionals ages 32–45 with high income but no wealth plan',          count: 19,  color: '#22d3ee' },
-  { id: 'n6',  icon: '👔',  name: 'C-Suite Executives',       desc: 'Senior leaders navigating deferred comp, concentrated stock, and executive transition planning',       count: 31,  color: '#34d399' },
+  { id: 'n2',  icon: '🏢',  name: 'Business Owners',          desc: 'SMB owners age 50–65 near succession planning',                                                       count: 89,  color: '#a78bfa' },
+  { id: 'n3',  icon: '🎗️',  name: 'Charity Boards',          desc: 'Nonprofit board members with philanthropic giving patterns and DAF/estate planning needs',             count: 34,  color: '#2dd4bf' },
+  { id: 'n4',  icon: '💰',  name: 'Inheritance Recipients',   desc: 'Individuals receiving $750K+ inheritance in last 24 months',                                          count: 28,  color: '#facc15' },
+  { id: 'n5',  icon: '👩‍⚕️',name: 'Physicians & Surgeons',   desc: 'Practice owners and partners nearing peak earning years',                                              count: 61,  color: '#fb7185' },
+  { id: 'n6',  icon: '🚀',  name: 'HENRYs',                   desc: 'High Earner Not Rich Yet — W2 professionals ages 32–45 with high income but no wealth plan',          count: 19,  color: '#22d3ee' },
   { id: 'n7',  icon: '🤖',  name: 'AI-Displaced Executives',  desc: 'Former C-suite & Director-level tech executives displaced by AI — est. $3M–$8M in unmanaged assets', count: 32,  color: '#fbbf24' },
-  { id: 'n8',  icon: '🦷',  name: 'Dentists & Specialists',   desc: 'Practice owners navigating buy-in/out decisions, disability gaps, and retirement funding',            count: 18,  color: '#e879f9' },
-  { id: 'n9',  icon: '🔧',  name: 'High Earning Tradesman',   desc: 'HVAC, electrical & plumbing owner-operators with irregular income and no coordinated wealth plan',    count: 14,  color: '#4ade80' },
-  { id: 'n10', icon: '💰',  name: 'Inheritance Recipients',   desc: 'Individuals receiving $750K+ inheritance in last 24 months',                                          count: 28,  color: '#facc15' },
-  { id: 'n11', icon: '🏗️',  name: 'Real Estate Developers',  desc: 'Developers and operators facing 1031 windows, partnership exits, and concentrated property risk',     count: 16,  color: '#f97316' },
-  { id: 'n12', icon: '🎗️',  name: 'Charity Boards',          desc: 'Nonprofit board members with philanthropic giving patterns and DAF/estate planning needs',             count: 34,  color: '#2dd4bf' },
-  { id: 'n13', icon: '⛵',  name: 'Yacht Owners',             desc: 'USCG-documented vessel owners (40ft+) — strong $2M+ AUM signal from registry cross-reference',        count: 11,  color: '#38bdf8' },
+  { id: 'n8',  icon: '⚖️',  name: 'Law Partners',             desc: 'Equity partners with uneven cash flow, K-1 complexity, and partnership buyout timelines',             count: 22,  color: '#f59e0b' },
+  { id: 'n9',  icon: '👔',  name: 'C-Suite Executives',       desc: 'Senior leaders navigating deferred comp, concentrated stock, and executive transition planning',       count: 31,  color: '#34d399' },
+  { id: 'n10', icon: '🦷',  name: 'Dentists & Specialists',   desc: 'Practice owners navigating buy-in/out decisions, disability gaps, and retirement funding',            count: 18,  color: '#e879f9' },
+  { id: 'n11', icon: '🔧',  name: 'High Earning Tradesman',   desc: 'HVAC, electrical & plumbing owner-operators with irregular income and no coordinated wealth plan',    count: 14,  color: '#4ade80' },
+  { id: 'n12', icon: '🏗️',  name: 'Real Estate Developers',  desc: 'Developers and operators facing 1031 windows, partnership exits, and concentrated property risk',     count: 16,  color: '#f97316' },
+  { id: 'n13', icon: '🏆',  name: 'Pro Athletes',             desc: 'Active and recently retired professional athletes — short career windows, signing bonuses, and complex post-career income transitions', count: 8,   color: '#f43f5e' },
 ];
 
 // ===== VALID STATUSES (stage labels only — no temperature labels) =====
@@ -481,12 +486,30 @@ function computeNicheMetrics() {
 }
 
 // ===== DRAFT GENERATOR (multi-channel) =====
-function getDraft(prospect, type = 'email') {
-  if (type === 'email') return prospect.emailDraft;
-  const { firstName: f, niche, reasonCodes: rc } = prospect;
-  const hook = rc[0] || 'your background';
-  const n = niche.toLowerCase();
+// M1 FIX: _sanitizeDraft strips stale dev artifacts (blank, "test", etc.)
+// and returns null if no real content is present.
+function _sanitizeDraft(text) {
+  if (!text) return null;
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  // Strip drafts that end with the literal word "test" (stale dev artifact)
+  if (/\btest\s*$/i.test(trimmed)) return null;
+  // Strip single-word or very-short drafts that are clearly placeholder noise
+  if (trimmed.length < 20) return null;
+  return trimmed;
+}
 
+function getDraft(prospect, type = 'email') {
+  const { firstName: f, niche, reasonCodes: rc } = prospect;
+  const hook = rc?.[0] || 'your background';
+  const n = (niche || '').toLowerCase();
+
+  if (type === 'email') {
+    const clean = _sanitizeDraft(prospect.emailDraft);
+    if (clean) return clean;
+    // Fallback: blank-slate placeholder (agent will replace on Generate)
+    return `Hi ${f},\n\nClick "Generate" above to have the AI draft a personalized email based on ${f ? f + "'s" : 'this prospect\'s'} profile, signals, and your niche.\n\n[Your Name]\n[Firm]`;
+  }
   if (type === 'call') {
     return `Hi ${f}, this is [Your Name] — I specialize in working with ${n} and your name came up in my research. Do you have 60 seconds? I'll be brief.\n\n[If yes]: We help people with ${hook.toLowerCase()} build a coordinated financial strategy — I'd love to ask you two quick questions to see if it's even relevant.\n\n[If now's not good]: No problem at all — I'll send a short email and you can decide if it's worth a conversation.`;
   }
@@ -496,7 +519,8 @@ function getDraft(prospect, type = 'email') {
   if (type === 'voicemail') {
     return `Hi ${f}, this is [Your Name]. I work specifically with ${n} and your name came up through my research. I'll send a short email — if what I do doesn't resonate, no worries at all. Thanks, and have a great day.`;
   }
-  return prospect.emailDraft;
+  const clean = _sanitizeDraft(prospect.emailDraft);
+  return clean || `Hi ${f},\n\nClick "Generate" to draft personalized outreach.\n\n[Your Name]`;
 }
 
 // ===== UTILITY FUNCTIONS =====
@@ -560,7 +584,7 @@ function parseCSV(text) {
       signals:      { estimatedAssets: row.assets || 'Unknown', ageRange: row.age || 'Unknown', relationship: 'CSV import', nextEvent: 'No trigger set' },
       enrolled:     new Date().toISOString().split('T')[0],
       lastActivity: 'Just added',
-      emailDraft:   '',
+      emailDraft:   `Hi ${row.firstname || row.first || 'there'},\n\nClick "Generate" above to draft AI-personalized outreach based on this prospect's profile.\n\n[Your Name]\n[Firm]`,
       activityLog:  [{ type:'CSV Imported', date: new Date().toISOString().split('T')[0], note:'Added via CSV import' }],
     };
   });

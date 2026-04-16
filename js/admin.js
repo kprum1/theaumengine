@@ -191,6 +191,7 @@ function pageAdminDashboard() {
           <option value="real-estate-developers">Real Estate Developers</option>
           <option value="law-partners">Law Partners</option>
           <option value="inheritance-recipients">Inheritance Recipients</option>
+          <option value="pro-athletes">Pro Athletes</option>
         </select>
         <select id="admin-leads-status-filter" onchange="renderMasterLeadsPool()"
           style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border-default);background:var(--bg-card);color:var(--text-primary);cursor:pointer">
@@ -599,6 +600,7 @@ async function renderMasterLeadsPool() {
     'real-estate-developers':  '#f97316',
     'law-partners':            '#14b8a6',
     'inheritance-recipients':  '#a855f7',
+    'pro-athletes':            '#f43f5e',
   };
 
   const rows = leads.map(l => {
@@ -674,12 +676,22 @@ async function renderGovernanceFlags(forceRefresh = false) {
         .limit(200)
         .get();
 
-      // Advisor name lookup from operator_presence
-      const presSnap = await db.collection('operator_presence').get();
+      // Advisor name lookup — pull BOTH operator_presence AND advisor_pool
+      // operator_presence has email/displayName (set on login)
+      // advisor_pool has firmName (set at provisioning) — more reliable for SLA table
+      const [presSnap, poolSnap] = await Promise.all([
+        db.collection('operator_presence').get(),
+        db.collection('advisor_pool').get(),
+      ]);
       const nameMap  = {};
       presSnap.docs.forEach(d => {
         const p = d.data();
         nameMap[d.id] = p.displayName || p.email?.split('@')[0] || d.id.slice(0,8);
+      });
+      // advisor_pool firmName wins over presence displayName
+      poolSnap.docs.forEach(d => {
+        const p = d.data();
+        if (p.firmName) nameMap[d.id] = p.firmName;
       });
 
       _govFlagsCache = snap.docs.map(d => ({ id: d.id, ...d.data(), _nameMap: nameMap }));

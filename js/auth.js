@@ -522,11 +522,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-// ── SLA Breach Banner — C21 ──────────────────────────────────────────────
+// ── SLA Breach Banner — C21 (patched C23) ────────────────────────────────
 // Checks this advisor's lead_assignments for new leads > 7 days old.
 // Injects a dismissible amber/red banner at the top of #page-content.
+// Dismissed state is stored in sessionStorage — banner does NOT re-fire
+// on navigation within the same session.
 async function _checkAndShowSlaBanner(uid) {
   if (!uid || typeof firebase === 'undefined') return;
+
+  // C23-4: Skip if advisor already dismissed the banner this session
+  const dismissKey = `sla_banner_dismissed_${uid}`;
+  if (sessionStorage.getItem(dismissKey)) return;
+
   const db = firebase.firestore();
   const SLA_DAYS = 7;
   const threshold = new Date(Date.now() - SLA_DAYS * 24 * 60 * 60 * 1000).toISOString();
@@ -564,8 +571,13 @@ async function _checkAndShowSlaBanner(uid) {
       <strong>${count} lead${plural ? 's' : ''}</strong> ${plural ? 'have' : 'has'} not been contacted in
       <strong>${SLA_DAYS}+ days</strong>. Open your pipeline and initiate outreach today.
     </span>
-    <button onclick="document.getElementById('sla-breach-banner').remove()"
+    <button
       aria-label="Dismiss SLA alert"
+      onclick="(function(){
+        sessionStorage.setItem('${dismissKey}', '1');
+        const b = document.getElementById('sla-breach-banner');
+        if (b) { b.style.opacity='0'; b.style.transition='opacity 0.25s'; setTimeout(()=>b.remove(),260); }
+      })()"
       style="background:none;border:none;color:inherit;cursor:pointer;opacity:.7;font-size:18px;line-height:1;padding:0 0 0 12px;"
       title="Dismiss">✕</button>
   `;
@@ -592,14 +604,7 @@ async function _checkAndShowSlaBanner(uid) {
   if (target) {
     target.insertBefore(banner, target.firstChild);
   }
-
-  // Auto-dismiss when the user navigates to a different page
-  const _navObs = new MutationObserver(() => {
-    const b = document.getElementById('sla-breach-banner');
-    if (b) b.style.opacity = '0';
-    setTimeout(() => { const b2 = document.getElementById('sla-breach-banner'); if (b2) b2.remove(); }, 300);
-    _navObs.disconnect();
-  });
-  if (target) _navObs.observe(target, { childList: true });
+  // Note: MutationObserver auto-dismiss removed (C23-4) — banner now persists
+  // across navigation within the session until advisor explicitly dismisses it.
 }
 

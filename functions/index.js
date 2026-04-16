@@ -685,11 +685,11 @@ exports.alfredIngest = onRequest({ cors: false }, async (req, res) => {
 //
 // Reads funnel_events from last 24h, groups by advisorUid,
 // fetches advisor email from Firebase Auth, sends HTML digest
-// via Nodemailer + Gmail SMTP (env: GMAIL_USER / GMAIL_APP_PASSWORD).
+// via Resend API (env: RESEND_API_KEY).
 //
 // Logs outcome to routing_logs collection.
 // ============================================================
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 function buildDigestHTML(name, dateStr, stats) {
   const { outreachSent, repliesLogged, meetingsBooked, statusChanges } = stats;
@@ -795,23 +795,13 @@ function buildDigestHTML(name, dateStr, stats) {
 exports.sendDailyDigest = onSchedule('0 12 * * *', async (event) => {
   console.info('[DigestCron] ⏰ Daily digest starting…');
 
-  // Email transport (Gmail SMTP via app password)
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD,
-    },
-  });
-
-  // Verify SMTP config before doing Firestore work
-  try {
-    await transporter.verify();
-    console.info('[DigestCron] ✅ SMTP connection verified');
-  } catch (e) {
-    console.error('[DigestCron] ❌ SMTP verify failed:', e.message);
+  // Validate Resend API key before doing any Firestore work
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) {
+    console.error('[DigestCron] ❌ RESEND_API_KEY not set — aborting.');
     return;
   }
+  const resend = new Resend(resendKey);
 
   // Pull all funnel events from the last 24 hours
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -889,8 +879,8 @@ exports.sendDailyDigest = onSchedule('0 12 * * *', async (event) => {
         outreachSent, repliesLogged, meetingsBooked, statusChanges,
       });
 
-      await transporter.sendMail({
-        from:    `"${process.env.DIGEST_FROM_NAME || 'The AUM Engine'}" <${process.env.GMAIL_USER}>`,
+      await resend.emails.send({
+        from:    `${process.env.DIGEST_FROM_NAME || 'The AUM Engine'} <hello@theaumengine.com>`,
         to:      email,
         subject: `📊 Your AUM Engine Daily Report — ${dateStr}`,
         text,
