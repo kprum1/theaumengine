@@ -555,7 +555,14 @@ function getAvatarClass(name) {
   return classes[idx % classes.length];
 }
 
-function getInitials(first, last) { return (first[0] + last[0]).toUpperCase(); }
+function getInitials(first, last) {
+  const f = (first || '').trim();
+  const l = (last  || '').trim();
+  if (f && l) return (f[0] + l[0]).toUpperCase();
+  if (f) return f.slice(0, 2).toUpperCase();
+  if (l) return l.slice(0, 2).toUpperCase();
+  return '??';
+}
 
 // ===== CSV UTILITIES =====
 function parseCSV(text) {
