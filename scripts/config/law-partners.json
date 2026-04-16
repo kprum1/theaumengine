@@ -1,0 +1,11 @@
+{
+  "nicheId": "law-partners",
+  "nicheName": "Law Partners",
+  "aumFloor": "$800K+",
+  "outputPrefix": "alfred_batch_law_partners",
+  "requiredFields": ["source", "sourceUrl", "city", "state", "externalId"],
+  "allowedEntityTypes": ["individual", "unknown"],
+  "rejectIfContains": ["public defender", "legal aid", "government", "state of", "county of"],
+  "minConfidenceScore": 0.50,
+  "notes": "Firm-level leads requiring partner name enrichment. Each firm record expands to 8-150 individual partner leads via firm website or LinkedIn. K-1 income = uneven distributions, estimated tax complexity, partnership capital accounts. Named-partner boutique firms (5-30 attorneys) have highest K-1 per partner. needsNameResolution:true for all firm-level records."
+}
