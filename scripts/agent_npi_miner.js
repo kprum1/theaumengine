@@ -69,6 +69,19 @@ const TAXONOMIES = {
   ],
 };
 
+// All valid dental taxonomy codes — used for post-fetch filtering
+const DENTAL_CODES = new Set([
+  '1223G0001X', // General Practice
+  '1223P0221X', // Orthodontics
+  '1223S0112X', // Oral & Maxillofacial Surgery
+  '1223E0200X', // Endodontics
+  '1223X0400X', // Prosthodontics
+  '1223P0300X', // Periodontics
+  '1223D0001X', // Dental Public Health
+  '1223P0700X', // Pediatric Dentistry
+  '1223X0008X', // Oral & Maxillofacial Radiology
+]);
+
 // AUM estimates by specialty (physician income proxy)
 const PHYSICIAN_AUM = {
   '207RC0000X': { aum: '$2M–$5M', band: '1m-5m', fitScore: 88, timing: 72 },
@@ -208,6 +221,7 @@ async function runNiche(nicheId) {
   for (const { code, label } of taxonomyList) {
     if (leads.length >= LIMIT) break;
 
+    // Use taxonomy_description for the API search (taxonomy_code param not supported by v2.1)
     const params = { taxonomy_description: label };
     if (STATE) params.state = STATE;
 
@@ -230,6 +244,14 @@ async function runNiche(nicheId) {
       if (seen.has(npi)) continue;
       seen.add(npi);
 
+      // Post-filter for dentists: ensure at least one taxonomy code is a dental code
+      // The 'General Practice' label also matches RNs, midwives, etc. in the NPI API.
+      if (nicheId === 'dentists') {
+        const providerCodes = (r.taxonomies || []).map(t => t.code);
+        const isDental = providerCodes.some(c => DENTAL_CODES.has(c));
+        if (!isDental) continue;
+      }
+
       const aumData = PHYSICIAN_AUM[code] || (nicheId === 'dentists' ? DEFAULT_DENTIST_AUM : DEFAULT_PHYSICIAN_AUM);
       const lead = buildLead(r, nicheId, label, aumData);
       if (lead) leads.push(lead);
@@ -244,9 +266,14 @@ async function runNiche(nicheId) {
 
 // ── Main ─────────────────────────────────────────────────────
 async function main() {
-  console.log('╔══════════════════════════════════════════════════╗');
-  console.log('║  AUM Engine — Agent A3: NPI Registry Miner      ║');
-  console.log('╚══════════════════════════════════════════════════╝');
+  const niche = NICHE_ARG;
+  console.log('╔══════════════════════════════════════════════════════════════╗');
+  if (niche === 'dentists') {
+    console.log('║  AUM Engine — Agent A1: NPI Dentist Miner                    ║');
+  } else {
+    console.log('║  AUM Engine — Agent A3: NPI Physician Miner                  ║');
+  }
+  console.log('╚══════════════════════════════════════════════════════════════╝');
   if (DRY_RUN) console.log('[NPI Agent] DRY RUN — no file will be written');
   if (STATE)   console.log(`[NPI Agent] State filter: ${STATE}`);
   console.log(`[NPI Agent] Niche: ${NICHE_ARG} | Limit: ${LIMIT}`);
