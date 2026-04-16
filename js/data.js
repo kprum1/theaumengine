@@ -27,6 +27,7 @@ const FEEDBACK_STORE = JSON.parse(localStorage.getItem('aumEngineFeedback') || '
 // Sprint 5: migrated from n1..n13 numeric IDs → slug IDs (2026-04-16)
 const NICHES = [
   { id: 'aircraft-owners',        icon: '✈️',  name: 'Aircraft Owners',         desc: 'Private pilots & aircraft owners in affluent zip codes',                                               color: '#60a5fa' },
+  { id: 'yacht-owners',           icon: '⛵',  name: 'Yacht Owners',            desc: 'Boat & yacht owners with significant discretionary wealth and lifestyle assets',                        color: '#0ea5e9' },
   { id: 'business-owners',        icon: '🏢',  name: 'Business Owners',         desc: 'SMB owners age 50–65 near succession planning',                                                       color: '#a78bfa' },
   { id: 'charity-board-members',  icon: '🎗️',  name: 'Charity Boards',         desc: 'Nonprofit board members with philanthropic giving patterns and DAF/estate planning needs',             color: '#2dd4bf' },
   { id: 'inheritance',            icon: '💰',  name: 'Inheritance Recipients',  desc: 'Individuals receiving $750K+ inheritance in last 24 months',                                          color: '#facc15' },
