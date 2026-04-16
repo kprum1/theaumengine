@@ -169,6 +169,8 @@ async function loadAssignedLeadsFromFirestore(uid) {
           // Role / company
           title:         lead.title    || lead.jobTitle    || (isOrgLead ? lead.firmTierLabel || '' : ''),
           company:       lead.company  || lead.firmName    || lead.employer || '',
+          city:          lead.city     || '',
+          state:         lead.state    || '',
           location:      [lead.city, lead.state].filter(Boolean).join(', '),
 
           // Scores (from assignment doc if present, else defaults)
