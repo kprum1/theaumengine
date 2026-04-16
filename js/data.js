@@ -18,25 +18,27 @@ const NOTES_STORE    = JSON.parse(localStorage.getItem('aumEngineNotes')    || '
 const FEEDBACK_STORE = JSON.parse(localStorage.getItem('aumEngineFeedback') || '{}');
 
 // ===== NICHES =====
-// IMPORTANT: nicheId values must exactly match what PROSPECTS[] reference.
-// Mapping: n1=Aircraft Owners, n2=Business Owners, n3=Charity Boards,
-// n4=Inheritance Recipients, n5=Physicians & Surgeons, n6=HENRYs,
-// n7=AI-Displaced Executives, n8–n13=pipeline niches (not yet in PROSPECTS)
-// n13=Pro Athletes (added 2026-04-16)
+// IMPORTANT: id values MUST match Firestore master_leads.nicheId exactly.
+// These slug IDs are the canonical source of truth across:
+//   - PROSPECTS[].nicheId (demo data)
+//   - master_leads.nicheId (pipeline data)
+//   - advisor_pool[].nicheIds (routing)
+//   - routing_queue[].nicheId (CF routing)
+// Sprint 5: migrated from n1..n13 numeric IDs → slug IDs (2026-04-16)
 const NICHES = [
-  { id: 'n1',  icon: '✈️',  name: 'Aircraft Owners',          desc: 'Private pilots & aircraft owners in affluent zip codes',                                               count: 47,  color: '#60a5fa' },
-  { id: 'n2',  icon: '🏢',  name: 'Business Owners',          desc: 'SMB owners age 50–65 near succession planning',                                                       count: 89,  color: '#a78bfa' },
-  { id: 'n3',  icon: '🎗️',  name: 'Charity Boards',          desc: 'Nonprofit board members with philanthropic giving patterns and DAF/estate planning needs',             count: 34,  color: '#2dd4bf' },
-  { id: 'n4',  icon: '💰',  name: 'Inheritance Recipients',   desc: 'Individuals receiving $750K+ inheritance in last 24 months',                                          count: 28,  color: '#facc15' },
-  { id: 'n5',  icon: '👩‍⚕️',name: 'Physicians & Surgeons',   desc: 'Practice owners and partners nearing peak earning years',                                              count: 61,  color: '#fb7185' },
-  { id: 'n6',  icon: '🚀',  name: 'HENRYs',                   desc: 'High Earner Not Rich Yet — W2 professionals ages 32–45 with high income but no wealth plan',          count: 19,  color: '#22d3ee' },
-  { id: 'n7',  icon: '🤖',  name: 'AI-Displaced Executives',  desc: 'Former C-suite & Director-level tech executives displaced by AI — est. $3M–$8M in unmanaged assets', count: 32,  color: '#fbbf24' },
-  { id: 'n8',  icon: '⚖️',  name: 'Law Partners',             desc: 'Equity partners with uneven cash flow, K-1 complexity, and partnership buyout timelines',             count: 22,  color: '#f59e0b' },
-  { id: 'n9',  icon: '👔',  name: 'C-Suite Executives',       desc: 'Senior leaders navigating deferred comp, concentrated stock, and executive transition planning',       count: 31,  color: '#34d399' },
-  { id: 'n10', icon: '🦷',  name: 'Dentists & Specialists',   desc: 'Practice owners navigating buy-in/out decisions, disability gaps, and retirement funding',            count: 18,  color: '#e879f9' },
-  { id: 'n11', icon: '🔧',  name: 'High Earning Tradesman',   desc: 'HVAC, electrical & plumbing owner-operators with irregular income and no coordinated wealth plan',    count: 14,  color: '#4ade80' },
-  { id: 'n12', icon: '🏗️',  name: 'Real Estate Developers',  desc: 'Developers and operators facing 1031 windows, partnership exits, and concentrated property risk',     count: 16,  color: '#f97316' },
-  { id: 'n13', icon: '🏆',  name: 'Pro Athletes',             desc: 'Active and recently retired professional athletes — short career windows, signing bonuses, and complex post-career income transitions', count: 8,   color: '#f43f5e' },
+  { id: 'aircraft-owners',        icon: '✈️',  name: 'Aircraft Owners',         desc: 'Private pilots & aircraft owners in affluent zip codes',                                               color: '#60a5fa' },
+  { id: 'business-owners',        icon: '🏢',  name: 'Business Owners',         desc: 'SMB owners age 50–65 near succession planning',                                                       color: '#a78bfa' },
+  { id: 'charity-board-members',  icon: '🎗️',  name: 'Charity Boards',         desc: 'Nonprofit board members with philanthropic giving patterns and DAF/estate planning needs',             color: '#2dd4bf' },
+  { id: 'inheritance',            icon: '💰',  name: 'Inheritance Recipients',  desc: 'Individuals receiving $750K+ inheritance in last 24 months',                                          color: '#facc15' },
+  { id: 'physicians',             icon: '👩‍⚕️',name: 'Physicians & Surgeons',  desc: 'Practice owners and partners nearing peak earning years',                                              color: '#fb7185' },
+  { id: 'henrys',                 icon: '🚀',  name: 'HENRYs',                  desc: 'High Earner Not Rich Yet — W2 professionals ages 32–45 with high income but no wealth plan',          color: '#22d3ee' },
+  { id: 'ai-displaced-executives',icon: '🤖',  name: 'AI-Displaced Executives', desc: 'Former C-suite & Director-level tech executives displaced by AI — est. $3M–$8M in unmanaged assets', color: '#fbbf24' },
+  { id: 'law-partners',           icon: '⚖️',  name: 'Law Partners',            desc: 'Equity partners with uneven cash flow, K-1 complexity, and partnership buyout timelines',             color: '#f59e0b' },
+  { id: 'c-suite-executives',     icon: '👔',  name: 'C-Suite Executives',      desc: 'Senior leaders navigating deferred comp, concentrated stock, and executive transition planning',       color: '#34d399' },
+  { id: 'dentists',               icon: '🦷',  name: 'Dentists & Specialists',  desc: 'Practice owners navigating buy-in/out decisions, disability gaps, and retirement funding',            color: '#e879f9' },
+  { id: 'high-earning-tradesman',  icon: '🔧',  name: 'High Earning Tradesman',  desc: 'HVAC, electrical & plumbing owner-operators with irregular income and no coordinated wealth plan',    color: '#4ade80' },
+  { id: 'real-estate-developers', icon: '🏗️',  name: 'Real Estate Developers', desc: 'Developers and operators facing 1031 windows, partnership exits, and concentrated property risk',     color: '#f97316' },
+  { id: 'pro-athletes',           icon: '🏆',  name: 'Pro Athletes',            desc: 'Active and recently retired professional athletes — short career windows, signing bonuses, and complex post-career income transitions', color: '#f43f5e' },
 ];
 
 // ===== VALID STATUSES (stage labels only — no temperature labels) =====
@@ -47,7 +49,7 @@ const PROSPECTS = [
   // ── AIRCRAFT OWNERS ──────────────────────────────────────────
   {
     id:'p1', firstName:'David', lastName:'Harrington', title:'CEO & Private Pilot', company:'Harrington Logistics',
-    city:'Scottsdale', state:'AZ', niche:'Aircraft Owners', nicheId:'n1',
+    city:'Scottsdale', state:'AZ', niche:'Aircraft Owners', nicheId:'aircraft-owners',
     fitScore:94, timingScore:88, priorityScore:92, status:'Contacted', assignedRep:'Big Nate',
     source:'Prospect Mine',
     reasonCodes:['Beechcraft King Air owner','Net worth est. $4.2M','Recent ERP sale proceeds','No current advisor relationship'],
@@ -62,7 +64,7 @@ const PROSPECTS = [
   },
   {
     id:'p9', firstName:'Michael', lastName:'Chen', title:'Retired Airline Captain', company:'Self',
-    city:'Paradise Valley', state:'AZ', niche:'Aircraft Owners', nicheId:'n1',
+    city:'Paradise Valley', state:'AZ', niche:'Aircraft Owners', nicheId:'aircraft-owners',
     fitScore:88, timingScore:76, priorityScore:82, status:'New', assignedRep:'Big Nate',
     source:'Prospect Mine',
     reasonCodes:['Cirrus SR22 owner','Pension + deferred comp','Age 62, recently retired','No advisor visible'],
@@ -73,7 +75,7 @@ const PROSPECTS = [
   },
   {
     id:'p10', firstName:'Robert', lastName:'Shaw', title:'Real Estate Developer & Pilot', company:'Shaw Development Group',
-    city:'Sedona', state:'AZ', niche:'Aircraft Owners', nicheId:'n1',
+    city:'Sedona', state:'AZ', niche:'Aircraft Owners', nicheId:'aircraft-owners',
     fitScore:85, timingScore:80, priorityScore:83, status:'Engaged', assignedRep:'Chris Vance',
     source:'Event — AOPA Fly-In',
     reasonCodes:['Piper Meridian owner','Active real estate portfolio','Multiple LLCs','Age 57'],
@@ -88,7 +90,7 @@ const PROSPECTS = [
   },
   {
     id:'p11', firstName:'Lisa', lastName:'Fontaine', title:'Surgeon & Private Pilot', company:'Fountain Hills Surgery Center',
-    city:'Fountain Hills', state:'AZ', niche:'Aircraft Owners', nicheId:'n1',
+    city:'Fountain Hills', state:'AZ', niche:'Aircraft Owners', nicheId:'aircraft-owners',
     fitScore:82, timingScore:85, priorityScore:84, status:'Meeting Requested', assignedRep:'Maria Lopes',
     source:'Referral — Dr. Kim',
     reasonCodes:['Diamond DA42 owner','Surgery center partner','Income $650K+','No succession plan'],
@@ -103,7 +105,7 @@ const PROSPECTS = [
   },
   {
     id:'p12', firstName:'William', lastName:'Knox', title:'Entrepreneur & Pilot', company:'Knox Aviation LLC',
-    city:'Mesa', state:'AZ', niche:'Aircraft Owners', nicheId:'n1',
+    city:'Mesa', state:'AZ', niche:'Aircraft Owners', nicheId:'aircraft-owners',
     fitScore:74, timingScore:68, priorityScore:71, status:'Nurture', assignedRep:'Big Nate',
     source:'Prospect Mine',
     reasonCodes:['Charter aircraft operator','Business aviation tax complexity','Age 55','Existing advisor (unknown quality)'],
@@ -120,7 +122,7 @@ const PROSPECTS = [
   // ── BUSINESS OWNERS ──────────────────────────────────────────
   {
     id:'p2', firstName:'Sandra', lastName:'Westhoff', title:'Founder & CEO', company:'Westhoff Dental Group',
-    city:'Overland Park', state:'KS', niche:'Business Owners', nicheId:'n2',
+    city:'Overland Park', state:'KS', niche:'Business Owners', nicheId:'business-owners',
     fitScore:88, timingScore:91, priorityScore:90, status:'Meeting Requested', assignedRep:'Big Nate',
     source:'Referral — Tom Bridges',
     reasonCodes:['6-practice dental group','Looking at succession','Age 61, no buy-sell agreement','Referred by existing client'],
@@ -136,7 +138,7 @@ const PROSPECTS = [
   },
   {
     id:'p7', firstName:'Thomas', lastName:'Castellano', title:'Partner', company:'Castellano Capital',
-    city:'Dallas', state:'TX', niche:'Business Owners', nicheId:'n2',
+    city:'Dallas', state:'TX', niche:'Business Owners', nicheId:'business-owners',
     fitScore:85, timingScore:82, priorityScore:84, status:'Booked', assignedRep:'Big Nate',
     source:'Referral — Karen West',
     reasonCodes:['Private equity partner','Year-end liquidity event pending','Active in YPO Dallas','Age 55'],
@@ -151,7 +153,7 @@ const PROSPECTS = [
   },
   {
     id:'p13', firstName:'Gregory', lastName:'Holt', title:'Owner & CEO', company:'Holt Manufacturing',
-    city:'Kansas City', state:'MO', niche:'Business Owners', nicheId:'n2',
+    city:'Kansas City', state:'MO', niche:'Business Owners', nicheId:'business-owners',
     fitScore:86, timingScore:79, priorityScore:83, status:'Contacted', assignedRep:'Big Nate',
     source:'Prospect Mine',
     reasonCodes:['3rd-generation manufacturer','Revenue $18M+','Age 58, no exit plan','ESOP consideration emerging'],
@@ -165,7 +167,7 @@ const PROSPECTS = [
   },
   {
     id:'p14', firstName:'Ellen', lastName:'Marsh', title:'Co-Founder', company:'Marsh & Taggart Law',
-    city:'Denver', state:'CO', niche:'Business Owners', nicheId:'n2',
+    city:'Denver', state:'CO', niche:'Business Owners', nicheId:'business-owners',
     fitScore:80, timingScore:83, priorityScore:82, status:'Engaged', assignedRep:'Maria Lopes',
     source:'Event — Denver Business Forum',
     reasonCodes:['Law firm partner buyout upcoming','Age 60','No clear post-buyout wealth plan','High income last 10 years'],
@@ -181,7 +183,7 @@ const PROSPECTS = [
   },
   {
     id:'p15', firstName:'Frank', lastName:'DiNapoli', title:'Owner', company:'DiNapoli Restaurant Group',
-    city:'Chicago', state:'IL', niche:'Business Owners', nicheId:'n2',
+    city:'Chicago', state:'IL', niche:'Business Owners', nicheId:'business-owners',
     fitScore:77, timingScore:72, priorityScore:75, status:'New', assignedRep:'Unassigned',
     source:'Prospect Mine',
     reasonCodes:['14 restaurant locations','Exploring PE buyout','Age 63','Significant real estate holdings'],
@@ -192,7 +194,7 @@ const PROSPECTS = [
   },
   {
     id:'p16', firstName:'Catherine', lastName:'Moss', title:'Founder & CEO', company:'Moss Wealth Strategies',
-    city:'Nashville', state:'TN', niche:'Business Owners', nicheId:'n2',
+    city:'Nashville', state:'TN', niche:'Business Owners', nicheId:'business-owners',
     fitScore:83, timingScore:76, priorityScore:80, status:'Contacted', assignedRep:'Chris Vance',
     source:'LinkedIn',
     reasonCodes:['RIA firm sale in progress','Age 57','Transition from operator to investor','Significant deferred comp'],
@@ -206,7 +208,7 @@ const PROSPECTS = [
   },
   {
     id:'p17', firstName:'Richard', lastName:'Vance', title:'Managing Partner', company:'Vance & Sons Construction',
-    city:'Atlanta', state:'GA', niche:'Business Owners', nicheId:'n2',
+    city:'Atlanta', state:'GA', niche:'Business Owners', nicheId:'business-owners',
     fitScore:79, timingScore:65, priorityScore:72, status:'Nurture', assignedRep:'Big Nate',
     source:'Prospect Mine',
     reasonCodes:['$22M revenue construction firm','Age 64','Medical event slowed planning','Sons not ready to take over'],
@@ -221,7 +223,7 @@ const PROSPECTS = [
   },
   {
     id:'p18', firstName:'Barbara', lastName:'Keene', title:'Owner', company:'Keene Logistics Solutions',
-    city:'Houston', state:'TX', niche:'Business Owners', nicheId:'n2',
+    city:'Houston', state:'TX', niche:'Business Owners', nicheId:'business-owners',
     fitScore:87, timingScore:88, priorityScore:88, status:'Booked', assignedRep:'Maria Lopes',
     source:'Referral — Jason Tanner',
     reasonCodes:['Logistics firm — LOI signed for sale','Age 59','$14M expected proceeds','Referred by CPA Jason Tanner'],
@@ -238,7 +240,7 @@ const PROSPECTS = [
   // ── CHARITY BOARD MEMBERS ─────────────────────────────────────
   {
     id:'p3', firstName:'Robert', lastName:'Kimathi', title:'Board Chair', company:'Midwest Arts Alliance',
-    city:'Chicago', state:'IL', niche:'Charity Board Members', nicheId:'n3',
+    city:'Chicago', state:'IL', niche:'Charity Board Members', nicheId:'charity-board-members',
     fitScore:81, timingScore:72, priorityScore:77, status:'Engaged', assignedRep:'Chris Vance',
     source:'Event — Philanthropy Forum',
     reasonCodes:['Chairs 2 major nonprofits','Philanthropic giving $120K/yr','Family foundation interest','Connected to 14 board members'],
@@ -253,7 +255,7 @@ const PROSPECTS = [
   },
   {
     id:'p20', firstName:'Diana', lastName:'Osei', title:'Board Member & Philanthropist', company:'Osei Family Foundation',
-    city:'Atlanta', state:'GA', niche:'Charity Board Members', nicheId:'n3',
+    city:'Atlanta', state:'GA', niche:'Charity Board Members', nicheId:'charity-board-members',
     fitScore:79, timingScore:70, priorityScore:74, status:'Contacted', assignedRep:'Chris Vance',
     source:'Prospect Mine',
     reasonCodes:['Sits on 4 nonprofit boards','Giving $80K+/yr','Family foundation newly formed','Age 58'],
@@ -269,7 +271,7 @@ const PROSPECTS = [
   // ── INHERITANCE RECIPIENTS ────────────────────────────────────
   {
     id:'p4', firstName:'Margaret', lastName:'Dolenz', title:'Inherited Beneficiary', company:'Dolenz Family',
-    city:'Naples', state:'FL', niche:'Inheritance Recipients', nicheId:'n4',
+    city:'Naples', state:'FL', niche:'Inheritance Recipients', nicheId:'inheritance',
     fitScore:76, timingScore:85, priorityScore:80, status:'Nurture', assignedRep:'Big Nate',
     source:'Prospect Mine',
     reasonCodes:['Inherited $1.2M July 2025','No advisor on record','Age 49, pre-retirement','FL coastal zip code'],
@@ -283,7 +285,7 @@ const PROSPECTS = [
   },
   {
     id:'p21', firstName:'James', lastName:'Calloway', title:'Inheritance Beneficiary', company:'Calloway Estate',
-    city:'Sarasota', state:'FL', niche:'Inheritance Recipients', nicheId:'n4',
+    city:'Sarasota', state:'FL', niche:'Inheritance Recipients', nicheId:'inheritance',
     fitScore:72, timingScore:78, priorityScore:75, status:'New', assignedRep:'Unassigned',
     source:'Prospect Mine',
     reasonCodes:['Inherited $2.1M Aug 2025','Probate just cleared','No financial advisor','Age 52'],
@@ -296,7 +298,7 @@ const PROSPECTS = [
   // ── PHYSICIANS & SURGEONS ─────────────────────────────────────
   {
     id:'p5', firstName:'James', lastName:'Okafor', title:'Orthopedic Surgeon', company:'Southwest Ortho Group',
-    city:'Phoenix', state:'AZ', niche:'Physicians & Surgeons', nicheId:'n5',
+    city:'Phoenix', state:'AZ', niche:'Physicians & Surgeons', nicheId:'physicians',
     fitScore:90, timingScore:79, priorityScore:85, status:'Contacted', assignedRep:'Maria Lopes',
     source:'Prospect Mine',
     reasonCodes:['Partner in 12-physician group','Income est. $700K/yr','No succession plan','High-risk specialty'],
@@ -311,7 +313,7 @@ const PROSPECTS = [
   },
   {
     id:'p22', firstName:'Priya', lastName:'Mehta', title:'Cardiologist & Partner', company:'Advanced Heart Institute',
-    city:'Dallas', state:'TX', niche:'Physicians & Surgeons', nicheId:'n5',
+    city:'Dallas', state:'TX', niche:'Physicians & Surgeons', nicheId:'physicians',
     fitScore:84, timingScore:77, priorityScore:81, status:'Engaged', assignedRep:'Maria Lopes',
     source:'Referral — Dr. Patel',
     reasonCodes:['Cardiology practice partner','Income $820K/yr','Group exploring ASC investment','Age 48'],
@@ -326,7 +328,7 @@ const PROSPECTS = [
   },
   {
     id:'p23', firstName:'Marcus', lastName:'Bell', title:'Neurosurgeon', company:'Premier Neuro Group',
-    city:'Houston', state:'TX', niche:'Physicians & Surgeons', nicheId:'n5',
+    city:'Houston', state:'TX', niche:'Physicians & Surgeons', nicheId:'physicians',
     fitScore:78, timingScore:63, priorityScore:71, status:'Dead', assignedRep:'Chris Vance',
     source:'Prospect Mine',
     reasonCodes:['High income — limited time to engage','Already with advisor','Duplicate outreach risk'],
@@ -344,7 +346,7 @@ const PROSPECTS = [
   // ── HENRYs ─────────────────────────────────────
   {
     id:'p6', firstName:'Alicia', lastName:'Ruiz', title:'Founder & CIO', company:'Ruiz Wealth Partners',
-    city:'Austin', state:'TX', niche:'HENRYs', nicheId:'n6',
+    city:'Austin', state:'TX', niche:'HENRYs', nicheId:'henrys',
     fitScore:72, timingScore:65, priorityScore:68, status:'New', assignedRep:'Unassigned',
     source:'Prospect Mine',
     reasonCodes: ['Income $280K+, minimal investable assets','No financial advisor','Tech sector W2','Age 34 — early accumulation stage'],
@@ -355,7 +357,7 @@ const PROSPECTS = [
   },
   {
     id:'p24', firstName:'Jordan', lastName:'Pierce', title:'Founder & CFP', company:'Pierce Financial Planning',
-    city:'Denver', state:'CO', niche:'HENRYs', nicheId:'n6',
+    city:'Denver', state:'CO', niche:'HENRYs', nicheId:'henrys',
     fitScore:68, timingScore:60, priorityScore:64, status:'New', assignedRep:'Unassigned',
     source:'Prospect Mine',
     reasonCodes: ['Income $310K — minimal investments','RSUs unvesting Q3','No advisor on record','Age 34'],
@@ -368,7 +370,7 @@ const PROSPECTS = [
   // ── AI-DISPLACED EXECUTIVES ──────────────────────────────────────
   {
     id:'p25', firstName:'Kirk', lastName:'McDonald', title:'Former Director of Data Science', company:'Apple (Ex)',
-    city:'Bend', state:'OR', niche:'AI-Displaced Executives', nicheId:'n7',
+    city:'Bend', state:'OR', niche:'AI-Displaced Executives', nicheId:'ai-displaced-executives',
     fitScore:98, timingScore:94, priorityScore:97, status:'New', assignedRep:'Big Nate',
     source:'Alfred Wealth Trigger Miner',
     reasonCodes:['Former Director at Apple — Data Science','Est. Home Value: $2.4M (Bend, OR)','Est. Liquid Assets: $4M–$7M','Transitioned out post-AI reorg — no advisor on record'],
@@ -381,7 +383,7 @@ const PROSPECTS = [
   },
   {
     id:'p26', firstName:'Nuria', lastName:'Molina', title:'Early Retired — Former VP Global Client Director', company:'IBM (Ex)',
-    city:'Miami', state:'FL', niche:'AI-Displaced Executives', nicheId:'n7',
+    city:'Miami', state:'FL', niche:'AI-Displaced Executives', nicheId:'ai-displaced-executives',
     fitScore:99, timingScore:98, priorityScore:99, status:'New', assignedRep:'Big Nate',
     source:'Alfred Wealth Trigger Miner',
     reasonCodes:['Recently declared early retirement from IBM','Former Global VP — VP-level pension + stock grants','Miami market — no known advisor relationship','Age 48 — 17+ working years ahead: complex planning window'],
@@ -394,7 +396,7 @@ const PROSPECTS = [
   },
   {
     id:'p27', firstName:'Tim', lastName:'Sneath', title:'Former Director of CoreOS', company:'Apple / Google (Ex)',
-    city:'San Francisco', state:'CA', niche:'AI-Displaced Executives', nicheId:'n7',
+    city:'San Francisco', state:'CA', niche:'AI-Displaced Executives', nicheId:'ai-displaced-executives',
     fitScore:91, timingScore:87, priorityScore:89, status:'New', assignedRep:'Unassigned',
     source:'Alfred Wealth Trigger Miner',
     reasonCodes:['Director-level roles at both Apple and Google','Active tech speaker — public LinkedIn profile','SF Bay Area — high wealth density market','Likely $3M–$5M in unvested stock + pension'],
@@ -407,7 +409,7 @@ const PROSPECTS = [
   },
   {
     id:'p28', firstName:'Ajay', lastName:'Punjabi', title:'Senior Executive (Former)', company:'Salesforce (Ex)',
-    city:'Los Angeles', state:'CA', niche:'AI-Displaced Executives', nicheId:'n7',
+    city:'Los Angeles', state:'CA', niche:'AI-Displaced Executives', nicheId:'ai-displaced-executives',
     fitScore:88, timingScore:85, priorityScore:87, status:'New', assignedRep:'Unassigned',
     source:'Alfred Wealth Trigger Miner',
     reasonCodes:['Salesforce Executive — Duke Fuqua MBA alum','LA market — high HNW density','Tech exec exit timing — likely equity liquidation event','No financial advisor on public record'],
@@ -420,7 +422,7 @@ const PROSPECTS = [
   },
   {
     id:'p29', firstName:'Corinne', lastName:'Sklar', title:'Former VP & Managing Director', company:'IBM / Salesforce (Ex)',
-    city:'New York', state:'NY', niche:'AI-Displaced Executives', nicheId:'n7',
+    city:'New York', state:'NY', niche:'AI-Displaced Executives', nicheId:'ai-displaced-executives',
     fitScore:93, timingScore:90, priorityScore:92, status:'New', assignedRep:'Unassigned',
     source:'Alfred Wealth Trigger Miner',
     reasonCodes:['VP & MD across IBM and Salesforce — dual-company exec track','NY market — UHNW prospect zone','Likely significant unvested equity + executive pension blend','LinkedIn profile active — open to connection'],
@@ -573,7 +575,7 @@ function parseCSV(text) {
       city:         row.city        || '',
       state:        row.state       || '',
       niche:        row.niche       || 'Business Owners',
-      nicheId:      'n2',
+      nicheId:      'business-owners',
       fitScore:     parseInt(row.fitscore)     || 65,
       timingScore:  parseInt(row.timingscore)  || 60,
       priorityScore:parseInt(row.priorityscore)|| 62,
