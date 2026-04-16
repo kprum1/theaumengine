@@ -53,6 +53,7 @@ function normalizeEmail(str) {
  * Same person → same key, regardless of source.
  */
 function computeIdempotencyKey(lead) {
+  // Person-level identity (preferred)
   const parts = [
     normalizeName(lead.firstName),
     normalizeName(lead.lastName),
@@ -60,11 +61,26 @@ function computeIdempotencyKey(lead) {
     normalizePhone(lead.phone),
   ].filter(Boolean);
 
-  if (parts.length < 2) {
-    throw new Error(`Lead missing sufficient identity fields: ${JSON.stringify(lead)}`);
+  if (parts.length >= 2) {
+    return crypto.createHash('sha256').update(parts.join('|')).digest('hex').slice(0, 32);
   }
-  return crypto.createHash('sha256').update(parts.join('|')).digest('hex').slice(0, 32);
+
+  // Business-level identity — for company leads (SBA, 990 boards) where
+  // firstName/lastName are empty and needsNameResolution: true
+  // Uses company name + externalId (EIN or SBA loan key) as stable identity
+  const bizParts = [
+    (lead.company || lead.fullName || '').toLowerCase().trim(),
+    (lead.externalId || '').trim(),
+    (lead.state || '').trim(),
+  ].filter(Boolean);
+
+  if (bizParts.length >= 2 && (lead.needsNameResolution || lead.entityType === 'business' || lead.entityType === 'unknown')) {
+    return crypto.createHash('sha256').update(bizParts.join('|')).digest('hex').slice(0, 32);
+  }
+
+  throw new Error(`Lead missing sufficient identity fields: ${JSON.stringify(lead)}`);
 }
+
 
 // ── Schema ─────────────────────────────────────────────────
 function buildMasterLead(raw, idempotencyKey, source) {
