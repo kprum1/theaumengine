@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ============================================================
-// AUM ENGINE — Agent A5: SEC EDGAR Monitor
+// AUM ENGINE — Agent A9: SEC EDGAR Monitor (C-Suite + AI-Displaced)
 // scripts/agent_sec_miner.js
 //
 // Data source: SEC EDGAR full-text search API (free, no key)
@@ -140,7 +140,7 @@ async function runForm4Mode() {
         city:         '',
         state:        '',
         niche:        'C-Suite Executives',
-        nicheId:      'csuite-executives',
+        nicheId:      'c-suite-executives',
         estimatedAUM: '$2M–$10M',
         aumBand:      '1m-5m',
         fitScore:     85,
@@ -317,7 +317,7 @@ async function runProxyMode() {
         city:         '',
         state:        '',
         niche:        'C-Suite Executives',
-        nicheId:      'csuite-executives',
+        nicheId:      'c-suite-executives',
         estimatedAUM: '$3M–$15M',
         aumBand:      '5m+',
         fitScore:     87,
