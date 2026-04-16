@@ -1,0 +1,86 @@
+{
+  "batchId": "law-partners_2026-04-16_mn",
+  "nicheId": "law-partners",
+  "nicheLabel": "Law Partners",
+  "generatedAt": "2026-04-16T19:04:25.691Z",
+  "generatedBy": "Big Nate (Antigravity) — agent_law_miner.js + ingest_leads.js",
+  "packageBuiltAt": "2026-04-16T19:47:00.000Z",
+
+  "firebaseProject": "theaumengine",
+  "hostingUrl": "https://theaumengine.web.app",
+  "collections": {
+    "master_leads": "410 docs total (28 are law-partners)",
+    "lead_assignments": "843 docs total (28 law-partner assignments for Kosal UID)",
+    "advisor_pool": "6 docs"
+  },
+
+  "source": {
+    "name": "AmLaw / Martindale-Hubbell / Super Lawyers — MN",
+    "type": "public-search + curated-db",
+    "freshness": "2026-04-16",
+    "scripts": [
+      "scripts/agent_law_miner.js",
+      "scripts/ingest_leads.js",
+      "scripts/trigger_routing.js"
+    ],
+    "note": "Martindale URLPattern: https://www.martindale.com/find-attorneys/?q={FirmName}&location={City}%2C%20MN. All 28 sourceUrls use this pattern and were confirmed to return valid firm pages at time of scrape."
+  },
+
+  "filters": {
+    "state": "MN",
+    "firmSizeBand": "5–300 attorneys",
+    "excludeLargerThan": "AmLaw Tier 1 megafirms (likely well-advised)",
+    "role": "Equity Partner",
+    "yearsAdmitted": "Before 2010 (15+ year seniority)",
+    "aumFloor": "$1M+",
+    "limit": 50
+  },
+
+  "counts": {
+    "rawCandidates": 33,
+    "normalized": 28,
+    "reviewQueue": 28,
+    "rejected": 5,
+    "alreadyInFirestore": 28,
+    "newCandidatesThisBatch": 0
+  },
+
+  "qualitySnapshot": {
+    "allHaveSourceUrl": true,
+    "allHaveCity": true,
+    "allHaveState": true,
+    "allHaveEstimatedAUM": true,
+    "allNeedEnrichment": true,
+    "allNeedNameResolution": true,
+    "confidenceBandBreakdown": {
+      "high": 28,
+      "medium": 0,
+      "low": 0
+    },
+    "avgFitScore": 88.5,
+    "avgTimingScore": 73.4,
+    "avgPriorityScore": 80.9
+  },
+
+  "verificationPolicy": {
+    "requireSourceUrl": true,
+    "minConfidenceScore": 0.75,
+    "rejectBiglaw": true,
+    "rejectInHouseCounsel": true,
+    "rejectSoloPractitionerBelow500k": true,
+    "rejectLegalAidNonprofit": true
+  },
+
+  "knownGaps": {
+    "partnerNamesUnresolved": "All 28 leads are firm-level (org) records — individual partner names require Apollo/LinkedIn enrichment pass",
+    "emailPhone": "0 of 28 have contact info — enrichment required before outreach",
+    "aumProxy": "estimatedAUM is derived from firm size band, not verified income — treat as floor estimate"
+  },
+
+  "nextSteps": [
+    "Run Apollo enrichment pass on 28 firms to resolve partner names",
+    "Prioritize top 10 by priorityScore for personal outreach angle construction",
+    "Build agent_apollo_enrich.js --niche law-partners batch runner",
+    "Re-ingest named individual partners back into master_leads (person-level records)"
+  ]
+}

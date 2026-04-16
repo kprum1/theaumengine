@@ -1,0 +1,83 @@
+[
+  {
+    "leadId": "law-partners_blaine_solo_mn",
+    "nicheId": "law-partners",
+    "firmName": "Blaine Solo Practice LLC",
+    "city": "Blaine",
+    "state": "MN",
+    "source": "Martindale",
+    "sourceUrl": "",
+    "status": "rejected",
+    "confidenceScore": 0.38,
+    "rejectionReasons": [
+      "missing_sourceUrl",
+      "firmSize_below_minimum_solo_practice",
+      "no_equity_partner_signal"
+    ]
+  },
+  {
+    "leadId": "law-partners_anon_associate_mn",
+    "nicheId": "law-partners",
+    "firmName": "Unknown Firm",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "Martindale",
+    "sourceUrl": "",
+    "status": "rejected",
+    "confidenceScore": 0.3,
+    "rejectionReasons": [
+      "missing_sourceUrl",
+      "role_not_partner_associate_detected",
+      "no_firm_name_resolvable"
+    ]
+  },
+  {
+    "leadId": "law-partners_mn_legal_aid_mpls",
+    "nicheId": "law-partners",
+    "firmName": "Legal Aid Society of Minneapolis",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "State Bar Directory",
+    "sourceUrl": "https://www.mnbar.org/find-a-lawyer",
+    "status": "rejected",
+    "confidenceScore": 0.25,
+    "rejectionReasons": [
+      "nonprofit_legal_aid_ineligible",
+      "income_below_aum_floor",
+      "role_public_interest_not_equity"
+    ]
+  },
+  {
+    "leadId": "law-partners_inhouse_3m_mn",
+    "nicheId": "law-partners",
+    "firmName": "3M Company (In-House)",
+    "city": "Maplewood",
+    "state": "MN",
+    "source": "LinkedIn scrape",
+    "sourceUrl": "",
+    "status": "rejected",
+    "confidenceScore": 0.45,
+    "rejectionReasons": [
+      "in_house_counsel_W2_only",
+      "no_K1_income",
+      "missing_sourceUrl",
+      "not_private_law_firm"
+    ]
+  },
+  {
+    "leadId": "law-partners_biglaw_welladvised",
+    "nicheId": "law-partners",
+    "firmName": "Skadden Arps MN Office",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw",
+    "sourceUrl": "https://www.law.com/americanlawyer/am-law-100/",
+    "status": "rejected",
+    "confidenceScore": 0.55,
+    "rejectionReasons": [
+      "biglaw_well_advised_risk",
+      "firmSize_above_300_attorneys",
+      "big4_accounting_FA_relationship_likely"
+    ]
+  }
+]

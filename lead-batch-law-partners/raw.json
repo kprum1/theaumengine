@@ -1,0 +1,454 @@
+[
+  {
+    "firmName": "Maslon LLP",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Maslon%20LLP&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "70-attorney",
+    "estimatedAUM": "$1.5M–$4M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Taft Stettinius & Hollister",
+    "partnerName": "",
+    "city": "Saint Paul",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Taft%20Stettinius%20%26%20Hollister&location=Saint%20Paul%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "120-attorney",
+    "estimatedAUM": "$2M–$5M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Fafinski Mark & Johnson",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Fafinski%20Mark%20%26%20Johnson&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "35-attorney",
+    "estimatedAUM": "$1.5M–$3M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "O'Brien & Wolf",
+    "partnerName": "",
+    "city": "Saint Paul",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=O'Brien%20%26%20Wolf&location=Saint%20Paul%2C%20MN",
+    "practiceAreas": [
+      "Complex Commercial Litigation"
+    ],
+    "firmSizeBand": "12-attorney",
+    "estimatedAUM": "$800K–$2M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Johnson Broderick & Thornton",
+    "partnerName": "",
+    "city": "Plymouth",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Johnson%20Broderick%20%26%20Thornton&location=Plymouth%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "10-attorney",
+    "estimatedAUM": "$800K–$2M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Hellmuth & Johnson",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Hellmuth%20%26%20Johnson&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "35-attorney",
+    "estimatedAUM": "$1.2M–$3M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Bowman & Brooke",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Bowman%20and%20Brooke&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Complex Commercial Litigation"
+    ],
+    "firmSizeBand": "45-attorney",
+    "estimatedAUM": "$1.5M–$3M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Leonard Street & Deinard",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Leonard%20Street%20and%20Deinard&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "160-attorney",
+    "estimatedAUM": "$2M–$5M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Greene Espel",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Greene%20Espel&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Complex Commercial Litigation"
+    ],
+    "firmSizeBand": "40-attorney",
+    "estimatedAUM": "$1.5M–$4M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Kennedy & Graven",
+    "partnerName": "",
+    "city": "Saint Paul",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Kennedy%20%26%20Graven&location=Saint%20Paul%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "25-attorney",
+    "estimatedAUM": "$1M–$2.5M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Moss & Barnett",
+    "partnerName": "",
+    "city": "Eden Prairie",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Moss%20%26%20Barnett&location=Eden%20Prairie%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "80-attorney",
+    "estimatedAUM": "$1.5M–$4M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Dorsey & Whitney",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Dorsey%20%26%20Whitney&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "600-attorney",
+    "estimatedAUM": "$3M–$10M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Larkin Hoffman",
+    "partnerName": "",
+    "city": "Saint Paul",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Larkin%20Hoffman&location=Saint%20Paul%2C%20MN",
+    "practiceAreas": [
+      "Real Estate & Land Use"
+    ],
+    "firmSizeBand": "95-attorney",
+    "estimatedAUM": "$1.5M–$4M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Ackermann & Tilajef",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Ackermann%20%26%20Tilajef&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Complex Commercial Litigation"
+    ],
+    "firmSizeBand": "12-attorney",
+    "estimatedAUM": "$800K–$2M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Robins Kaplan",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Robins%20Kaplan&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Complex Commercial Litigation"
+    ],
+    "firmSizeBand": "250-attorney",
+    "estimatedAUM": "$2M–$6M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Briggs & Morgan",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Briggs%20and%20Morgan&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Complex Commercial Litigation"
+    ],
+    "firmSizeBand": "130-attorney",
+    "estimatedAUM": "$2M–$5M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Fredrikson & Byron",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Fredrikson%20%26%20Byron&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "260-attorney",
+    "estimatedAUM": "$2M–$6M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Bassford Remele",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Bassford%20Remele&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Complex Commercial Litigation"
+    ],
+    "firmSizeBand": "30-attorney",
+    "estimatedAUM": "$1.2M–$3M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Stinson LLP",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Stinson%20LLP&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "500-attorney",
+    "estimatedAUM": "$2M–$6M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Fox Rothschild",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Fox%20Rothschild&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "60-attorney",
+    "estimatedAUM": "$1.5M–$4M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Gray Plant Mooty",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Gray%20Plant%20Mooty&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "140-attorney",
+    "estimatedAUM": "$2M–$5M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Henson Efron",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Henson%20Efron&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Complex Commercial Litigation"
+    ],
+    "firmSizeBand": "20-attorney",
+    "estimatedAUM": "$1M–$2.5M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Faegre Drinker Biddle & Reath",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Faegre%20Drinker%20Biddle%20%26%20Reath&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "800-attorney",
+    "estimatedAUM": "$3M–$10M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Lommen Abdo",
+    "partnerName": "",
+    "city": "Minnetonka",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Lommen%20Abdo&location=Minnetonka%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "25-attorney",
+    "estimatedAUM": "$1M–$2.5M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Rybel & Rybel",
+    "partnerName": "",
+    "city": "Edina",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Rybel%20%26%20Rybel&location=Edina%2C%20MN",
+    "practiceAreas": [
+      "Real Estate & Land Use"
+    ],
+    "firmSizeBand": "8-attorney",
+    "estimatedAUM": "$800K–$2M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Milavetz Gallop & Milavetz",
+    "partnerName": "",
+    "city": "Wayzata",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Milavetz%20Gallop%20%26%20Milavetz&location=Wayzata%2C%20MN",
+    "practiceAreas": [
+      "Complex Commercial Litigation"
+    ],
+    "firmSizeBand": "15-attorney",
+    "estimatedAUM": "$1M–$2.5M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Winthrop & Weinstine",
+    "partnerName": "",
+    "city": "Minneapolis",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Winthrop%20%26%20Weinstine&location=Minneapolis%2C%20MN",
+    "practiceAreas": [
+      "Corporate",
+      "M&A",
+      "Transactional"
+    ],
+    "firmSizeBand": "80-attorney",
+    "estimatedAUM": "$1.5M–$4M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  },
+  {
+    "firmName": "Meagher & Geer",
+    "partnerName": "",
+    "city": "Saint Paul",
+    "state": "MN",
+    "source": "AmLaw / Martindale-Hubbell",
+    "sourceUrl": "https://www.martindale.com/find-attorneys/?q=Meagher%20%26%20Geer&location=Saint%20Paul%2C%20MN",
+    "practiceAreas": [
+      "Complex Commercial Litigation"
+    ],
+    "firmSizeBand": "35-attorney",
+    "estimatedAUM": "$1.2M–$3M",
+    "notes": "Partner names require directory clickthrough or LinkedIn enrichment",
+    "scrapedAt": "2026-04-16"
+  }
+]
