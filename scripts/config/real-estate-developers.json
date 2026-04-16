@@ -1,0 +1,11 @@
+{
+  "nicheId": "real-estate-developers",
+  "nicheName": "Real Estate Developers",
+  "aumFloor": "$500K+",
+  "outputPrefix": "alfred_batch_hud_re_developers",
+  "requiredFields": ["source", "sourceUrl", "city", "state", "externalId"],
+  "allowedEntityTypes": ["individual", "business", "unknown"],
+  "rejectIfContains": ["government", "federal", "housing authority", "city of", "county of", "state of", "municipal", "public housing"],
+  "minConfidenceScore": 0.55,
+  "notes": "externalId = HUD-{projectNumber}. Property-level leads — developer name requires county recorder or SOS lookup. Mortgage amount is primary AUM signal: $2M mortgage → developer AUM ~$2M-$5M. Active FHA = developer still operating. needsNameResolution:true for all records."
+}
