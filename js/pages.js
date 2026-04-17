@@ -353,16 +353,21 @@ function pageProspectMine() {
 
 function pageLeadScoreboard() {
   let list = [...PROSPECTS];
+  const isFiltered = activeFilters.status !== 'all' || activeFilters.niche !== 'all';
   if (activeFilters.status !== 'all') list = list.filter(p=>p.status===activeFilters.status);
   if (activeFilters.niche  !== 'all') list = list.filter(p=>p.nicheId===activeFilters.niche);
   list.sort((a,b)=>b.priorityScore-a.priorityScore);
+
+  const dbTotal = window._firestoreLeadTotal || PROSPECTS.length;
+  // When no filter: show full DB total. When filtered: show list.length of dbTotal.
+  const showingCount = isFiltered ? list.length : dbTotal;
 
   const statuses = ['New','Contacted','Engaged','Nurture','Meeting Requested','Booked','Dead'];
   return `
   <div class="page-header">
     <div class="page-header-left">
       <div class="page-title">Lead Scoreboard</div>
-      <div class="page-subtitle">${list.length} of ${window._firestoreLeadTotal || PROSPECTS.length} prospects ranked by AI fit + timing score</div>
+      <div class="page-subtitle">${showingCount} of ${dbTotal} prospects ranked by AI fit + timing score</div>
     </div>
     <div class="page-actions">
       <button class="btn btn-secondary" onclick="triggerCSVImport()">⬆ Import CSV</button>
