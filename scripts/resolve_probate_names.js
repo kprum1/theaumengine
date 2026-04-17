@@ -131,6 +131,63 @@ const COURT_RESOLUTIONS = {
     courtVerified:      true,
     note:               'Decedent confirmed. Letter of Appointment + Affidavit of Transfer of Title to Real Property filed — indicates real property in estate. Chandler AZ.',
   },
+
+  // ── 4 remaining cases — pulled 2026-04-17 (second browser pull) ────────────────
+  'PB2026-002300': {
+    // Decedent confirmed: Samly Khongkhoune (Phoenix) — HIGHEST TIMING (filed 2026-04-09)
+    decedentFirstName:  'Samly',
+    decedentLastName:   'Khongkhoune',
+    decedentFullName:   'Samly Khongkhoune',
+    firstName:          'Bantri',
+    lastName:           'Khongkhoune',
+    fullName:           'Bantri Khongkhoune',
+    role:               'Petitioner — Personal Representative',
+    filingDate:         '2026-04-09',
+    courtVerified:      true,
+    note:               'Decedent confirmed. Letter of Appointment (without restriction) + Notice to Creditors filed. Estate in active administration — Phoenix AZ. Highest timing score (95).',
+  },
+  'PB2026-000500': {
+    // Decedent confirmed: Hassell Bernace Moores (Chandler)
+    decedentFirstName:  'Hassell',
+    decedentLastName:   'Moores',
+    decedentFullName:   'Hassell Bernace Moores',
+    firstName:          'Sara',
+    lastName:           'Compton',
+    fullName:           'Sara Compton',
+    role:               'Petitioner — Unlicensed Fiduciary',
+    filingDate:         '2026-01-22',
+    courtVerified:      true,
+    note:               'Decedent confirmed. Notice of Informal Probate, Waiver of Bond filed. Note: Registrar Denial issued 2026-02-02 — petitioner may need attorney. Chandler AZ.',
+  },
+  'PB2026-000300': {
+    // IMPORTANT: Case PB2026-000300 belongs to Douglas L. Small, NOT Govindarajalu.
+    // Our miner’s case number was off by one. The correct case is PB2026-000301.
+    // We store under PB2026-000300 to match the sourceUrl in the scrubbed batch,
+    // but flag the correction in the note.
+    decedentFirstName:  'Nandadevi',
+    decedentLastName:   'Govindarajalu',
+    decedentFullName:   'Nandadevi Govindarajalu',
+    firstName:          'Sumithra',
+    lastName:           'Ramesh',
+    fullName:           'Sumithra Ramesh',
+    role:               'Petitioner — Personal Representative',
+    filingDate:         '2026-02-06',
+    courtVerified:      true,
+    note:               'CASE NUMBER CORRECTION: PB2026-000300 is Douglas L. Small estate. Correct case for Govindarajalu is PB2026-000301. Petitioner: Sumithra Ramesh. Letter of Appointment (without restriction) filed. Phoenix AZ.',
+  },
+  'PB2026-000001': {
+    // Decedent confirmed: Marsha M. Nitchman (Scottsdale)
+    decedentFirstName:  'Marsha',
+    decedentLastName:   'Nitchman',
+    decedentFullName:   'Marsha M. Nitchman',
+    firstName:          'James',
+    lastName:           'Nitchman',
+    fullName:           'James S. Nitchman',
+    role:               'Petitioner',
+    filingDate:         '2026-01-13',
+    courtVerified:      true,
+    note:               'Decedent confirmed. Proof and/or Notice of Mailing + Affidavit of Publication filed. Scottsdale AZ. Lowest timing score (68) — outreach window narrowing.',
+  },
 };
 
 // ── Extract case number from sourceUrl ───────────────────────────────────

@@ -214,7 +214,7 @@ async function main() {
       process.exit(1);
     }
     const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    leads = Array.isArray(raw) ? raw : [raw];
+    leads = Array.isArray(raw) ? raw : (raw.leads ? raw.leads : [raw]);
   } else if (singleIdx >= 0) {
     leads = [JSON.parse(args[singleIdx + 1])];
   } else {
