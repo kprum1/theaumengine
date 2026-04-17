@@ -162,7 +162,7 @@ function pageCommandCenter() {
   <div class="kpi-strip">
     <div class="kpi-card" style="--kpi-color:linear-gradient(90deg,#60a5fa,#818cf8)">
       <div class="kpi-label">Total Prospects</div><div class="kpi-value">${M.total}</div>
-      <div class="kpi-delta up">↑ 6 new this week</div><div class="kpi-icon">💎</div>
+      <div class="kpi-delta up">↑ ${M.newThisWeek || 0} new this week</div><div class="kpi-icon">💎</div>
     </div>
     <div class="kpi-card" style="--kpi-color:linear-gradient(90deg,#fb7185,#f43f5e)">
       <div class="kpi-label">In Pipeline</div><div class="kpi-value">${M.contacted}</div>

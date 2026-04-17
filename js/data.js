@@ -457,12 +457,22 @@ const ALERTS = [
 const PIPELINE_COLUMNS = ['New','Contacted','Engaged','Nurture','Meeting Requested','Booked','Dead','Snoozed'];
 
 // ===== COMPUTED METRICS (stable — no Math.random) =====
+// M.total uses window._firestoreLeadTotal when available (accurate count from DB).
+// Falls back to PROSPECTS.length during initial hydration.
 function computeMetrics() {
-  const total = PROSPECTS.length;
-  const booked = PROSPECTS.filter(p => p.status === 'Booked').length;
+  const total     = window._firestoreLeadTotal || PROSPECTS.length;
+  const booked    = PROSPECTS.filter(p => p.status === 'Booked').length;
   const contacted = PROSPECTS.filter(p => !['New','Dead'].includes(p.status)).length;
-  const engaged = PROSPECTS.filter(p => ['Engaged','Meeting Requested','Booked'].includes(p.status)).length;
-  const dead = PROSPECTS.filter(p => p.status === 'Dead').length;
+  const engaged   = PROSPECTS.filter(p => ['Engaged','Meeting Requested','Booked'].includes(p.status)).length;
+  const dead      = PROSPECTS.filter(p => p.status === 'Dead').length;
+
+  // "New this week" = leads assigned in last 7 days (based on lastActivity date or enrolled)
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const newThisWeek = PROSPECTS.filter(p => {
+    const d = p.enrolled ? new Date(p.enrolled).getTime() :
+              p.ingestedAt ? new Date(p.ingestedAt).getTime() : 0;
+    return d > weekAgo;
+  }).length;
 
   return {
     total,
@@ -470,9 +480,10 @@ function computeMetrics() {
     contacted,
     engaged,
     dead,
-    contactRate: Math.round(contacted / total * 100),
-    replyRate:   Math.round(engaged   / Math.max(contacted,1) * 100),
-    convRate:    Math.round(booked    / Math.max(contacted,1) * 100),
+    newThisWeek,
+    contactRate: Math.round(contacted / Math.max(total, 1) * 100),
+    replyRate:   Math.round(engaged   / Math.max(contacted, 1) * 100),
+    convRate:    Math.round(booked    / Math.max(contacted, 1) * 100),
   };
 }
 

@@ -126,10 +126,11 @@ async function loadAssignedLeadsFromFirestore(uid) {
     const db   = _getDB();
     if (!db) return [];
 
-    // Pull all active assignments for this advisor
+    // Pull all active assignments for this advisor (limit 500 — covers large pipelines)
     const snap = await db.collection('lead_assignments')
       .where('ownerUid', '==', uid)
       .where('ownershipStatus', 'in', ['active', 'pending'])
+      .limit(500)
       .get();
 
     if (snap.empty) return [];
@@ -271,6 +272,29 @@ async function updateLeadFeedbackInFirestore(assignmentId, vote, notes) {
   } catch(e) { console.warn('[db.js] updateLeadFeedback failed:', e); }
 }
 
+// ── Fast lead count — sets window._firestoreLeadTotal for computeMetrics() ──
+// Uses Firestore .count() aggregation (single read, no doc fetch).
+// Called during bootstrapUserData so the Command Center KPI is accurate.
+async function fetchAdvisorLeadCount(uid) {
+  if (!uid) return 0;
+  try {
+    const db = _getDB();
+    if (!db) return 0;
+    const countSnap = await db.collection('lead_assignments')
+      .where('ownerUid', '==', uid)
+      .where('ownershipStatus', 'in', ['active', 'pending'])
+      .count()
+      .get();
+    const count = countSnap.data().count || 0;
+    window._firestoreLeadTotal = count;
+    console.info(`[db.js] True lead count for ${uid.slice(0,8)}: ${count}`);
+    return count;
+  } catch(e) {
+    console.warn('[db.js] fetchAdvisorLeadCount failed (will use PROSPECTS.length):', e.message);
+    return 0;
+  }
+}
+
 // ── Bootstrap: Load All User Data on Login ────────────────────────────────
 // Called from auth.js onAuthStateChanged when user is authenticated.
 // Returns { nicheProfile, nicheAnswers, icpConfig, advisorProfile, assignedLeads }
@@ -284,6 +308,8 @@ async function bootstrapUserData(uid) {
       _userDoc(uid, 'advisorProfile').get(),
       loadAssignedLeadsFromFirestore(uid),   // ← Phase B: live leads
     ]);
+    // Non-blocking: fetch true count and cache it for computeMetrics()
+    fetchAdvisorLeadCount(uid).catch(() => {});
     return {
       nicheProfile:   profileSnap.exists  ? profileSnap.data()              : null,
       nicheAnswers:   answersSnap.exists  ? (answersSnap.data().answers||{}) : {},
@@ -296,6 +322,7 @@ async function bootstrapUserData(uid) {
     return { nicheProfile: null, nicheAnswers: {}, icpConfig: null, advisorProfile: null, assignedLeads: [] };
   }
 }
+
 
 // ── Outreach Outcome Logging (Phase C1 — Measurement) ────────────────────────
 // Writes one outcome event to outreach_outcomes/{auto-id}
@@ -535,7 +562,7 @@ async function loadAlAssignmentsForAdvisor(uid) {
     const snap = await db.collection('lead_assignments')
       .where('ownerUid', '==', uid)
       .orderBy('assignedAt', 'desc')
-      .limit(100)
+      .limit(500)   // raised from 100 → supports large pipelines (was truncating at 100)
       .get();
 
     if (snap.empty) return [];
