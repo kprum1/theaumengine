@@ -263,6 +263,16 @@ service cloud.firestore {
     }
 
     // ================================================================
+    // META — pipeline summary stats (read by Command Center KPI)
+    // Written by scripts/write_pipeline_meta.js (Admin SDK).
+    // Any authenticated user may read (used for Total Prospects KPI).
+    // ================================================================
+    match /meta/{docId} {
+      allow read:  if request.auth != null;
+      allow write: if false; // Admin SDK only
+    }
+
+    // ================================================================
     // DENY ALL — catch-all for any unmatched paths
     // ================================================================
     match /{document=**} {

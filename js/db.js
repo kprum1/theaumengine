@@ -273,9 +273,10 @@ async function updateLeadFeedbackInFirestore(assignmentId, vote, notes) {
 }
 
 // ── Fast lead count — sets window._firestoreLeadTotal for computeMetrics() ──
-// Uses Firestore .count() aggregation (single read, no doc fetch).
-// Operator (kosal@fin-tegration.com) gets the GLOBAL total across all advisors.
-// Regular advisors get their own count only.
+// Reads meta/pipeline_stats (written by scripts/write_pipeline_meta.js).
+// One Firestore read — no aggregation API required (compat SDK compatible).
+// Operator (kosal@fin-tegration.com) gets totalLeads (global across all advisors).
+// Regular advisors get their per-UID count from leadsByAdvisor map.
 const _OPERATOR_EMAIL = 'kosal@fin-tegration.com';
 
 async function fetchAdvisorLeadCount(uid) {
@@ -284,20 +285,23 @@ async function fetchAdvisorLeadCount(uid) {
     const db = _getDB();
     if (!db) return 0;
 
-    // Operator: fetch global total (no ownerUid filter)
-    const isOp = window._currentUser && window._currentUser.email === _OPERATOR_EMAIL;
-    let q = db.collection('lead_assignments');
-    if (!isOp) {
-      q = q.where('ownerUid', '==', uid)
-            .where('ownershipStatus', 'in', ['active', 'pending']);
+    const metaSnap = await db.collection('meta').doc('pipeline_stats').get();
+    if (!metaSnap.exists) {
+      console.warn('[db.js] meta/pipeline_stats not found — using PROSPECTS.length fallback');
+      return 0;
     }
-    const countSnap = await q.count().get();
-    const count = countSnap.data().count || 0;
+    const meta = metaSnap.data();
+    const isOp = window._currentUser && window._currentUser.email === _OPERATOR_EMAIL;
+
+    const count = isOp
+      ? (meta.totalLeads || 0)                        // operator → global total
+      : (meta.leadsByAdvisor?.[uid] || 0);            // advisor  → their own total
+
     window._firestoreLeadTotal = count;
-    console.info(`[db.js] Lead count (${isOp ? 'GLOBAL/operator' : 'advisor'}): ${count}`);
+    console.info(`[db.js] Lead count (${isOp ? 'GLOBAL/operator' : uid.slice(0,8)}): ${count}`);
     return count;
   } catch(e) {
-    console.warn('[db.js] fetchAdvisorLeadCount failed (will use PROSPECTS.length):', e.message);
+    console.warn('[db.js] fetchAdvisorLeadCount failed:', e.message);
     return 0;
   }
 }
