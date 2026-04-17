@@ -94,13 +94,12 @@ const HENRY_TITLES = [
 function apolloPeopleSearch(companyName, titles, city, state) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify({
-      api_key:                  APOLLO_API_KEY,
-      q_organization_name:      companyName,
-      person_titles:            titles,
-      person_locations:         city && state ? [`${city}, ${state}`] : [],
-      page:                     1,
-      per_page:                 3,  // top 3 candidates — we take the first
-      prospected_by_current_team: ['no'],  // don't restrict to already-seen
+      q_organization_name:        companyName,
+      person_titles:              titles,
+      person_locations:           city && state ? [`${city}, ${state}`] : [],
+      page:                       1,
+      per_page:                   3,  // top 3 candidates — we take the first
+      prospected_by_current_team: ['no'],
     });
 
     const options = {
@@ -110,6 +109,7 @@ function apolloPeopleSearch(companyName, titles, city, state) {
       headers:  {
         'Content-Type':   'application/json',
         'Cache-Control':  'no-cache',
+        'X-Api-Key':      APOLLO_API_KEY,   // Apollo requires key in header, not body
         'Content-Length': Buffer.byteLength(payload),
       },
     };
@@ -137,10 +137,7 @@ function apolloPeopleSearch(companyName, titles, city, state) {
 // Used when company website is available — more accurate than name search
 function apolloOrgEnrich(domain) {
   return new Promise((resolve, reject) => {
-    const payload = JSON.stringify({
-      api_key: APOLLO_API_KEY,
-      domain,
-    });
+    const payload = JSON.stringify({ domain });
 
     const options = {
       hostname: APOLLO_BASE,
@@ -149,6 +146,7 @@ function apolloOrgEnrich(domain) {
       headers:  {
         'Content-Type':   'application/json',
         'Cache-Control':  'no-cache',
+        'X-Api-Key':      APOLLO_API_KEY,   // Apollo requires key in header, not body
         'Content-Length': Buffer.byteLength(payload),
       },
     };
