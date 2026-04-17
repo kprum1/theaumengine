@@ -556,13 +556,30 @@ function getAvatarClass(name) {
   return classes[idx % classes.length];
 }
 
-function getInitials(first, last) {
-  const f = (first || '').trim();
-  const l = (last  || '').trim();
+function getInitials(first, last, company) {
+  const f = (first   || '').trim();
+  const l = (last    || '').trim();
+  const c = (company || '').trim();
   if (f && l) return (f[0] + l[0]).toUpperCase();
   if (f) return f.slice(0, 2).toUpperCase();
   if (l) return l.slice(0, 2).toUpperCase();
+  // Business-level lead — fall back to company initials
+  if (c) {
+    const words = c.split(/\s+/).filter(Boolean);
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    return c.slice(0, 2).toUpperCase();
+  }
   return '??';
+}
+
+// Returns a display name for a prospect, falling back to company when
+// firstName/lastName are empty (e.g. business-level leads pending Apollo enrichment).
+function getDisplayName(p) {
+  if (!p) return 'Unnamed Lead';
+  const first = (p.firstName || '').trim();
+  const last  = (p.lastName  || '').trim();
+  if (first || last) return `${first} ${last}`.trim();
+  return (p.company || '').trim() || 'Unnamed Lead';
 }
 
 // ===== CSV UTILITIES =====

@@ -306,12 +306,13 @@ function openNicheDrawer(nicheId) {
       </div>`
     : prospects.map(p => {
         const color = statusColors[p.status] || 'var(--text-muted)';
-        const initials = typeof getInitials === 'function' ? getInitials(p.firstName, p.lastName) : (p.firstName[0]+p.lastName[0]).toUpperCase();
-        const avatarCls = typeof getAvatarClass === 'function' ? getAvatarClass(p.lastName) : 'av-blue';
+        const initials = typeof getInitials === 'function' ? getInitials(p.firstName, p.lastName, p.company) : '??';
+        const avatarCls = typeof getAvatarClass === 'function' ? getAvatarClass(p.lastName || p.company || '') : 'av-blue';
+        const displayName = typeof getDisplayName === 'function' ? getDisplayName(p) : `${p.firstName} ${p.lastName}`.trim();
         return `<div class="nd-prospect-row" onclick="event.stopPropagation();closeNicheDrawer();openDrawer('${p.id}')" id="nd-row-${p.id}">
           <div class="nd-avatar ${avatarCls}">${initials}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:12.5px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.firstName} ${p.lastName}</div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${displayName}</div>
             <div style="font-size:10.5px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title || ''}${p.company ? ' · ' + p.company : ''}</div>
             <div style="font-size:10px;margin-top:3px;font-weight:600;color:${color}">${p.status}</div>
           </div>
@@ -1446,10 +1447,10 @@ function openDrawer(id) {
   document.getElementById('drawer-content').innerHTML = `
   <div class="drawer-header">
     <div style="display:flex;align-items:flex-start;gap:12px">
-      <div class="dossier-avatar ${getAvatarClass(p.lastName)}" style="width:44px;height:44px;border-radius:10px;font-size:16px;font-weight:800">${getInitials(p.firstName,p.lastName)}</div>
+      <div class="dossier-avatar ${getAvatarClass(p.lastName || p.company || '')}" style="width:44px;height:44px;border-radius:10px;font-size:16px;font-weight:800">${getInitials(p.firstName,p.lastName,p.company)}</div>
       <div>
-        <div style="font-size:16px;font-weight:800;color:var(--text-primary)">${p.firstName} ${p.lastName}</div>
-        <div style="font-size:12px;color:var(--text-muted)">${p.title} · ${p.company}</div>
+        <div style="font-size:16px;font-weight:800;color:var(--text-primary)">${getDisplayName(p)}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${p.title || ''}${p.title && p.company ? ' · ' : ''}${p.company || ''}</div>
         <div style="margin-top:5px">${getStatusPill(p.status)}</div>
       </div>
     </div>

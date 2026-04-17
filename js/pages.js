@@ -233,9 +233,9 @@ function pageCommandCenter() {
           ${top.map((p,i)=>`
           <div class="queue-item" onclick="openDrawer('${p.id}')">
             <span class="queue-rank">#${i+1}</span>
-            <div class="queue-avatar ${getAvatarClass(p.lastName)}">${getInitials(p.firstName,p.lastName)}</div>
+            <div class="queue-avatar ${getAvatarClass(p.lastName || p.company || '')}">${getInitials(p.firstName,p.lastName,p.company)}</div>
             <div class="queue-info">
-              <div class="queue-name">${p.firstName} ${p.lastName}</div>
+              <div class="queue-name">${getDisplayName(p)}</div>
               <div class="queue-meta">${p.niche} · ${p.city}, ${p.state}</div>
             </div>
             ${getStatusPill(p.status)}
@@ -402,8 +402,8 @@ function pageLeadScoreboard() {
           <tr onclick="openDrawer('${p.id}')">
             <td><span style="font-family:'JetBrains Mono',monospace;font-weight:800;color:var(--text-muted)">#${i+1}</span></td>
             <td><div style="display:flex;align-items:center;gap:8px">
-              <div class="queue-avatar ${getAvatarClass(p.lastName)}" style="width:28px;height:28px;font-size:10px;border-radius:6px">${getInitials(p.firstName,p.lastName)}</div>
-              <div><div style="font-weight:600;color:var(--text-primary);font-size:12.5px">${p.firstName} ${p.lastName}</div>
+              <div class="queue-avatar ${getAvatarClass(p.lastName || p.company || '')}" style="width:28px;height:28px;font-size:10px;border-radius:6px">${getInitials(p.firstName,p.lastName,p.company)}</div>
+              <div><div style="font-weight:600;color:var(--text-primary);font-size:12.5px">${getDisplayName(p)}</div>
               <div style="font-size:10.5px;color:var(--text-muted)">${p.title}</div></div>
             </div></td>
             <td><span class="tag">${p.niche}</span></td>
@@ -470,8 +470,8 @@ function pageOutreachStudio() {
         <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Select Prospect</div></div>
         ${priority.map(p=>`
         <div class="queue-item ${p.id===activeOutreachProspectId?'active-prospect':''}" style="margin-bottom:6px;${p.id===activeOutreachProspectId?'border-color:var(--blue);background:rgba(96,165,250,0.06)':''}" onclick="setOutreachProspect('${p.id}');navigate('outreach-studio')">
-          <div class="queue-avatar ${getAvatarClass(p.lastName)}" style="width:28px;height:28px;font-size:10px;border-radius:6px">${getInitials(p.firstName,p.lastName)}</div>
-          <div class="queue-info"><div class="queue-name">${p.firstName} ${p.lastName}</div>
+          <div class="queue-avatar ${getAvatarClass(p.lastName || p.company || '')}" style="width:28px;height:28px;font-size:10px;border-radius:6px">${getInitials(p.firstName,p.lastName,p.company)}</div>
+          <div class="queue-info"><div class="queue-name">${getDisplayName(p)}</div>
           <div class="queue-meta">${p.niche} · Priority ${p.priorityScore}</div></div>
           ${getStatusPill(p.status)}
         </div>`).join('')}
@@ -611,7 +611,7 @@ function pageNurtureBooking() {
             }
             return `
           <div class="pipeline-item" onclick="openDrawer('${p.id}')">
-            <div class="pipeline-item-name">${p.firstName} ${p.lastName}</div>
+            <div class="pipeline-item-name">${getDisplayName(p)}</div>
             <div class="pipeline-item-meta">${p.niche}</div>
             <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between">
               <span style="font-size:10px;color:var(--text-muted)">${p.lastActivity}</span>
@@ -655,7 +655,7 @@ function pageNurtureBooking() {
           <thead><tr><th>Prospect</th><th>Niche</th><th>Meeting Date</th><th>Rep</th><th>Status</th><th>Action</th></tr></thead>
           <tbody>
             ${upcoming.map(p=>`<tr onclick="setActiveMeeting('${p.id}');navigate('meeting-prep')">
-              <td><div style="font-weight:600;color:var(--text-primary)">${p.firstName} ${p.lastName}</div>
+              <td><div style="font-weight:600;color:var(--text-primary)">${getDisplayName(p)}</div>
               <div style="font-size:10.5px;color:var(--text-muted)">${p.title} · ${p.city} ${p.state}</div></td>
               <td><span class="tag">${p.niche}</span></td>
               <td><span style="color:${p.status==='Booked'?'var(--emerald)':'var(--amber)'};font-weight:600">${p.signals.nextEvent}</span></td>
@@ -692,8 +692,8 @@ function pageMeetingPrep() {
         ${upcoming.map(x=>`
         <div class="queue-item ${x.id===p.id?'':''}
         " style="margin-bottom:6px;${x.id===p.id?'border-color:var(--blue);background:rgba(96,165,250,0.06)':''}" onclick="setActiveMeeting('${x.id}')">
-          <div class="queue-avatar ${getAvatarClass(x.lastName)}" style="width:28px;height:28px;font-size:10px;border-radius:6px">${getInitials(x.firstName,x.lastName)}</div>
-          <div class="queue-info"><div class="queue-name">${x.firstName} ${x.lastName}</div><div class="queue-meta">${x.signals.nextEvent}</div></div>
+          <div class="queue-avatar ${getAvatarClass(x.lastName || x.company || '')}" style="width:28px;height:28px;font-size:10px;border-radius:6px">${getInitials(x.firstName,x.lastName,x.company)}</div>
+          <div class="queue-info"><div class="queue-name">${getDisplayName(x)}</div><div class="queue-meta">${x.signals.nextEvent}</div></div>
           ${getStatusPill(x.status)}
         </div>`).join('')}
       </div>
