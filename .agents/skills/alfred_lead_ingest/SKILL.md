@@ -309,6 +309,81 @@ Based on current pilot advisor capacity:
 - Idempotency key = `SHA-256(firstName + lastName + email + phone)` — exact dupes silently skipped
 - Staging files can be deleted after confirmed ingest
 
+
 ---
 
-*Skill written 2026-04-13 by Antigravity (Big Nate). Revised 2026-04-13: Alfred prepares batch files only — no API key access per security policy. Alfred: read §3 and §9 first.*
+## 11. PIPELINE META — KEEPING THE KPI IN SYNC
+
+### The Problem
+The Command Center **Total Prospects** KPI reads from `computeMetrics()` in `js/data.js`, which uses `PROSPECTS.length`. That array is a mix of:
+- ~28 hardcoded demo leads (always present)
+- Live leads hydrated from `lead_assignments` via Firestore (capped at 500, some fail silently)
+
+Firebase compat SDK v9.23.0 **does not support `.count()` aggregation** — calling it throws silently and falls back to `PROSPECTS.length`.
+
+**Result:** Operator saw **437** when the real total was **1,030**.
+
+### The Fix — `write_pipeline_meta.js`
+
+After every ingest batch, run:
+
+```bash
+cd /Users/kosalprum/Documents/AdvDiamondMining
+node scripts/write_pipeline_meta.js
+```
+
+This writes `meta/pipeline_stats` in Firestore:
+```json
+{
+  "totalLeads": 1030,
+  "totalMasterLeads": 619,
+  "totalQueueItems": 609,
+  "leadsByAdvisor": {
+    "FvEWqsETjbU602nLfHaJUaUkWkS2": 410,
+    "Iqo8zz5gTFh967ZokqHCpUp4S2t2": 128
+  },
+  "updatedAt": "2026-04-17T..."
+}
+```
+
+`db.js → fetchAdvisorLeadCount()` reads this single doc (1 Firestore read) and sets `window._firestoreLeadTotal`:
+- **Operator** (`kosal@fin-tegration.com`) → `totalLeads` (global across all advisors)
+- **Any advisor** → `leadsByAdvisor[uid]` (their personal count)
+
+`computeMetrics()` in `data.js` prefers `window._firestoreLeadTotal` over `PROSPECTS.length`.
+
+### Firestore Rule
+`firestore.rules` includes:
+```
+match /meta/{docId} {
+  allow read:  if request.auth != null;
+  allow write: if false; // Admin SDK only
+}
+```
+
+### Full Ingest Checklist (Updated)
+
+```bash
+cd /Users/kosalprum/Documents/AdvDiamondMining
+
+# 1. Run audit before ingest
+node scripts/audit_leads.js
+
+# 2. Ingest the batch
+node scripts/lead_ingest_agent.js --file scripts/staging/alfred_batch_YYYY_MM_DD.json
+
+# 3. Trigger routing
+node scripts/trigger_routing.js
+
+# 4. ⚠️ ALWAYS RUN THIS AFTER INGEST — updates KPI in cockpit
+node scripts/write_pipeline_meta.js
+
+# 5. Final audit
+node scripts/audit_leads.js
+```
+
+> ⚠️ **If you skip Step 4, the cockpit KPI will show a stale number.** Always run `write_pipeline_meta.js` after any ingest or routing pass.
+
+---
+
+*Skill written 2026-04-13 by Antigravity (Big Nate). Revised 2026-04-17: Added §11 Pipeline Meta / KPI Sync pattern (Total Prospects fix). Alfred: read §3 and §9 first.*
