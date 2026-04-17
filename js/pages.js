@@ -362,7 +362,7 @@ function pageLeadScoreboard() {
   <div class="page-header">
     <div class="page-header-left">
       <div class="page-title">Lead Scoreboard</div>
-      <div class="page-subtitle">${list.length} of ${PROSPECTS.length} prospects ranked by AI fit + timing score</div>
+      <div class="page-subtitle">${list.length} of ${window._firestoreLeadTotal || PROSPECTS.length} prospects ranked by AI fit + timing score</div>
     </div>
     <div class="page-actions">
       <button class="btn btn-secondary" onclick="triggerCSVImport()">⬆ Import CSV</button>
@@ -377,7 +377,7 @@ function pageLeadScoreboard() {
       <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L13 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
       <input class="search-input" placeholder="Search prospects…" id="search-prospects" oninput="filterProspects(this.value)">
     </div>
-    <div class="filter-chip ${activeFilters.status==='all'?'active':''}" onclick="setFilter('status','all');navigate('lead-scoreboard')">All (${PROSPECTS.length})</div>
+    <div class="filter-chip ${activeFilters.status==='all'?'active':''}" onclick="setFilter('status','all');navigate('lead-scoreboard')">All (${window._firestoreLeadTotal || PROSPECTS.length})</div>
     ${statuses.map(s=>{
       const c=PROSPECTS.filter(p=>p.status===s).length;
       return `<div class="filter-chip ${activeFilters.status===s?'active':''}" onclick="setFilter('status','${s}');navigate('lead-scoreboard')">${s} ${c>0?`(${c})`:''}</div>`;
@@ -772,7 +772,7 @@ function pageManagerConsole() {
     </div>
   </div>
   <div class="kpi-strip">
-    <div class="gem-metric"><div class="gem-metric-label">Total Prospects</div><div class="gem-metric-value">${M.total}</div><div class="gem-metric-sub">↑ 6 new this week</div></div>
+    <div class="gem-metric"><div class="gem-metric-label">Total Prospects</div><div class="gem-metric-value">${M.total}</div><div class="gem-metric-sub">↑ ${M.newThisWeek || 0} new this week</div></div>
     <div class="gem-metric"><div class="gem-metric-label">Meetings Booked</div><div class="gem-metric-value">${M.booked}</div><div class="gem-metric-sub">↑ +2 vs last month</div></div>
     <div class="gem-metric"><div class="gem-metric-label">Contact Rate</div><div class="gem-metric-value">${M.contactRate}%</div><div class="gem-metric-sub">Target: 50%</div></div>
     <div class="gem-metric"><div class="gem-metric-label">Reply Rate</div><div class="gem-metric-value">${M.replyRate}%</div><div class="gem-metric-sub">Industry avg: 8%</div></div>
