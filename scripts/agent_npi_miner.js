@@ -32,7 +32,9 @@ const args      = process.argv.slice(2);
 const getArg    = (flag) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : null; };
 const hasFlag   = (flag) => args.includes(flag);
 const NICHE_ARG = getArg('--niche') || 'physicians'; // 'physicians' | 'dentists' | 'all'
-const STATE     = getArg('--state') || null;
+const GEO_ARG   = getArg('--geo') || null;           // e.g. 'Eden Prairie, MN' — overrides --state
+const STATE     = GEO_ARG ? GEO_ARG.split(',').pop().trim() : (getArg('--state') || null);
+const GEO_CITY  = GEO_ARG ? GEO_ARG.split(',')[0].trim().toUpperCase() : null;
 const LIMIT     = parseInt(getArg('--limit') || '100', 10);
 const DRY_RUN   = hasFlag('--dry-run');
 
@@ -252,6 +254,14 @@ async function runNiche(nicheId) {
         if (!isDental) continue;
       }
 
+      // Post-filter: city-level geo focus (NPI API has no city param, so we filter here)
+      if (GEO_CITY) {
+        const addresses = r.addresses || [];
+        const practiceAddr = addresses.find(a => a.address_purpose === 'LOCATION') || addresses[0] || {};
+        const recordCity = (practiceAddr.city || '').toUpperCase();
+        if (recordCity !== GEO_CITY) continue;
+      }
+
       const aumData = PHYSICIAN_AUM[code] || (nicheId === 'dentists' ? DEFAULT_DENTIST_AUM : DEFAULT_PHYSICIAN_AUM);
       const lead = buildLead(r, nicheId, label, aumData);
       if (lead) leads.push(lead);
@@ -277,6 +287,8 @@ async function main() {
   if (DRY_RUN) console.log('[NPI Agent] DRY RUN — no file will be written');
   if (STATE)   console.log(`[NPI Agent] State filter: ${STATE}`);
   console.log(`[NPI Agent] Niche: ${NICHE_ARG} | Limit: ${LIMIT}`);
+  if (GEO_ARG)   console.log(`[NPI Agent] Geo filter:   ${GEO_ARG}  (city-level post-filter)`);
+  else if (STATE) console.log(`[NPI Agent] State filter: ${STATE}`);
 
   const nichesToRun = NICHE_ARG === 'all'
     ? ['physicians', 'dentists']
@@ -309,7 +321,9 @@ async function main() {
     // Write output
     if (!fs.existsSync(STAGING_DIR)) fs.mkdirSync(STAGING_DIR, { recursive: true });
 
-    const outputFile = path.join(STAGING_DIR, `alfred_batch_npi_${nicheId}_${TODAY}.raw.json`);
+    // Include geo slug in filename when city-filtered
+    const geoSlug = GEO_CITY ? `_${GEO_CITY.toLowerCase().replace(/[^a-z0-9]+/g, '_')}` : '';
+    const outputFile = path.join(STAGING_DIR, `alfred_batch_npi_${nicheId}${geoSlug}_${TODAY}.raw.json`);
     fs.writeFileSync(outputFile, JSON.stringify(leads, null, 2), 'utf8');
     const sizeKB = (fs.statSync(outputFile).size / 1024).toFixed(1);
 

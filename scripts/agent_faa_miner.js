@@ -89,51 +89,52 @@ const HNW_AIRCRAFT_TYPES = new Set(['4', '5', '6']); // Multi-engine, turbine, r
 //                  5=Government, 7=LLC, 8=Non-Citizen Corp, 9=Non-Citizen Co-Owner
 const INDIVIDUAL_OWNER_TYPES = new Set(['1', '2', '4', '7']); // Individual, Partnership, Co-Owner, LLC
 
-// ── MASTER.txt column indices (0-based) ─────────────────────
-// FAA MASTER.txt is fixed-width with specific column layout.
-// Using the known field positions from FAA documentation:
-const COL = {
-  N_NUMBER:     { start: 0,  end: 5  },
-  SERIAL:       { start: 5,  end: 35 },
-  MFR_MDL_CODE: { start: 35, end: 42 },  // cross-ref to ACFTREF
-  ENG_MFR_MDL:  { start: 42, end: 49 },
-  YEAR_MFR:     { start: 49, end: 53 },
-  TYPE_REGISTRANT: { start: 53, end: 54 },
-  NAME:         { start: 54, end: 84 },
-  STREET:       { start: 84, end: 114 },
-  STREET2:      { start: 114, end: 144 },
-  CITY:         { start: 144, end: 174 },
-  STATE:        { start: 174, end: 176 },
-  ZIP_CODE:     { start: 176, end: 186 },
-  REGION:       { start: 186, end: 187 },
-  COUNTY:       { start: 187, end: 190 },
-  COUNTRY:      { start: 190, end: 192 },
-  LAST_ACT_DT:  { start: 192, end: 200 },
-  CERT_ISSUE_DT:{ start: 200, end: 208 },
-  CERTIFICATION:{ start: 208, end: 211 },
-  TYPE_AIRCRAFT:{ start: 211, end: 212 },
-  TYPE_ENGINE:  { start: 212, end: 214 },
-  STATUS_CODE:  { start: 214, end: 216 },
-  MODE_S_CODE:  { start: 216, end: 224 },
-  FRACT_OWNER:  { start: 224, end: 225 },
-  AIR_WORTH_DATE:{ start: 225, end: 233 },
-  OTHER_NAMES_1:{ start: 233, end: 263 },
-  OTHER_NAMES_2:{ start: 263, end: 293 },
-  OTHER_NAMES_3:{ start: 293, end: 323 },
-  OTHER_NAMES_4:{ start: 323, end: 353 },
-  OTHER_NAMES_5:{ start: 353, end: 383 },
-  EXPIRATION_DT:{ start: 383, end: 391 },
-  UNIQUE_ID:    { start: 391, end: 399 },
-  KIT_MFR:      { start: 399, end: 429 },
-  KIT_MODEL:    { start: 429, end: 459 },
-  MODE_S_CODE_HEX: { start: 459, end: 467 },
+// ── MASTER.txt CSV column indices (0-based) ─────────────────
+// FAA MASTER.txt is now comma-delimited (CSV).
+// Header: N-NUMBER,SERIAL NUMBER,MFR MDL CODE,ENG MFR MDL,YEAR MFR,
+//         TYPE REGISTRANT,NAME,STREET,STREET2,CITY,STATE,ZIP CODE,
+//         REGION,COUNTY,COUNTRY,LAST ACTION DATE,CERT ISSUE DATE,
+//         CERTIFICATION,TYPE AIRCRAFT,TYPE ENGINE,STATUS CODE,
+//         MODE S CODE,FRACT OWNER,AIR WORTH DATE,...
+const CSV_COL = {
+  N_NUMBER:        0,
+  SERIAL:          1,
+  MFR_MDL_CODE:    2,
+  ENG_MFR_MDL:     3,
+  YEAR_MFR:        4,
+  TYPE_REGISTRANT: 5,
+  NAME:            6,
+  STREET:          7,
+  STREET2:         8,
+  CITY:            9,
+  STATE:           10,
+  ZIP_CODE:        11,
+  REGION:          12,
+  COUNTY:          13,
+  COUNTRY:         14,
+  LAST_ACT_DT:     15,
+  CERT_ISSUE_DT:   16,
+  CERTIFICATION:   17,
+  TYPE_AIRCRAFT:   18,
+  TYPE_ENGINE:     19,
+  STATUS_CODE:     20,
+  MODE_S_CODE:     21,
+  FRACT_OWNER:     22,
+  AIR_WORTH_DATE:  23,
 };
 
-function parseField(line, col) {
-  return line.substring(col.start, col.end).trim();
+function parseCSVLine(line) {
+  // Simple CSV split — FAA data doesn't use quoted fields
+  return line.split(',').map(f => f.trim());
+}
+
+function getField(fields, colKey) {
+  const idx = CSV_COL[colKey];
+  return (fields[idx] || '').trim();
 }
 
 // ── ACFTREF.txt parser — builds a map of MFR_MDL_CODE → {mfr, model} ──
+// ACFTREF.txt is now CSV: CODE,MFR,MODEL,TYPE-ACFT,TYPE-ENG,...
 function buildAircraftRefMap(acftrefPath) {
   if (!fs.existsSync(acftrefPath)) {
     console.warn('[FAA Agent] ACFTREF.txt not found — model data unavailable');
@@ -142,16 +143,19 @@ function buildAircraftRefMap(acftrefPath) {
   const lines = fs.readFileSync(acftrefPath, 'utf8').split('\n');
   const map = {};
   for (const line of lines) {
-    if (!line.trim() || line.startsWith('CODE')) continue;
-    // ACFTREF is also fixed-width
-    const code  = line.substring(0,  7).trim();
-    const mfr   = line.substring(7,  37).trim();
-    const model = line.substring(37, 67).trim();
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('CODE') || trimmed.startsWith('\uFEFFCODE')) continue;
+    // CSV: CODE,MFR,MODEL,TYPE-ACFT,...
+    const fields = trimmed.split(',');
+    const code  = (fields[0] || '').trim();
+    const mfr   = (fields[1] || '').trim();
+    const model = (fields[2] || '').trim();
     if (code) map[code] = { mfr, model };
   }
   console.log(`[FAA Agent] Aircraft reference map built: ${Object.keys(map).length} models`);
   return map;
 }
+
 
 // ── Name parser — splits "HATCHER DALE R" → {firstName, lastName} ──
 function parseName(raw) {
@@ -261,8 +265,8 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('[FAA Agent] Parsing MASTER.txt…');
-  const lines = fs.readFileSync(MASTER_FILE, 'latin1').split('\n');
+  console.log('[FAA Agent] Parsing MASTER.txt (CSV format)…');
+  const lines = fs.readFileSync(MASTER_FILE, 'utf8').split('\n');
   console.log(`[FAA Agent] Total records in FAA database: ${lines.length.toLocaleString()}`);
 
   // ── Step 4: Filter and convert ───────────────────────────
@@ -271,15 +275,19 @@ async function main() {
   let filtered_reason = { type_registrant: 0, aircraft_type: 0, manufacturer: 0, company: 0, state: 0, status: 0 };
 
   for (const line of lines) {
-    if (!line.trim() || line.startsWith('N-NUMBER')) continue; // skip header/blank
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('N-NUMBER') || trimmed.startsWith('\uFEFFN-NUMBER')) continue; // skip header/blank
     scanned++;
 
-    const typeRegistrant = parseField(line, COL.TYPE_REGISTRANT);
-    const typeAircraft   = parseField(line, COL.TYPE_AIRCRAFT);
-    const statusCode     = parseField(line, COL.STATUS_CODE);
-    const state          = parseField(line, COL.STATE);
-    const mfrMdlCode     = parseField(line, COL.MFR_MDL_CODE);
-    const rawName        = parseField(line, COL.NAME);
+    const fields = parseCSVLine(trimmed);
+    if (fields.length < 21) continue; // malformed line
+
+    const typeRegistrant = getField(fields, 'TYPE_REGISTRANT');
+    const typeAircraft   = getField(fields, 'TYPE_AIRCRAFT');
+    const statusCode     = getField(fields, 'STATUS_CODE');
+    const state          = getField(fields, 'STATE');
+    const mfrMdlCode     = getField(fields, 'MFR_MDL_CODE');
+    const rawName        = getField(fields, 'NAME');
 
     // Filter: Valid status (V = Valid registration)
     if (statusCode !== 'V') { filtered_reason.status++; continue; }
@@ -306,12 +314,12 @@ async function main() {
     if (parsed.isCompany || !parsed.lastName) { filtered_reason.company++; continue; }
 
     // Build the lead
-    const nNumber = parseField(line, COL.N_NUMBER);
-    const city    = _titleCase(parseField(line, COL.CITY));
-    const zip     = parseField(line, COL.ZIP_CODE);
+    const nNumber = getField(fields, 'N_NUMBER');
+    const city    = _titleCase(getField(fields, 'CITY'));
+    const zip     = getField(fields, 'ZIP_CODE');
     const { aum, band } = estimateAUM(acft.mfr);
     const aircraftModel = [acft.mfr, acft.model].filter(Boolean).join(' ') || 'Unknown';
-    const yearMfr = parseField(line, COL.YEAR_MFR);
+    const yearMfr = getField(fields, 'YEAR_MFR');
 
     const verifyUrl = `https://registry.faa.gov/aircraftinquiry/Search/NNumberResult?nNumberTxt=${nNumber}`;
 
@@ -325,14 +333,14 @@ async function main() {
       nicheId:      'aircraft-owners',
       estimatedAUM: aum,
       aumBand:      band,
-      fitScore:     80, // Base score — enrichment raises this
-      timingScore:  60, // Unknown timing — enrichment/research raises this
+      fitScore:     80,
+      timingScore:  60,
       nNumber:      `N${nNumber}`,
       aircraftModel,
       aircraftYear:  yearMfr || null,
       source:       'FAA Aircraft Registry',
       sourceUrl:    verifyUrl,
-      needsEnrichment: true, // No email/phone from FAA — flag for Apollo
+      needsEnrichment: true,
       batchId:      `alfred_batch_faa_${TODAY}`,
       reasonCodes:  [
         `FAA-registered ${aircraftModel} owner`,

@@ -75,8 +75,8 @@ function normalizeLead(raw, config) {
   const city       = titleCase(raw.city      || '');
   const state      = String(raw.state || '').toUpperCase().slice(0, 2);
 
-  // Entity classification
-  const entityType = classifyEntity(company, fullName);
+  // Entity classification — respect pre-set value if provided (e.g. 'unknown' for needsNameResolution leads)
+  const entityType = raw.entityType || classifyEntity(company, fullName);
 
   // Build normalized lead
   const lead = {

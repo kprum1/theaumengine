@@ -209,8 +209,8 @@ function buildOrgLead(org, orgDetail, nteeLabel) {
     state,
 
     // Niche
-    niche:    'Charity Boards',
-    nicheId:  'charity-boards',
+    niche:    'Charity Board Members',
+    nicheId:  'charity-board-members',
 
     // AUM
     estimatedAUM:  aum,

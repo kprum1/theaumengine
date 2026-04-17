@@ -46,26 +46,36 @@ const DRY_RUN = hasFlag('--dry-run');
 const STAGING_DIR = path.join(__dirname, 'staging');
 const TODAY       = new Date().toISOString().split('T')[0];
 
-// ── Target employers (FAANG + Big Finance + Biotech) ──────────
+// ── Target employers (FAANG + Big Finance + Biotech + Western Suburbs MN) ───
 const TARGET_EMPLOYERS = [
-  // Tech
+  // ── WESTERN SUBURBS MN — Jeremy Jackson's territory (Priority) ─────────
+  // UnitedHealth Group / Optum — largest H-1B filer in MN (70,000+ employees)
+  { company: 'UnitedHealth Group', city: 'Minnetonka', state: 'MN', aumProxy: '$280K–$600K', titles: ['Senior Director', 'VP', 'Director', 'Principal Engineer'] },
+  { company: 'Optum', city: 'Eden Prairie', state: 'MN', aumProxy: '$250K–$500K', titles: ['Director', 'Senior Director', 'Principal Architect', 'VP'] },
+  // Cargill — largest US private company HQ'd in Wayzata
+  { company: 'Cargill Incorporated', city: 'Wayzata', state: 'MN', aumProxy: '$300K–$700K', titles: ['Director', 'Senior Director', 'VP', 'Managing Director'] },
+  // Boston Scientific — Maple Grove (near Plymouth), large H-1B filer
+  { company: 'Boston Scientific', city: 'Maple Grove', state: 'MN', aumProxy: '$250K–$500K', titles: ['Principal Engineer', 'Senior Director', 'VP', 'Director'] },
+  // Polaris Industries — Medina MN (HQ), UHNW C-suite + senior engineers
+  { company: 'Polaris Inc', city: 'Medina', state: 'MN', aumProxy: '$250K–$500K', titles: ['Director', 'Senior Director', 'Principal Engineer', 'VP'] },
+  // Donaldson Company — Eden Prairie area filtration giant
+  { company: 'Donaldson Company', city: 'Minneapolis', state: 'MN', aumProxy: '$220K–$450K', titles: ['Director', 'Senior Director', 'VP', 'Principal Engineer'] },
+  // SPS Commerce — Plymouth MN, supply chain SaaS, large H-1B pool
+  { company: 'SPS Commerce', city: 'Plymouth', state: 'MN', aumProxy: '$200K–$380K', titles: ['Senior Engineer', 'Director', 'Principal Engineer', 'VP'] },
+  // Stratasys — Eden Prairie, 3D printing pioneer
+  { company: 'Stratasys', city: 'Eden Prairie', state: 'MN', aumProxy: '$220K–$420K', titles: ['Director', 'Principal Engineer', 'Senior Director', 'VP'] },
+  // ── National FAANG + Finance ────────────────────────────────────────────
   { company: 'Google LLC', city: 'Mountain View', state: 'CA', aumProxy: '$350K–$800K', titles: ['Senior Software Engineer', 'Staff Engineer', 'Senior Director', 'Principal Engineer'] },
   { company: 'Apple Inc', city: 'Cupertino', state: 'CA', aumProxy: '$300K–$700K', titles: ['Senior Software Engineer', 'Director', 'Senior Manager'] },
   { company: 'Meta Platforms', city: 'Menlo Park', state: 'CA', aumProxy: '$350K–$900K', titles: ['Software Engineer E5', 'Director', 'Research Scientist'] },
   { company: 'Amazon', city: 'Seattle', state: 'WA', aumProxy: '$250K–$600K', titles: ['Senior SDE', 'Principal PM', 'Director'] },
   { company: 'Microsoft Corporation', city: 'Redmond', state: 'WA', aumProxy: '$250K–$550K', titles: ['Principal SWE', 'Senior PM', 'Director'] },
   { company: 'Salesforce', city: 'San Francisco', state: 'CA', aumProxy: '$280K–$600K', titles: ['Senior SWE', 'Principal Architect', 'Director'] },
-  { company: 'Adobe Inc', city: 'San Jose', state: 'CA', aumProxy: '$250K–$500K', titles: ['Senior SWE', 'Principal PM', 'Director'] },
   { company: 'Nvidia Corporation', city: 'Santa Clara', state: 'CA', aumProxy: '$350K–$900K', titles: ['Senior Engineer', 'Principal Architect', 'Director'] },
-  // Finance
   { company: 'Goldman Sachs', city: 'New York', state: 'NY', aumProxy: '$400K–$1.2M', titles: ['Vice President', 'Associate', 'Managing Director'] },
   { company: 'JPMorgan Chase', city: 'New York', state: 'NY', aumProxy: '$300K–$800K', titles: ['Vice President', 'Executive Director', 'Director'] },
-  { company: 'Morgan Stanley', city: 'New York', state: 'NY', aumProxy: '$300K–$800K', titles: ['Vice President', 'Managing Director', 'Associate'] },
-  // Consulting
   { company: 'McKinsey & Company', city: 'New York', state: 'NY', aumProxy: '$350K–$700K', titles: ['Associate Principal', 'Manager', 'Junior Partner'] },
   { company: 'Boston Consulting Group', city: 'Boston', state: 'MA', aumProxy: '$300K–$650K', titles: ['Project Leader', 'Principal', 'Manager'] },
-  // Biotech
-  { company: 'UnitedHealth Group', city: 'Eden Prairie', state: 'MN', aumProxy: '$250K–$500K', titles: ['Director', 'Senior Director', 'VP'] },
   { company: 'Pfizer Inc', city: 'New York', state: 'NY', aumProxy: '$250K–$550K', titles: ['Principal Scientist', 'Sr Director', 'VP'] },
 ];
 

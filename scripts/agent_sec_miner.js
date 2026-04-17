@@ -137,8 +137,8 @@ async function runForm4Mode() {
         lastName:     _title(nameParts.slice(1).join(' ')),
         title:        'Executive — insider stock disposition',
         company:      'See SEC filing',
-        city:         '',
-        state:        '',
+        city:         'Unknown',   // Location requires enrichment — see sourceUrl
+        state:        'US',
         niche:        'C-Suite Executives',
         nicheId:      'c-suite-executives',
         estimatedAUM: '$2M–$10M',
@@ -230,8 +230,8 @@ async function run8KMode() {
         lastName:     '',
         title:        `Departed Executive — ${companyName}`,
         company:      `Former: ${companyName}`,
-        city:         '',
-        state:        '',
+        city:         'Unknown',   // Company city requires enrichment — see sourceUrl
+        state:        'US',
         niche:        'AI-Displaced Executives',
         nicheId:      'ai-displaced-executives',
         estimatedAUM: '$2M–$8M',
