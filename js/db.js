@@ -274,20 +274,27 @@ async function updateLeadFeedbackInFirestore(assignmentId, vote, notes) {
 
 // ── Fast lead count — sets window._firestoreLeadTotal for computeMetrics() ──
 // Uses Firestore .count() aggregation (single read, no doc fetch).
-// Called during bootstrapUserData so the Command Center KPI is accurate.
+// Operator (kosal@fin-tegration.com) gets the GLOBAL total across all advisors.
+// Regular advisors get their own count only.
+const _OPERATOR_EMAIL = 'kosal@fin-tegration.com';
+
 async function fetchAdvisorLeadCount(uid) {
   if (!uid) return 0;
   try {
     const db = _getDB();
     if (!db) return 0;
-    const countSnap = await db.collection('lead_assignments')
-      .where('ownerUid', '==', uid)
-      .where('ownershipStatus', 'in', ['active', 'pending'])
-      .count()
-      .get();
+
+    // Operator: fetch global total (no ownerUid filter)
+    const isOp = window._currentUser && window._currentUser.email === _OPERATOR_EMAIL;
+    let q = db.collection('lead_assignments');
+    if (!isOp) {
+      q = q.where('ownerUid', '==', uid)
+            .where('ownershipStatus', 'in', ['active', 'pending']);
+    }
+    const countSnap = await q.count().get();
     const count = countSnap.data().count || 0;
     window._firestoreLeadTotal = count;
-    console.info(`[db.js] True lead count for ${uid.slice(0,8)}: ${count}`);
+    console.info(`[db.js] Lead count (${isOp ? 'GLOBAL/operator' : 'advisor'}): ${count}`);
     return count;
   } catch(e) {
     console.warn('[db.js] fetchAdvisorLeadCount failed (will use PROSPECTS.length):', e.message);
@@ -301,15 +308,14 @@ async function fetchAdvisorLeadCount(uid) {
 async function bootstrapUserData(uid) {
   if (!uid) return { nicheProfile: null, nicheAnswers: {}, icpConfig: null, advisorProfile: null, assignedLeads: [] };
   try {
-    const [profileSnap, answersSnap, icpSnap, apSnap, assignedLeads] = await Promise.all([
+    const [profileSnap, answersSnap, icpSnap, apSnap, assignedLeads, _count] = await Promise.all([
       _userDoc(uid, 'nicheProfile').get(),
       _userDoc(uid, 'nicheAnswers').get(),
       _userDoc(uid, 'icpConfig').get(),
       _userDoc(uid, 'advisorProfile').get(),
       loadAssignedLeadsFromFirestore(uid),   // ← Phase B: live leads
+      fetchAdvisorLeadCount(uid),           // ← await count so KPI is correct on first render
     ]);
-    // Non-blocking: fetch true count and cache it for computeMetrics()
-    fetchAdvisorLeadCount(uid).catch(() => {});
     return {
       nicheProfile:   profileSnap.exists  ? profileSnap.data()              : null,
       nicheAnswers:   answersSnap.exists  ? (answersSnap.data().answers||{}) : {},
@@ -322,6 +328,7 @@ async function bootstrapUserData(uid) {
     return { nicheProfile: null, nicheAnswers: {}, icpConfig: null, advisorProfile: null, assignedLeads: [] };
   }
 }
+
 
 
 // ── Outreach Outcome Logging (Phase C1 — Measurement) ────────────────────────
