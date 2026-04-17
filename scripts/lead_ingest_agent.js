@@ -123,20 +123,27 @@ function buildMasterLead(raw, idempotencyKey, source) {
   };
 }
 
-function buildRoutingQueueItem(masterLeadId, idempotencyKey, source) {
+function buildRoutingQueueItem(masterLeadId, idempotencyKey, source, lead = {}) {
   return {
     masterLeadId,
     idempotencyKey,
     source,
-    status:      'pending',   // pending | processing | assigned | failed
+    status:      'pending',   // pending | processing | assigned | failed | orphaned
     priority:    50,          // 0-100, overridden by ScoringAgent
     attempts:    0,
     createdAt:   new Date().toISOString(),
     updatedAt:   new Date().toISOString(),
     lockedBy:    null,
     lockedUntil: null,
+    // Denormalized lead fields for fast routing without master_lead lookup
+    nicheId:     (lead.nicheId || '').trim(),
+    niche:       (lead.niche   || '').trim(),
+    state:       (lead.state   || '').toUpperCase().slice(0, 2),
+    city:        (lead.city    || '').trim(),
+    leadId:      masterLeadId,  // alias for audit scripts
   };
 }
+
 
 // ── Core ingest function ────────────────────────────────────
 async function ingestLead(raw, source = 'script') {
@@ -178,8 +185,8 @@ async function ingestLead(raw, source = 'script') {
     console.log(`  ✅ CREATED master_lead: ${masterLeadId} — ${raw.firstName} ${raw.lastName}`);
   }
 
-  // 5. Write to routing_queue
-  const queueItem = buildRoutingQueueItem(masterLeadId, idempotencyKey, source);
+  // 5. Write to routing_queue (with denormalized lead fields for fast routing)
+  const queueItem = buildRoutingQueueItem(masterLeadId, idempotencyKey, source, raw);
   const queueRef  = await db.collection('routing_queue').add(queueItem);
 
   // 6. Write to routing_logs (append-only audit)

@@ -91,7 +91,11 @@ async function audit() {
   });
   if (!Object.keys(qStatus).length) console.log('  (empty)');
   else Object.entries(qStatus).forEach(([s, n]) => {
-    const flag = s === 'pending' ? '  ⏳' : s === 'failed' ? '  ❌' : s === 'assigned' ? '  ✅' : '';
+    const flag = s === 'pending'  ? '  ⏳'
+               : s === 'failed'   ? '  ❌'
+               : s === 'assigned' ? '  ✅'
+               : s === 'orphaned' ? '  🗑  (stale — not blocking)'
+               : '';
     console.log('  ' + s.padEnd(14) + ': ' + n + flag);
   });
 
@@ -116,7 +120,7 @@ async function audit() {
     const policy = p.capPolicy ? ` [${p.capPolicy}]` : '';
     console.log('  ' + eligible + ' ' + (p.firmName || d.id.slice(0,12)).padEnd(36) + capBar + policy);
     console.log('    niches: ' + (p.nicheIds || []).join(', '));
-    const states = (p.licensedStates || []);
+    const states = (p.licensedStates || p.states || []);
     console.log('    states: ' + (states.length === 0 ? '⚠️  none set' : states.length >= 50 ? '🌐 National' : states.join(', ')));
   });
 
