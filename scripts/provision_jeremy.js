@@ -53,6 +53,7 @@ const JEREMY = {
     'aircraft-owners',
     'yacht-owners',
     'inheritance',
+    're-developers',   // Added C34: routes Hennepin GIS + HUD re-dev leads
   ],
 
   // Geographic focus — western MN suburbs (Jeremy's home territory)
