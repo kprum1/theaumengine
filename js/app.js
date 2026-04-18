@@ -169,7 +169,7 @@ function navigate(page) {
   if (el) el.classList.add('active');
 
   // Reset ED intake state when leaving the intake flow
-  if (!['ed-disclosure','ed-intake'].includes(page)) {
+  if (!['ed-disclosure','ed-intake','client-intake'].includes(page)) {
     try { localStorage.removeItem('edConsentGiven'); } catch(e){}
     window._edIntakeInitialized = false;
     if (window.EdIntakeEngine?.reset) window.EdIntakeEngine.reset();
@@ -221,6 +221,7 @@ function renderPage() {
     'settings'       : pageSettings,
     'admin-dashboard': typeof pageAdminDashboard === 'function' ? pageAdminDashboard : pageCommandCenter,
     // ── CLIENT INTELLIGENCE (ED/Al) ───────────────────────────────
+    'client-intake'  : typeof pageClientIntake   === 'function' ? pageClientIntake   : pageCommandCenter,
     'ed-disclosure'  : typeof pageEdDisclosure  === 'function' ? pageEdDisclosure  : pageCommandCenter,
     'ed-intake'      : typeof pageEdIntake      === 'function' ? pageEdIntake      : pageCommandCenter,
     'privacy'        : typeof pagePrivacyPolicy  === 'function' ? pagePrivacyPolicy  : pageCommandCenter,

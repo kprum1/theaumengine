@@ -1401,7 +1401,138 @@ function pageSettings() {
 // Expose on window so app.js navigate() can reset it when leaving the intake flow
 window._edIntakeInitialized = false;
 
+// ===== CLIENT INTAKE INBOX =====
+function pageClientIntake() {
+  const situations  = window._edSituations  || [];
+  const uid         = (typeof currentUID !== 'undefined' && currentUID) ? currentUID : '';
+  const intakeLink  = uid ? `${window.location.origin}/#ed-disclosure?ref=${uid}` : null;
+
+  const _parseTs = (val) => {
+    if (!val) return null;
+    if (val?.toDate) return val.toDate();
+    try { const d = new Date(val); return isNaN(d) ? null : d; } catch(e) { return null; }
+  };
+  const _fmt = (val) => {
+    const d = _parseTs(val);
+    return d ? d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+  };
+
+  const wealthLabels = {
+    under_500k:'Under $500K', '500k_1m':'$500K–$1M',
+    '1m_3m':'$1M–$3M', '3m_10m':'$3M–$10M', over_10m:'$10M+'
+  };
+  const stageLabels = {
+    liquidity_event:'Liquidity Event', recently_liquid:'Recently Liquid',
+    transition:'Transition', accumulating:'Accumulating', preserving:'Preserving'
+  };
+
+  const statusBadge = (s) => {
+    const map = {
+      pending: ['var(--amber)', '⏳ Pending Review'],
+      new:     ['var(--amber)', '⏳ Pending Review'],
+      approved:['var(--emerald)','✅ In Planning Queue'],
+      al_accepted:['var(--emerald)','✅ In Planning Queue'],
+      pending_review:['var(--blue)','🔵 Brief Generated'],
+      declined:['var(--rose)','↩ Returned'],
+    };
+    const [color, label] = map[s] || ['var(--text-muted)','— Unknown'];
+    return `<span style="font-size:10px;font-weight:700;padding:3px 8px;background:${color}18;color:${color};border-radius:20px;white-space:nowrap">${label}</span>`;
+  };
+
+  const scoreColor = (n) => n >= 85 ? 'var(--rose)' : n >= 70 ? 'var(--amber)' : n >= 55 ? 'var(--blue)' : 'var(--emerald)';
+
+  const rows = situations.length === 0 ? `
+    <div class="empty-state" style="padding:48px 24px">
+      <div class="empty-state-icon">🧠</div>
+      <div class="empty-state-title">No client intakes yet</div>
+      <div class="empty-state-sub" style="max-width:360px">
+        Share your intake link with prospects — they complete 10 questions and Al generates a planning brief for your review.
+      </div>
+      <button class="btn btn-primary" style="margin-top:16px;background:var(--color-ed);border-color:var(--color-ed)" onclick="navigate('ed-disclosure')">
+        + Start First Intake
+      </button>
+    </div>` : situations.map(s => {
+    const name       = s.fullName || [s.firstName, s.lastName].filter(Boolean).join(' ') || 'Anonymous Client';
+    const score      = s.situationScore || s.opportunityScore || s.score || 0;
+    const wealth     = wealthLabels[s.wealthTier]  || s.wealthTier  || '—';
+    const stage      = stageLabels[s.lifeStage]    || (s.lifeStage || '').replace(/_/g,' ') || '—';
+    const date       = _fmt(s.savedAt);
+    const id         = s.id || s._firestoreId || '';
+    const hasBrief   = !!(s.brief || s.status === 'al_accepted' || s.status === 'pending_review' || s.status === 'approved');
+    const professions = Array.isArray(s.profession) ? s.profession.map(p=>p.replace(/_/g,' ')).join(', ') : '';
+    return `
+    <div class="card" style="padding:18px 20px;margin-bottom:10px;display:flex;align-items:center;gap:16px;transition:box-shadow .15s"
+      onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.15)'"
+      onmouseout="this.style.boxShadow=''">
+      <!-- Score -->
+      <div style="min-width:52px;text-align:center;flex-shrink:0">
+        <div style="font-size:24px;font-weight:900;color:${scoreColor(score)};line-height:1">${score}</div>
+        <div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px">Score</div>
+      </div>
+      <!-- Info -->
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13.5px;font-weight:800;color:var(--text-primary);margin-bottom:3px">${name}</div>
+        <div style="font-size:11.5px;color:var(--text-secondary);margin-bottom:4px">
+          ${wealth}${stage !== '—' ? ' · ' + stage : ''}${professions ? ' · ' + professions : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${statusBadge(s.status || 'pending')}
+          <span style="font-size:10.5px;color:var(--text-muted)">Submitted ${date}</span>
+          ${s.referringAdvisorUid ? '' : '<span style="font-size:10px;color:var(--text-muted);font-style:italic">· Started from cockpit</span>'}
+        </div>
+      </div>
+      <!-- Actions -->
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:flex-end">
+        ${hasBrief
+          ? `<button class="btn btn-primary" style="font-size:11px;padding:6px 14px;background:var(--color-ed);border-color:var(--color-ed)"
+               onclick="alGenerateBrief('${id}')">View Brief →</button>`
+          : `<button class="btn btn-primary" style="font-size:11px;padding:6px 14px;background:var(--color-ed);border-color:var(--color-ed)"
+               onclick="alGenerateBrief('${id}')">Generate Brief →</button>`}
+        <button class="btn btn-ghost" style="font-size:10.5px;padding:4px 10px"
+          onclick="navigate('command-center')">View in CC</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="page-header">
+    <div class="page-header-left">
+      <div class="page-title">🧠 Client Intake — ED</div>
+      <div class="page-subtitle">Submissions inbox · ${situations.length} profile${situations.length !== 1 ? 's' : ''} received</div>
+    </div>
+    <div class="page-actions">
+      <button class="btn btn-secondary" onclick="navigate('ed-disclosure')">+ New Intake (Self)</button>
+    </div>
+  </div>
+
+  <!-- Shareable intake link card -->
+  ${intakeLink ? `
+  <div style="margin-bottom:18px;padding:14px 18px;background:rgba(217,119,6,0.06);border:1px solid rgba(217,119,6,0.2);border-radius:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <div style="flex:1;min-width:200px">
+      <div style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">🔗 Your Prospect Intake Link</div>
+      <div style="font-size:11.5px;color:var(--text-secondary);line-height:1.5">
+        Share this with any prospect — they complete 10 questions and Al generates a planning brief automatically.<br>
+        <code style="font-size:10px;background:var(--bg-elevated);padding:2px 6px;border-radius:4px;color:var(--text-primary)">${intakeLink}</code>
+      </div>
+    </div>
+    <button onclick="navigator.clipboard.writeText('${intakeLink}').then(()=>showToast('Intake link copied!','✅'))"
+      style="background:var(--amber);color:#000;border:none;border-radius:8px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+      📋 Copy Link
+    </button>
+  </div>` : ''}
+
+  <!-- Submissions list -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title"><div class="section-title-dot" style="background:var(--color-ed)"></div>Submissions (${situations.length})</div>
+      ${situations.length > 0 ? `<span style="font-size:11px;color:var(--text-muted)">Sorted newest first · Click "Generate Brief" to create an Al planning brief</span>` : ''}
+    </div>
+    ${rows}
+  </div>`;
+}
+
 function pageEdDisclosure() {
+
   const ref = (() => { try { return new URLSearchParams(window.location.search).get('ref'); } catch(e){return null;} })();
   return `
   <div class="page-header" style="border-bottom:1px solid var(--border-subtle);margin-bottom:0;padding-bottom:20px">
