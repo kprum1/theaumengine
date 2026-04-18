@@ -309,16 +309,56 @@ function openNicheDrawer(nicheId) {
         const initials = typeof getInitials === 'function' ? getInitials(p.firstName, p.lastName, p.company) : '??';
         const avatarCls = typeof getAvatarClass === 'function' ? getAvatarClass(p.lastName || p.company || '') : 'av-blue';
         const displayName = typeof getDisplayName === 'function' ? getDisplayName(p) : `${p.firstName} ${p.lastName}`.trim();
+        const fit    = p.fitScore    || 72;
+        const timing = p.timingScore || 65;
+        const aum    = p.assets || p.estimatedAUM || '$1M+';
+        const loc    = [p.city, p.state].filter(Boolean).join(', ') || '—';
+        const src    = (p.source || 'AUM Engine').split(/[\s_-]/)[0].slice(0,12);
+        const fitW   = Math.min(fit, 100);
+        const timW   = Math.min(timing, 100);
         return `<div class="nd-prospect-row" onclick="event.stopPropagation();closeNicheDrawer();openDrawer('${p.id}')" id="nd-row-${p.id}">
-          <div class="nd-avatar ${avatarCls}">${initials}</div>
+          <div class="nd-avatar ${avatarCls}" style="width:40px;height:40px;font-size:12px">${initials}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:12.5px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${displayName}</div>
-            <div style="font-size:10.5px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title || ''}${p.company ? ' · ' + p.company : ''}</div>
-            <div style="font-size:10px;margin-top:3px;font-weight:600;color:${color}">${p.status}</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0;margin-left:8px">
-            <div style="font-size:18px;font-weight:900;color:var(--blue);line-height:1">${p.priorityScore}</div>
-            <div style="font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);margin-top:2px">Priority</div>
+            <!-- Row 1: name + priority score -->
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+              <div style="font-size:13px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${displayName}</div>
+              <div style="display:flex;align-items:baseline;gap:3px;flex-shrink:0">
+                <span style="font-size:20px;font-weight:900;color:var(--blue);line-height:1">${p.priorityScore}</span>
+                <span style="font-size:9px;color:var(--text-muted)">pts</span>
+              </div>
+            </div>
+            <!-- Row 2: title · company -->
+            <div style="font-size:11px;color:var(--text-secondary);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.title || ''}${p.company ? ' · ' + p.company : ''}</div>
+            <!-- Row 3: location · AUM · source -->
+            <div style="display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap">
+              <span style="font-size:10px;color:var(--text-muted)">📍 ${loc}</span>
+              <span style="font-size:10px;font-weight:600;color:var(--emerald)">💰 ${aum}</span>
+              <span style="font-size:9px;padding:1px 6px;background:rgba(96,165,250,0.12);color:var(--blue);border-radius:20px;border:1px solid rgba(96,165,250,0.2)">${src}</span>
+              <span style="font-size:9.5px;font-weight:700;color:${color};margin-left:auto">${p.status}</span>
+            </div>
+            <!-- Row 4: score bars + draft btn -->
+            <div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+              <div style="flex:1">
+                <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
+                  <span style="font-size:8.5px;color:var(--text-muted);width:30px">Fit</span>
+                  <div style="flex:1;height:3px;background:var(--border-subtle);border-radius:2px">
+                    <div style="width:${fitW}%;height:3px;background:var(--blue);border-radius:2px"></div>
+                  </div>
+                  <span style="font-size:8.5px;color:var(--text-muted);width:20px;text-align:right">${fit}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:4px">
+                  <span style="font-size:8.5px;color:var(--text-muted);width:30px">Time</span>
+                  <div style="flex:1;height:3px;background:var(--border-subtle);border-radius:2px">
+                    <div style="width:${timW}%;height:3px;background:var(--violet);border-radius:2px"></div>
+                  </div>
+                  <span style="font-size:8.5px;color:var(--text-muted);width:20px;text-align:right">${timing}</span>
+                </div>
+              </div>
+              <button onclick="event.stopPropagation();closeNicheDrawer();setOutreachProspect('${p.id}');navigate('outreach-studio')"
+                style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.25);color:var(--blue);cursor:pointer;white-space:nowrap;transition:background .15s"
+                onmouseover="this.style.background='rgba(96,165,250,0.22)'"
+                onmouseout="this.style.background='rgba(96,165,250,0.12)'">✉️ Draft</button>
+            </div>
           </div>
         </div>`;
       }).join('');
@@ -328,7 +368,7 @@ function openNicheDrawer(nicheId) {
   drawer.id = 'niche-prospect-drawer';
   drawer.style.cssText = [
     'position:fixed;top:0;right:0;bottom:0;z-index:700;',
-    'width:340px;max-width:92vw;',
+    'width:520px;max-width:96vw;',
     'background:var(--bg-card);border-left:1px solid var(--border-default);',
     'display:flex;flex-direction:column;',
     'box-shadow:-8px 0 40px rgba(0,0,0,0.35);',
@@ -340,16 +380,16 @@ function openNicheDrawer(nicheId) {
       @keyframes nd-fade-in  { from{opacity:0}to{opacity:1} }
       @keyframes nd-slide-in { from{transform:translateX(100%)}to{transform:translateX(0)} }
       .nd-prospect-row {
-        display:flex;align-items:center;gap:12px;
-        padding:12px 18px;cursor:pointer;
+        display:flex;align-items:flex-start;gap:12px;
+        padding:14px 18px;cursor:pointer;
         border-bottom:1px solid var(--border-subtle);
         transition:background .15s;
       }
-      .nd-prospect-row:hover { background:rgba(96,165,250,0.06); }
+      .nd-prospect-row:hover { background:rgba(96,165,250,0.05); }
       .nd-avatar {
-        width:34px;height:34px;border-radius:8px;
+        width:40px;height:40px;border-radius:9px;
         display:flex;align-items:center;justify-content:center;
-        font-size:11px;font-weight:800;flex-shrink:0;
+        font-size:12px;font-weight:800;flex-shrink:0;margin-top:1px;
       }
     </style>
 
@@ -424,6 +464,172 @@ function closeNicheDrawer() {
   const backdrop = document.getElementById('niche-drawer-backdrop');
   if (drawer)   { drawer.style.transition = 'transform .2s ease'; drawer.style.transform = 'translateX(100%)'; setTimeout(() => drawer?.remove(), 200); }
   if (backdrop) { backdrop.style.transition = 'opacity .2s'; backdrop.style.opacity = '0'; setTimeout(() => backdrop?.remove(), 200); }
+}
+
+// ── Contact Card Modal ────────────────────────────────────────────────────────
+// Shown when clicking a prospect row in Top 8 or anywhere openContactCard() is called.
+// Provides at-a-glance prospect info + 4 action buttons without leaving the page.
+function openContactCard(prospectId) {
+  const p = PROSPECTS.find(x => x.id === prospectId);
+  if (!p) { openDrawer(prospectId); return; } // fallback
+
+  document.getElementById('contact-card-modal')?.remove();
+  document.getElementById('contact-card-backdrop')?.remove();
+
+  const fit    = p.fitScore    || 72;
+  const timing = p.timingScore || 65;
+  const loc    = [p.city, p.state].filter(Boolean).join(', ') || '—';
+  const aum    = p.assets || p.estimatedAUM || '$1M+';
+  const avatarCls = typeof getAvatarClass === 'function' ? getAvatarClass(p.lastName || p.company || '') : 'av-blue';
+  const initials  = typeof getInitials    === 'function' ? getInitials(p.firstName, p.lastName, p.company) : '??';
+  const displayName = typeof getDisplayName === 'function' ? getDisplayName(p) : `${p.firstName} ${p.lastName}`.trim();
+  const reasons = (p.reasonCodes || []).slice(0, 3);
+
+  const statusColors = {
+    'New':'var(--blue)','Contacted':'var(--blue)','Engaged':'var(--emerald)',
+    'Nurture':'var(--amber)','Meeting Requested':'#f59e0b','Booked':'var(--emerald)',
+    'Dead':'var(--text-muted)','Snoozed':'var(--text-muted)',
+  };
+  const statusClr = statusColors[p.status] || 'var(--text-muted)';
+
+  // Backdrop
+  const bd = document.createElement('div');
+  bd.id = 'contact-card-backdrop';
+  bd.onclick = closeContactCard;
+  bd.style.cssText = 'position:fixed;inset:0;z-index:800;background:rgba(0,0,0,0.5);backdrop-filter:blur(3px);animation:cc-fade .18s ease';
+  document.body.appendChild(bd);
+
+  // Modal
+  const modal = document.createElement('div');
+  modal.id = 'contact-card-modal';
+  modal.style.cssText = [
+    'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:900;',
+    'width:460px;max-width:94vw;max-height:90vh;overflow-y:auto;',
+    'background:var(--bg-card);border:1px solid var(--border-default);',
+    'border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,0.5);',
+    'animation:cc-pop .22s cubic-bezier(.22,1,.36,1);',
+  ].join('');
+
+  modal.innerHTML = `
+    <style>
+      @keyframes cc-fade { from{opacity:0} to{opacity:1} }
+      @keyframes cc-pop  { from{opacity:0;transform:translate(-50%,-48%) scale(.96)} to{opacity:1;transform:translate(-50%,-50%) scale(1)} }
+      .cc-action-btn {
+        flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
+        padding:12px 8px;border-radius:10px;border:1px solid var(--border-default);
+        background:var(--bg-elevated);cursor:pointer;font-family:inherit;
+        transition:all .15s;color:var(--text-secondary);
+      }
+      .cc-action-btn:hover { border-color:var(--blue);background:rgba(96,165,250,0.08);color:var(--blue); }
+      .cc-action-btn .cc-icon { font-size:20px; }
+      .cc-action-btn .cc-label { font-size:10.5px;font-weight:700;letter-spacing:.02em; }
+    </style>
+
+    <!-- Header -->
+    <div style="padding:20px 20px 0">
+      <div style="display:flex;align-items:flex-start;gap:14px">
+        <div class="${avatarCls}" style="width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;flex-shrink:0">${initials}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:17px;font-weight:800;color:var(--text-primary);line-height:1.2">${displayName}</div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-top:3px">${p.title || ''}${p.company ? ' · ' + p.company : ''}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
+            <span style="font-size:10.5px;color:var(--text-muted)">📍 ${loc}</span>
+            <span style="font-size:10.5px;font-weight:600;color:var(--emerald)">💰 ${aum}</span>
+            <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(96,165,250,0.12);color:var(--blue);border:1px solid rgba(96,165,250,0.2);font-weight:600">${p.niche || '—'}</span>
+          </div>
+        </div>
+        <div style="text-align:center;flex-shrink:0">
+          <div style="font-size:30px;font-weight:900;color:var(--blue);line-height:1">${p.priorityScore}</div>
+          <div style="font-size:8.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted)">Score</div>
+          <div style="margin-top:6px;font-size:10px;font-weight:700;color:${statusClr}">${p.status}</div>
+        </div>
+      </div>
+
+      <!-- Score bars -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;padding:12px 14px;background:var(--bg-elevated);border-radius:10px;border:1px solid var(--border-subtle)">
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:10px;color:var(--text-muted);font-weight:600">Fit Score</span>
+            <span style="font-size:10px;font-weight:800;color:var(--blue)">${fit}</span>
+          </div>
+          <div style="height:5px;background:var(--border-subtle);border-radius:3px">
+            <div style="width:${Math.min(fit,100)}%;height:5px;background:linear-gradient(90deg,var(--blue),#818cf8);border-radius:3px"></div>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:10px;color:var(--text-muted);font-weight:600">Timing Score</span>
+            <span style="font-size:10px;font-weight:800;color:var(--violet)">${timing}</span>
+          </div>
+          <div style="height:5px;background:var(--border-subtle);border-radius:3px">
+            <div style="width:${Math.min(timing,100)}%;height:5px;background:linear-gradient(90deg,var(--violet),#c084fc);border-radius:3px"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Signal tags -->
+      ${reasons.length ? `
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:5px">
+        ${reasons.map(r => `<span style="font-size:10px;padding:3px 9px;border-radius:20px;background:rgba(52,211,153,0.1);color:var(--emerald);border:1px solid rgba(52,211,153,0.2);font-weight:600">${r}</span>`).join('')}
+      </div>` : ''}
+    </div>
+
+    <!-- Divider -->
+    <div style="height:1px;background:var(--border-subtle);margin:16px 0"></div>
+
+    <!-- Action buttons -->
+    <div style="padding:0 20px 20px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);margin-bottom:10px">Quick Actions</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="cc-action-btn" onclick="closeContactCard();setOutreachProspect('${p.id}');navigate('outreach-studio')">
+          <span class="cc-icon">✉️</span>
+          <span class="cc-label">Draft Email</span>
+        </button>
+        <button class="cc-action-btn" onclick="closeContactCard();_ccLogCall('${p.id}')">
+          <span class="cc-icon">📞</span>
+          <span class="cc-label">Log Call</span>
+        </button>
+        <button class="cc-action-btn" onclick="closeContactCard();setProspectStatus('${p.id}','Meeting Requested');showToast('Meeting requested — moved to pipeline 📅','📅')">
+          <span class="cc-icon">📅</span>
+          <span class="cc-label">Book Meeting</span>
+        </button>
+        <button class="cc-action-btn" onclick="closeContactCard();openDrawer('${p.id}')">
+          <span class="cc-icon">🔍</span>
+          <span class="cc-label">Full Profile</span>
+        </button>
+      </div>
+      <!-- Status advance row -->
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:10px;color:var(--text-muted);">Move to:</span>
+        ${['Contacted','Engaged','Nurture','Booked','Dead'].map(s =>
+          `<button onclick="closeContactCard();setProspectStatus('${p.id}','${s}');showToast('Status → ${s}','✅')"
+            style="font-size:10px;font-weight:600;padding:4px 10px;border-radius:6px;background:var(--bg-elevated);border:1px solid var(--border-subtle);color:var(--text-secondary);cursor:pointer;transition:all .15s"
+            onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'"
+            onmouseout="this.style.borderColor='var(--border-subtle)';this.style.color='var(--text-secondary)'">${s}</button>`
+        ).join('')}
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  // Escape key closes
+  const keyHandler = e => {
+    if (e.key === 'Escape') { closeContactCard(); document.removeEventListener('keydown', keyHandler); }
+  };
+  document.addEventListener('keydown', keyHandler);
+}
+
+function closeContactCard() {
+  const modal = document.getElementById('contact-card-modal');
+  const bd    = document.getElementById('contact-card-backdrop');
+  if (modal) { modal.style.transition = 'opacity .15s,transform .15s'; modal.style.opacity = '0'; modal.style.transform = 'translate(-50%,-50%) scale(.96)'; setTimeout(() => modal?.remove(), 150); }
+  if (bd)    { bd.style.transition = 'opacity .15s'; bd.style.opacity = '0'; setTimeout(() => bd?.remove(), 150); }
+}
+
+function _ccLogCall(prospectId) {
+  setProspectStatus(prospectId, 'Contacted');
+  showToast('Call logged — status → Contacted 📞', '📞');
 }
 
 // ===== NICHE WIZARD v2.0 (macro → meso → micro → results) =====

@@ -231,7 +231,7 @@ function pageCommandCenter() {
         </div>
         <div class="top-queue">
           ${top.map((p,i)=>`
-          <div class="queue-item" onclick="openDrawer('${p.id}')">
+          <div class="queue-item" onclick="openContactCard('${p.id}')">
             <span class="queue-rank">#${i+1}</span>
             <div class="queue-avatar ${getAvatarClass(p.lastName || p.company || '')}">${getInitials(p.firstName,p.lastName,p.company)}</div>
             <div class="queue-info">
