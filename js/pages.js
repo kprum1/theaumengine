@@ -175,7 +175,7 @@ function pageCommandCenter() {
       <div class="kpi-delta up">↑ ${M.newThisWeek || 0} new this week</div><div class="kpi-icon">💎</div>
     </div>
     <div class="kpi-card" style="--kpi-color:linear-gradient(90deg,#fb7185,#f43f5e);cursor:pointer;transition:transform .15s,box-shadow .15s"
-      onclick="setFilter&&setFilter('status','active');navigate('lead-scoreboard')" title="View active pipeline"
+      onclick="navigate('nurture-booking')" title="View pipeline board"
       onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(251,113,133,0.2)'"
       onmouseout="this.style.transform='';this.style.boxShadow=''">
       <div class="kpi-label">In Pipeline</div><div class="kpi-value">${M.contacted}</div>
