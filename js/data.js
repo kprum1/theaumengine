@@ -450,16 +450,108 @@ const TEAM_REPS = [
   { id:'r3', initials:'CV', name:'Chris Vance', role:'Advisor Rep',       booked:2, contacted:15, converted:1, color:'av-emerald' },
 ];
 
-// ===== ALERTS =====
-const ALERTS = [
-  { id:'a1', type:'hot',     title:'David Harrington opened email 3×', sub:'Aircraft Owner · Scottsdale AZ · Follow up now', time:'2h ago', prospectId:'p1' },
-  { id:'a2', type:'booking', title:'Thomas Castellano — meeting tomorrow', sub:'Business Owner · Dallas TX · Meeting Prep ready', time:'5h ago', prospectId:'p7' },
-  { id:'a3', type:'stale',   title:'William Knox — 21 days no contact', sub:'Aircraft Owner · Mesa AZ · Consider reactivation', time:'1d ago', prospectId:'p12' },
-  { id:'a4', type:'new',     title:'10 AI-exec prospects mined by Alfred', sub:'Transitioning Tech Executives · Apple · IBM · Salesforce', time:'Just now', prospectId:null },
-  { id:'a5', type:'reply',   title:'Sandra Westhoff replied!', sub:'Business Owner · Overland Park KS · Checking calendar', time:'5h ago', prospectId:'p2' },
-  { id:'a6', type:'booking', title:'Barbara Keene — meeting in 5 days', sub:'Business Owner · Houston TX · High-priority close', time:'3h ago', prospectId:'p18' },
-  { id:'a7', type:'hot',     title:'Kirk McDonald — Fit Score 98 🔥', sub:'AI-Displaced Exec · Former Apple Director · Bend OR · Mine now', time:'Just now', prospectId:'p25' },
-];
+// ===== ALERTS (live — derived from real PROSPECTS) =====
+// ALERTS is computed from the live PROSPECTS array so it always reflects Firestore data.
+// Call refreshAlerts() after PROSPECTS updates to keep the badge + panel in sync.
+let ALERTS = [];
+
+function computeAlerts() {
+  const alerts = [];
+  const now = Date.now();
+
+  // Sort prospects by priority score descending to pick best signals first
+  const sorted  = [...PROSPECTS].sort((a, b) => b.priorityScore - a.priorityScore);
+  const engaged  = sorted.filter(p => ['Engaged','Meeting Requested','Booked'].includes(p.status));
+  const booked   = sorted.filter(p => p.status === 'Booked');
+  const mtgReq   = sorted.filter(p => p.status === 'Meeting Requested');
+  const highFit  = sorted.filter(p => (p.priorityScore || 0) >= 95 && p.status === 'New');
+  const stale    = sorted.filter(p => {
+    if (!['New','Contacted'].includes(p.status)) return false;
+    const last = p.lastActivityMs || (p.assignedAt ? new Date(p.assignedAt).getTime() : 0);
+    return last && (now - last) > 15 * 24 * 3600 * 1000; // 15 days
+  });
+
+  // Hot high-fit leads (up to 2)
+  highFit.slice(0, 2).forEach((p, i) => {
+    const name = typeof getDisplayName === 'function' ? getDisplayName(p) : `${p.firstName} ${p.lastName}`.trim();
+    const loc  = [p.city, p.state].filter(Boolean).join(', ');
+    alerts.push({
+      id: 'live-hot-' + p.id,
+      type: 'hot',
+      title: `${name} — Fit Score ${p.priorityScore} 🔥`,
+      sub: `${p.niche || ''}${loc ? ' · ' + loc : ''} · High-priority outreach`,
+      time: 'Top pick',
+      prospectId: p.id,
+    });
+  });
+
+  // Engaged / replied leads (up to 2)
+  engaged.slice(0, 2).forEach(p => {
+    const name = typeof getDisplayName === 'function' ? getDisplayName(p) : `${p.firstName} ${p.lastName}`.trim();
+    const loc  = [p.city, p.state].filter(Boolean).join(', ');
+    const isEngaged = p.status === 'Engaged';
+    alerts.push({
+      id: 'live-reply-' + p.id,
+      type: 'reply',
+      title: `${name} ${isEngaged ? 'is engaged' : '— ' + p.status}`,
+      sub: `${p.niche || ''}${loc ? ' · ' + loc : ''}${isEngaged ? ' · Checking calendar' : ' · Follow up now'}`,
+      time: p.lastActivity || 'Recently',
+      prospectId: p.id,
+    });
+  });
+
+  // Meeting Requested / Booked (up to 2)
+  [...mtgReq, ...booked].slice(0, 2).forEach(p => {
+    const name = typeof getDisplayName === 'function' ? getDisplayName(p) : `${p.firstName} ${p.lastName}`.trim();
+    const loc  = [p.city, p.state].filter(Boolean).join(', ');
+    const isBooked = p.status === 'Booked';
+    alerts.push({
+      id: 'live-booking-' + p.id,
+      type: 'booking',
+      title: `${name} — ${isBooked ? 'meeting booked ✅' : 'meeting requested'}`,
+      sub: `${p.niche || ''}${loc ? ' · ' + loc : ''} · ${isBooked ? 'Meeting Prep ready' : 'Confirm time'}`,
+      time: p.lastActivity || 'Recently',
+      prospectId: p.id,
+    });
+  });
+
+  // Stale leads — need reactivation (up to 2)
+  stale.slice(0, 2).forEach(p => {
+    const name = typeof getDisplayName === 'function' ? getDisplayName(p) : `${p.firstName} ${p.lastName}`.trim();
+    const loc  = [p.city, p.state].filter(Boolean).join(', ');
+    const daysAgo = p.lastActivityMs ? Math.floor((now - p.lastActivityMs) / 86400000) : 21;
+    alerts.push({
+      id: 'live-stale-' + p.id,
+      type: 'stale',
+      title: `${name} — ${daysAgo}+ days no contact`,
+      sub: `${p.niche || ''}${loc ? ' · ' + loc : ''} · Consider reactivation`,
+      time: `${daysAgo}d ago`,
+      prospectId: p.id,
+    });
+  });
+
+  // New pipeline summary if enough new leads
+  const newLeads = sorted.filter(p => p.status === 'New');
+  if (newLeads.length > 10) {
+    const topNiches = [...new Set(newLeads.slice(0,5).map(p => p.niche))].slice(0,3).join(' · ');
+    alerts.push({
+      id: 'live-new-batch',
+      type: 'new',
+      title: `${newLeads.length} new prospects ready to work`,
+      sub: topNiches || 'Multiple niches · Ranked by AI fit score',
+      time: 'Now',
+      prospectId: null,
+    });
+  }
+
+  return alerts;
+}
+
+function refreshAlerts() {
+  ALERTS = computeAlerts();
+  if (typeof syncAlertBadge === 'function') syncAlertBadge();
+}
+
 
 const PIPELINE_COLUMNS = ['New','Contacted','Engaged','Nurture','Meeting Requested','Booked','Dead','Snoozed'];
 

@@ -136,6 +136,7 @@ auth.onAuthStateChanged(async (user) => {
       // C35-2: Flush demo leads the moment real Firestore pipeline leads arrive
       if (data.assignedLeads && data.assignedLeads.length > 0) {
         _flushDemoLeads('bootstrapUserData — ' + data.assignedLeads.length + ' assigned leads loaded');
+        if (typeof refreshAlerts === 'function') refreshAlerts(); // recompute alerts from live data
       }
 
       // Load booking link from Firestore → hydrate ICP_CONFIG + localStorage
@@ -202,6 +203,8 @@ auth.onAuthStateChanged(async (user) => {
           // Re-sort by priority score descending
           PROSPECTS.sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0));
           console.info(`[auth.js] Loaded ${newOnes.length} Firestore prospects (total: ${PROSPECTS.length})`);
+          // Recompute live alerts from updated pipeline
+          if (typeof refreshAlerts === 'function') refreshAlerts();
           // Refresh the current page so the scoreboard shows new leads
           if (typeof navigate === 'function') {
             const currentPage = document.querySelector('.nav-item.active')?.dataset?.page || 'command-center';

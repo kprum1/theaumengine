@@ -249,7 +249,8 @@ function pageCommandCenter() {
         <div class="alert-queue">
           ${ALERTS.map(a=>{
             const dc={hot:'var(--rose)',reply:'var(--emerald)',booking:'var(--blue)',stale:'var(--amber)',new:'var(--violet)'}[a.type]||'var(--violet)';
-            return `<div class="alert-item" onclick="${a.prospectId?`openDrawer('${a.prospectId}')`:`navigate('prospect-mine')`}">
+            const onclk = a.prospectId ? `openContactCard('${a.prospectId}')` : `navigate('prospect-mine')`;
+            return `<div class="alert-item" onclick="${onclk}" style="cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(96,165,250,0.05)'" onmouseout="this.style.background=''">
               <div class="alert-dot" style="background:${dc};box-shadow:0 0 6px ${dc}"></div>
               <div class="alert-text"><div class="alert-title">${a.title}</div><div class="alert-sub">${a.sub}</div></div>
               <div class="alert-time">${a.time}</div>
