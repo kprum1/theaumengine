@@ -593,7 +593,7 @@ function openContactCard(prospectId) {
           <span class="cc-icon">📅</span>
           <span class="cc-label">Book Meeting</span>
         </button>
-        <button class="cc-action-btn" onclick="closeContactCard();openDrawer('${p.id}')">
+        <button class="cc-action-btn" onclick="closeContactCard();setTimeout(()=>openDrawer('${p.id}'),80)">
           <span class="cc-icon">🔍</span>
           <span class="cc-label">Full Profile</span>
         </button>
@@ -1650,6 +1650,23 @@ function openDrawer(id) {
   const p = PROSPECTS.find(x=>x.id===id);
   if (!p) return;
   drawerProspect = p;
+
+  // Defensive fallbacks — Firestore leads may not have demo-only fields
+  const reasonCodes  = Array.isArray(p.reasonCodes)  ? p.reasonCodes  : [];
+  const signals      = p.signals && typeof p.signals === 'object' && !Array.isArray(p.signals) ? p.signals : {};
+  const emailDraft   = p.emailDraft || (p.firstName ? `Hi ${p.firstName},\n\nI came across your profile and wanted to reach out…\n\nBest,\nYour Advisor` : 'Click to draft outreach in Outreach Studio.');
+  const activityLog  = Array.isArray(p.activityLog)  ? p.activityLog  : [];
+  const signalsHTML  = Object.entries(signals).length
+    ? Object.entries(signals).map(([k,v])=>`<div class="signal-row"><span class="signal-label">${k.replace(/([A-Z])/g,' $1').trim()}</span><span class="signal-value">${v}</span></div>`).join('')
+    : `<div style="font-size:11px;color:var(--text-muted)">No additional signals available.</div>`;
+  const activityHTML = activityLog.length
+    ? activityLog.map(a=>`<div style="display:flex;gap:8px;margin-bottom:8px">
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--blue);margin-top:5px;flex-shrink:0"></div>
+      <div><div style="font-size:12px;font-weight:600;color:var(--text-primary)">${a.type}</div>
+      <div style="font-size:11px;color:var(--text-muted)">${a.date} — ${a.note}</div></div>
+    </div>`).join('')
+    : `<div style="font-size:11px;color:var(--text-muted)">No recorded activity yet — this is a new lead.</div>`;
+
   document.getElementById('drawer-content').innerHTML = `
   <div class="drawer-header">
     <div style="display:flex;align-items:flex-start;gap:12px">
@@ -1657,6 +1674,7 @@ function openDrawer(id) {
       <div>
         <div style="font-size:16px;font-weight:800;color:var(--text-primary)">${getDisplayName(p)}</div>
         <div style="font-size:12px;color:var(--text-muted)">${p.title || ''}${p.title && p.company ? ' · ' : ''}${p.company || ''}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px">📍 ${[p.city,p.state].filter(Boolean).join(', ') || '—'} &nbsp;·&nbsp; 💰 ${p.assets || p.estimatedAUM || '$1M+'}</div>
         <div style="margin-top:5px">${getStatusPill(p.status)}</div>
       </div>
     </div>
@@ -1665,15 +1683,16 @@ function openDrawer(id) {
   <div class="drawer-section">
     <div class="drawer-section-title">Scores</div>
     <div class="grid-3" style="gap:8px">
-      <div style="text-align:center;background:var(--bg-elevated);border-radius:8px;padding:10px"><div style="font-size:22px;font-weight:900;color:#60a5fa">${p.fitScore}</div><div style="font-size:10px;color:var(--text-muted)">Fit</div></div>
-      <div style="text-align:center;background:var(--bg-elevated);border-radius:8px;padding:10px"><div style="font-size:22px;font-weight:900;color:#a78bfa">${p.timingScore}</div><div style="font-size:10px;color:var(--text-muted)">Timing</div></div>
-      <div style="text-align:center;background:var(--bg-elevated);border-radius:8px;padding:10px"><div style="font-size:22px;font-weight:900;color:#34d399">${p.priorityScore}</div><div style="font-size:10px;color:var(--text-muted)">Priority</div></div>
+      <div style="text-align:center;background:var(--bg-elevated);border-radius:8px;padding:10px"><div style="font-size:22px;font-weight:900;color:#60a5fa">${p.fitScore || 72}</div><div style="font-size:10px;color:var(--text-muted)">Fit</div></div>
+      <div style="text-align:center;background:var(--bg-elevated);border-radius:8px;padding:10px"><div style="font-size:22px;font-weight:900;color:#a78bfa">${p.timingScore || 65}</div><div style="font-size:10px;color:var(--text-muted)">Timing</div></div>
+      <div style="text-align:center;background:var(--bg-elevated);border-radius:8px;padding:10px"><div style="font-size:22px;font-weight:900;color:#34d399">${p.priorityScore || 70}</div><div style="font-size:10px;color:var(--text-muted)">Priority</div></div>
     </div>
   </div>
+  ${reasonCodes.length ? `
   <div class="drawer-section">
     <div class="drawer-section-title">Why This Lead Fits</div>
-    <div>${p.reasonCodes.map(r=>`<span class="reason-tag">${r}</span>`).join('')}</div>
-  </div>
+    <div>${reasonCodes.map(r=>`<span class="reason-tag">${r}</span>`).join('')}</div>
+  </div>` : ''}
   <div class="drawer-section" style="padding-bottom:0">
     <div class="drawer-section-title">Enterprise Intelligence
       <span style="font-size:9px;font-weight:600;letter-spacing:0.07em;padding:2px 7px;border-radius:8px;background:rgba(96,165,250,0.12);color:var(--blue);margin-left:6px;text-transform:uppercase">NEW</span>
@@ -1681,22 +1700,18 @@ function openDrawer(id) {
     ${buildEnrichmentPanel(p.id)}
   </div>
   <div class="drawer-section">
-    <div class="drawer-section-title">Signals & Context</div>
-    ${Object.entries(p.signals).map(([k,v])=>`<div class="signal-row"><span class="signal-label">${k.replace(/([A-Z])/g,' $1').trim()}</span><span class="signal-value">${v}</span></div>`).join('')}
+    <div class="drawer-section-title">Signals &amp; Context</div>
+    ${signalsHTML}
   </div>
   <div class="drawer-section">
     <div class="drawer-section-title">Suggested Outreach</div>
-    <div class="msg-draft" onclick="setOutreachProspect('${p.id}');navigate('outreach-studio');closeDrawer()">${p.emailDraft.split('\n').slice(0,4).join('\n')}…
+    <div class="msg-draft" onclick="setOutreachProspect('${p.id}');navigate('outreach-studio');closeDrawer()">${emailDraft.split('\n').slice(0,4).join('\n')}…
       <div style="margin-top:6px;font-size:10px;color:var(--blue)">Click to edit in Outreach Studio →</div>
     </div>
   </div>
   <div class="drawer-section">
     <div class="drawer-section-title">Activity History</div>
-    ${p.activityLog.map(a=>`<div style="display:flex;gap:8px;margin-bottom:8px">
-      <div style="width:6px;height:6px;border-radius:50%;background:var(--blue);margin-top:5px;flex-shrink:0"></div>
-      <div><div style="font-size:12px;font-weight:600;color:var(--text-primary)">${a.type}</div>
-      <div style="font-size:11px;color:var(--text-muted)">${a.date} — ${a.note}</div></div>
-    </div>`).join('')}
+    ${activityHTML}
   </div>
   <div class="drawer-section">
     <div class="drawer-section-title">Pilot Feedback</div>
