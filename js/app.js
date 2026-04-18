@@ -943,6 +943,17 @@ function applyProfileToSettings() {
 
 // ===== LEAD SCOREBOARD =====
 function setFilter(key,val) { activeFilters[key]=val; }
+
+// Load a niche cohort: filter Scoreboard to that nicheId and navigate
+window.loadCohort = function(nicheId) {
+  activeFilters.niche  = nicheId;
+  activeFilters.status = 'all';
+  navigate('lead-scoreboard');
+  // Find niche display name for the toast
+  const niche = (typeof NICHES !== 'undefined' ? NICHES : []).find(n => n.id === nicheId);
+  const label = niche ? niche.name : nicheId;
+  showToast(`Showing ${label} cohort`, niche?.icon || '💎');
+};
 function filterProspects(q) {
   const rows = document.querySelectorAll('#scoreboard-body tr');
   const lq = q.toLowerCase();

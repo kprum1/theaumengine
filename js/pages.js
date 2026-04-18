@@ -367,14 +367,52 @@ function pageProspectMine() {
           <button class="btn btn-primary" style="width:100%" onclick="startMining()">Run Prospect Mine Agent</button>
         </div>
         <div style="margin-top:12px">
-          <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Recent Cohorts</div></div>
-          ${[{name:'Phoenix Aircraft Owners',count:47,date:'Apr 4'},{name:'KS Business Owners 50–65',count:89,date:'Mar 28'},{name:'Chicago Charity Boards',count:34,date:'Mar 20'}]
-            .map(c=>`<div class="card" style="margin-bottom:8px;display:flex;align-items:center;gap:10px;cursor:pointer">
-              <span style="font-size:18px">💎</span>
-              <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text-primary)">${c.name}</div>
-              <div style="font-size:11px;color:var(--text-muted)">${c.count} prospects · Mined ${c.date}</div></div>
-              <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px">Load</button>
-            </div>`).join('')}
+          <div class="section-header">
+            <div class="section-title"><div class="section-title-dot"></div>Recent Cohorts</div>
+            ${window._firestoreMetaUpdatedAt ? `<span style="font-size:10px;color:var(--text-muted)">Updated ${new Date(window._firestoreMetaUpdatedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
+          </div>
+          ${(() => {
+            // Build cohort list from Firestore pipeline_meta + in-memory PROSPECTS
+            const breakdown = window._firestoreNicheBreakdown || null;
+            const nicheList = typeof NICHES !== 'undefined' ? NICHES : [];
+
+            // Merge: Firestore counts (authoritative total) + PROSPECTS contact rate
+            const cohorts = nicheList.map(n => {
+              const fs     = breakdown?.[n.id] || null;
+              const total  = fs?.total || PROSPECTS.filter(p => p.nicheId === n.id).length;
+              const inPipeline = PROSPECTS.filter(p => p.nicheId === n.id && !['New','Dead'].includes(p.status)).length;
+              const contactRate = total ? Math.round(inPipeline / Math.min(total, PROSPECTS.filter(p=>p.nicheId===n.id).length || 1) * 100) : 0;
+              const latestRaw  = fs?.latestIngest || null;
+              const latestDate = latestRaw
+                ? new Date(latestRaw).toLocaleDateString('en-US',{month:'short',day:'numeric'})
+                : null;
+              return { ...n, total, contactRate, latestDate };
+            }).filter(c => c.total > 0).sort((a,b) => b.total - a.total);
+
+            if (cohorts.length === 0) return `
+              <div class="empty-state" style="padding:24px 16px">
+                <div class="empty-state-icon" style="font-size:24px">💎</div>
+                <div class="empty-state-title" style="font-size:12px">No cohorts yet</div>
+                <div class="empty-state-sub" style="font-size:11px">Run the Mine Agent to build your first prospect cohort.</div>
+              </div>`;
+
+            return cohorts.map(c => `
+              <div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:box-shadow .15s"
+                onclick="loadCohort('${c.id}')"
+                onmouseover="this.style.boxShadow='0 4px 14px rgba(0,0,0,0.18)';this.querySelector('.cohort-load-btn').style.background='${c.color}';this.querySelector('.cohort-load-btn').style.color='#000'"
+                onmouseout="this.style.boxShadow='';this.querySelector('.cohort-load-btn').style.background='';this.querySelector('.cohort-load-btn').style.color=''">
+                <span style="font-size:20px;flex-shrink:0">${c.icon}</span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:12.5px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div>
+                  <div style="font-size:10.5px;color:var(--text-muted);display:flex;gap:8px;align-items:center;margin-top:2px">
+                    <span style="font-weight:700;color:${c.color}">${c.total.toLocaleString()}</span> prospects
+                    ${c.latestDate ? `<span style="opacity:0.5">·</span><span>Latest: ${c.latestDate}</span>` : ''}
+                    ${c.contactRate > 0 ? `<span style="opacity:0.5">·</span><span>${c.contactRate}% contact rate</span>` : ''}
+                  </div>
+                </div>
+                <button class="btn btn-ghost cohort-load-btn" style="font-size:11px;padding:4px 12px;flex-shrink:0;transition:background .15s,color .15s" onclick="event.stopPropagation();loadCohort('${c.id}')">Load →</button>
+              </div>`).join('');
+          })()}
         </div>
       </div>
     </div>

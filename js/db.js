@@ -297,7 +297,11 @@ async function fetchAdvisorLeadCount(uid) {
       ? (meta.totalLeads || 0)                        // operator → global total
       : (meta.leadsByAdvisor?.[uid] || 0);            // advisor  → their own total
 
-    window._firestoreLeadTotal = count;
+    window._firestoreLeadTotal     = count;
+    // Cache per-niche breakdown for Recent Cohorts in Prospect Mine
+    window._firestoreNicheBreakdown = meta.nicheBreakdown || null;
+    window._firestoreMetaUpdatedAt  = meta.updatedAt || null;
+
     console.info(`[db.js] Lead count (${isOp ? 'GLOBAL/operator' : uid.slice(0,8)}): ${count}`);
     return count;
   } catch(e) {
