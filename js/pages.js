@@ -312,7 +312,7 @@ function pageCommandCenter() {
   <div class="section" id="al-briefs-section">
     <div class="section-header">
       <div class="section-title"><div class="section-title-dot" style="background:var(--color-ed)"></div>🧠 Client Intelligence — Al Briefs</div>
-      <button class="btn btn-ghost" onclick="navigate('client-intake')" style="font-size:11px;padding:5px 12px">View All Intakes</button>
+      <button class="btn btn-ghost" onclick="navigate('ed-disclosure')" style="font-size:11px;padding:5px 12px">+ New Intake</button>
     </div>
     ${briefPanelHTML}
   </div>`;
