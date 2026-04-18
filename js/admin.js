@@ -188,7 +188,7 @@ function pageAdminDashboard() {
           <option value="ai-displaced-executives">AI-Displaced Execs</option>
           <option value="charity-board-members">Charity Board Members</option>
           <option value="c-suite-executives">C-Suite Executives</option>
-          <option value="real-estate-developers">Real Estate Developers</option>
+          <option value="re-developers">Real Estate Developers</option>
           <option value="law-partners">Law Partners</option>
           <option value="inheritance-recipients">Inheritance Recipients</option>
           <option value="pro-athletes">Pro Athletes</option>
@@ -597,7 +597,8 @@ async function renderMasterLeadsPool() {
     'ai-displaced-executives': '#f59e0b',
     'charity-board-members':   '#ec4899',
     'c-suite-executives':      '#6366f1',
-    'real-estate-developers':  '#f97316',
+    're-developers':            '#f97316',
+    'real-estate-developers':   '#f97316',  // legacy alias
     'law-partners':            '#14b8a6',
     'inheritance-recipients':  '#a855f7',
     'pro-athletes':            '#f43f5e',

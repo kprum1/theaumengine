@@ -38,7 +38,7 @@ const NICHES = [
   { id: 'c-suite-executives',     icon: '👔',  name: 'C-Suite Executives',      desc: 'Senior leaders navigating deferred comp, concentrated stock, and executive transition planning',       color: '#34d399' },
   { id: 'dentists',               icon: '🦷',  name: 'Dentists & Specialists',  desc: 'Practice owners navigating buy-in/out decisions, disability gaps, and retirement funding',            color: '#e879f9' },
   { id: 'high-earning-tradesman',  icon: '🔧',  name: 'High Earning Tradesman',  desc: 'HVAC, electrical & plumbing owner-operators with irregular income and no coordinated wealth plan',    color: '#4ade80' },
-  { id: 'real-estate-developers', icon: '🏗️',  name: 'Real Estate Developers', desc: 'Developers and operators facing 1031 windows, partnership exits, and concentrated property risk',     color: '#f97316' },
+  { id: 're-developers',          icon: '🏗️',  name: 'Real Estate Developers', desc: 'Developers and operators facing 1031 windows, partnership exits, and concentrated property risk',     color: '#f97316' },
   { id: 'pro-athletes',           icon: '🏆',  name: 'Pro Athletes',            desc: 'Active and recently retired professional athletes — short career windows, signing bonuses, and complex post-career income transitions', color: '#f43f5e' },
 ];
 

@@ -701,7 +701,7 @@ function applyProfileToSettings() {
     'Dentists & Specialists':   'dentists-specialists',
     'High Earning Tradesman':   'high-earning-tradesman',
     'Inheritance Recipients':   'inheritance-recipients',
-    'Real Estate Developers':   'real-estate-developers',
+    'Real Estate Developers':   're-developers',
     'Charity Boards':           'charity-board-members',
     'Pro Athletes':             'pro-athletes',
   };

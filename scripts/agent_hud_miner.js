@@ -242,7 +242,7 @@ function parseXLSX(xlsxPath, targetStates) {
 
       // Niche
       niche:   'Real Estate Developers',
-      nicheId: 'real-estate-developers',
+      nicheId: 're-developers',
 
       // AUM
       estimatedAUM:  aum,

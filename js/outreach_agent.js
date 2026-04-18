@@ -19,7 +19,8 @@ const PERSONA_TYPES = {
   'dentists-specialists':     'dentist_specialist',
   'high-earning-tradesman':   'high_earning_trade',
   'inheritance-recipients':   'inheritance_recipient',
-  'real-estate-developers':   'real_estate_developer',
+  're-developers':            'real_estate_developer',
+  'real-estate-developers':   'real_estate_developer',  // legacy alias — normalize to re-developers
   'charity-boards':           'charity_board',
   'charity-board-members':    'charity_board',
   'yacht-owners':             'yacht_owner',

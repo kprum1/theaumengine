@@ -129,7 +129,8 @@ function _inferPlanningPain(nicheId, reasonCodes, signals) {
     'c-suite-executives':     ['deferred comp', 'concentrated stock', 'executive transition'],
     'charity-board-members':  ['DAF strategy', 'legacy planning', 'philanthropic tax efficiency'],
     'inheritance-recipients': ['sudden wealth', 'estate settlement', 'investment deployment'],
-    'real-estate-developers': ['1031 exchange', 'concentration risk', 'deal-level tax planning'],
+    're-developers':           ['1031 exchange', 'concentration risk', 'deal-level tax planning'],
+    'real-estate-developers': ['1031 exchange', 'concentration risk', 'deal-level tax planning'],  // legacy alias
     'law-partners':           ['K-1 complexity', 'partner buyout', 'uneven income'],
     'pro-athletes':           ['signing bonus deployment', 'career-window income planning', 'post-career income transition'],
   };
