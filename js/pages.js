@@ -309,10 +309,10 @@ function pageCommandCenter() {
       </div>`).join('')}
     </div>
   </div>
-  <div class="section">
+  <div class="section" id="al-briefs-section">
     <div class="section-header">
       <div class="section-title"><div class="section-title-dot" style="background:var(--color-ed)"></div>🧠 Client Intelligence — Al Briefs</div>
-      <button class="btn btn-ghost" onclick="navigate('ed-disclosure')" style="font-size:11px;padding:5px 12px">+ New Intake</button>
+      <button class="btn btn-ghost" onclick="navigate('client-intake')" style="font-size:11px;padding:5px 12px">View All Intakes</button>
     </div>
     ${briefPanelHTML}
   </div>`;
@@ -1523,11 +1523,11 @@ function pageClientIntake() {
       <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;align-items:flex-end">
         ${hasBrief
           ? `<button class="btn btn-primary" style="font-size:11px;padding:6px 14px;background:var(--color-ed);border-color:var(--color-ed)"
-               onclick="alGenerateBrief('${id}')">View Brief →</button>`
+               onclick="openEdBrief('${id}')">View Brief →</button>`
           : `<button class="btn btn-primary" style="font-size:11px;padding:6px 14px;background:var(--color-ed);border-color:var(--color-ed)"
-               onclick="alGenerateBrief('${id}')">Generate Brief →</button>`}
+               onclick="openEdBrief('${id}')">Generate Brief →</button>`}
         <button class="btn btn-ghost" style="font-size:10.5px;padding:4px 10px"
-          onclick="navigate('command-center')">View in CC</button>
+          onclick="viewEdInCC('${id}')">View in CC</button>
       </div>
     </div>`;
   }).join('');

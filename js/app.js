@@ -954,6 +954,37 @@ window.loadCohort = function(nicheId) {
   const label = niche ? niche.name : nicheId;
   showToast(`Showing ${label} cohort`, niche?.icon || '💎');
 };
+
+// Scroll main-content to a named section after navigate()
+function _scrollToSection(sectionId, delayMs = 250) {
+  setTimeout(() => {
+    const el = document.getElementById(sectionId);
+    const scroller = document.getElementById('main-content') || document.documentElement;
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Pulse highlight so the user sees exactly where to look
+      el.style.transition = 'outline 0.1s';
+      el.style.outline = '2px solid var(--color-ed)';
+      el.style.borderRadius = '10px';
+      setTimeout(() => { el.style.outline = ''; el.style.borderRadius = ''; }, 2000);
+    }
+  }, delayMs);
+}
+
+// Client Intake inbox: Generate/View brief AND scroll to Al Briefs in CC
+window.openEdBrief = function(situationId) {
+  if (typeof alGenerateBrief === 'function') alGenerateBrief(situationId);
+  // alGenerateBrief already calls navigate('command-center'); scroll after render
+  _scrollToSection('al-briefs-section', 350);
+};
+
+// Client Intake inbox: View in CC — set active situation then scroll
+window.viewEdInCC = function(situationId) {
+  window._alActiveSituationId = situationId;
+  navigate('command-center');
+  _scrollToSection('al-briefs-section', 350);
+};
+
 function filterProspects(q) {
   const rows = document.querySelectorAll('#scoreboard-body tr');
   const lq = q.toLowerCase();
