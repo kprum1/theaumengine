@@ -692,8 +692,44 @@ function pageNurtureBooking() {
 
 function pageMeetingPrep() {
   const p = activeMeetingProspect || PROSPECTS.find(x=>x.status==='Booked') || PROSPECTS[0];
-  const savedNote = NOTES_STORE[p.id] || '';
-  const upcoming = PROSPECTS.filter(x=>['Booked','Meeting Requested'].includes(x.status));
+  if (!p) return `<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-title">No prospects loaded yet</div><div class="empty-state-sub">Your pipeline is hydrating — come back in a moment.</div></div>`;
+
+  const signals       = (p.signals && typeof p.signals === 'object' && !Array.isArray(p.signals)) ? p.signals : {};
+  const reasonCodes   = Array.isArray(p.reasonCodes) ? p.reasonCodes : [];
+  const nextEvent     = signals.nextEvent     || p.lastActivity || 'Meeting scheduled';
+  const estAssets     = signals.estimatedAssets || p.assets || p.estimatedAUM || 'Significant assets';
+  const relationship  = signals.relationship  || 'New prospect';
+  const niche         = p.niche || p.nicheId  || 'this niche';
+  const title         = p.title   || '';
+  const company       = p.company || '';
+  const reason0       = reasonCodes[0]        || 'High-priority prospect matching your niche criteria';
+  const priorityScore = p.priorityScore       || 72;
+  const savedNote     = NOTES_STORE[p.id]     || '';
+  const upcoming      = PROSPECTS.filter(x=>['Booked','Meeting Requested'].includes(x.status));
+
+  const upcomingHTML = upcoming.map(x => {
+    const xSig  = (x.signals && typeof x.signals === 'object') ? x.signals : {};
+    const xNext = xSig.nextEvent || x.lastActivity || 'Meeting scheduled';
+    return `<div class="queue-item" style="margin-bottom:6px;${x.id===p.id?'border-color:var(--blue);background:rgba(96,165,250,0.06)':''}" onclick="setActiveMeeting('${x.id}')">
+      <div class="queue-avatar ${getAvatarClass(x.lastName || x.company || '')}" style="width:28px;height:28px;font-size:10px;border-radius:6px">${getInitials(x.firstName,x.lastName,x.company)}</div>
+      <div class="queue-info"><div class="queue-name">${getDisplayName(x)}</div><div class="queue-meta">${xNext}</div></div>
+      ${getStatusPill(x.status)}
+    </div>`;
+  }).join('');
+
+  const reasonTagsHTML = reasonCodes.length
+    ? reasonCodes.map(r=>`<span class="reason-tag">${r}</span>`).join('')
+    : `<span class="reason-tag">High AUM Potential</span><span class="reason-tag">Niche Match</span><span class="reason-tag">Advisor-Ready</span>`;
+
+  const discoveryQs = [
+    'Where are you today with financial planning — does anyone coordinate the full picture for you?',
+    'What does the next 3–5 years look like — any major transitions on the horizon?',
+    'What would a successful outcome from a relationship like this look like for you?',
+    `How are you currently thinking about ${reason0.length > 60 ? 'your financial priorities' : reason0}?`
+  ].map((q,i)=>`<div style="padding:8px 10px;background:var(--bg-elevated);border-radius:6px;font-size:12px;color:var(--text-secondary);margin-bottom:5px;line-height:1.6">${i+1}. ${q}</div>`).join('');
+
+  const planningGaps = ['No coordinated strategy across all asset classes','Unclear succession or transition timeline','Suboptimal tax positioning at this wealth level','Estate and legacy documentation incomplete']
+    .map((g,i)=>`<div class="signal-row"><span class="signal-label">${i+1}.</span><span class="signal-value">${g}</span></div>`).join('');
 
   return `
   <div class="page-header">
@@ -708,53 +744,38 @@ function pageMeetingPrep() {
     <div class="grid-12">
       <div>
         <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Select Meeting (${upcoming.length})</div></div>
-        ${upcoming.length===0?`<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-title">No meetings booked yet</div><div class="empty-state-sub">Book meetings in Nurture & Booking to prep here.</div></div>`:''}
-        ${upcoming.map(x=>`
-        <div class="queue-item ${x.id===p.id?'':''}
-        " style="margin-bottom:6px;${x.id===p.id?'border-color:var(--blue);background:rgba(96,165,250,0.06)':''}" onclick="setActiveMeeting('${x.id}')">
-          <div class="queue-avatar ${getAvatarClass(x.lastName || x.company || '')}" style="width:28px;height:28px;font-size:10px;border-radius:6px">${getInitials(x.firstName,x.lastName,x.company)}</div>
-          <div class="queue-info"><div class="queue-name">${getDisplayName(x)}</div><div class="queue-meta">${x.signals.nextEvent}</div></div>
-          ${getStatusPill(x.status)}
-        </div>`).join('')}
+        ${upcoming.length===0 ? `<div class="empty-state"><div class="empty-state-icon">📅</div><div class="empty-state-title">No meetings booked yet</div><div class="empty-state-sub">Book meetings in Nurture &amp; Booking to prep here.</div></div>` : ''}
+        ${upcomingHTML}
       </div>
       <div>
         <div class="agent-thinking" style="margin-bottom:12px">
           <div class="agent-dots"><span>💎</span><span>💎</span><span>💎</span></div>
-          Meeting Prep Agent · Dossier ready for ${p.firstName} ${p.lastName}
+          Meeting Prep Agent · Dossier ready for ${p.firstName || getDisplayName(p)}
         </div>
         <div class="dossier-card">
           <div class="dossier-header">
-            <div class="dossier-avatar ${getAvatarClass(p.lastName)}">${getInitials(p.firstName,p.lastName)}</div>
+            <div class="dossier-avatar ${getAvatarClass(p.lastName || p.company || '')}">${getInitials(p.firstName,p.lastName,p.company)}</div>
             <div>
-              <div style="font-size:15px;font-weight:800;color:var(--text-primary)">${p.firstName} ${p.lastName}</div>
-              <div style="font-size:12px;color:var(--text-muted)">${p.title} · ${p.company}</div>
-              <div style="font-size:12px;color:var(--blue);margin-top:2px">📅 ${p.signals.nextEvent}</div>
+              <div style="font-size:15px;font-weight:800;color:var(--text-primary)">${getDisplayName(p)}</div>
+              <div style="font-size:12px;color:var(--text-muted)">${[title,company].filter(Boolean).join(' · ') || niche}</div>
+              <div style="font-size:12px;color:var(--blue);margin-top:2px">📅 ${nextEvent}</div>
             </div>
             <div style="margin-left:auto;text-align:right">
-              <div style="font-size:22px;font-weight:900;color:var(--text-primary)">${p.priorityScore}</div>
+              <div style="font-size:22px;font-weight:900;color:var(--text-primary)">${priorityScore}</div>
               <div style="font-size:10px;color:var(--text-muted)">Priority Score</div>
             </div>
           </div>
           <div class="dossier-body">
             <div class="drawer-section-title">Why This Meeting Matters</div>
             <div style="font-size:12.5px;color:var(--text-secondary);line-height:1.7;margin-bottom:14px">
-              ${p.firstName} is a ${p.niche.toLowerCase()} with estimated ${p.signals.estimatedAssets} in assets. ${p.reasonCodes[0]}. Relationship: ${p.signals.relationship}.
+              ${p.firstName || 'This prospect'} is in the ${niche.toLowerCase()} niche with estimated ${estAssets} in assets. ${reason0}. Relationship status: ${relationship}.
             </div>
             <div class="drawer-section-title">Key Signals</div>
-            <div style="margin-bottom:14px">${p.reasonCodes.map(r=>`<span class="reason-tag">${r}</span>`).join('')}</div>
+            <div style="margin-bottom:14px">${reasonTagsHTML}</div>
             <div class="drawer-section-title">Likely Planning Gaps</div>
-            <div style="margin-bottom:14px">
-              ${['No coordinated strategy across all asset classes','Unclear succession or transition timeline','Suboptimal tax positioning at this wealth level','Estate and legacy documentation incomplete']
-                .map((g,i)=>`<div class="signal-row"><span class="signal-label">${i+1}.</span><span class="signal-value">${g}</span></div>`).join('')}
-            </div>
+            <div style="margin-bottom:14px">${planningGaps}</div>
             <div class="drawer-section-title">Discovery Questions</div>
-            <div style="margin-bottom:14px">
-              ${['Where are you today with financial planning — does anyone coordinate the full picture for you?',
-                 'What does the next 3–5 years look like — any major transitions on the horizon?',
-                 'What would a successful outcome from a relationship like this look like for you?',
-                 `How are you currently thinking about ${p.reasonCodes[0]}?`]
-                .map((q,i)=>`<div style="padding:8px 10px;background:var(--bg-elevated);border-radius:6px;font-size:12px;color:var(--text-secondary);margin-bottom:5px;line-height:1.6">${i+1}. ${q}</div>`).join('')}
-            </div>
+            <div style="margin-bottom:14px">${discoveryQs}</div>
             <div class="drawer-section-title">Pre-Meeting Notes</div>
             <textarea class="form-textarea" id="meeting-notes-${p.id}" placeholder="Add your notes before the meeting…">${savedNote}</textarea>
             <div style="display:flex;gap:8px;margin-top:10px">
@@ -767,6 +788,7 @@ function pageMeetingPrep() {
     </div>
   </div>`;
 }
+
 
 function pageManagerConsole() {
   const M = computeMetrics();
