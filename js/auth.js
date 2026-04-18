@@ -20,6 +20,20 @@ window.closeAuthModal = function() {
   if (form) form.reset();
 };
 
+// C35-2: Demo data gate — removes hardcoded p1/p25 demo leads from PROSPECTS
+// the moment any real Firestore leads are verified. Non-destructive: only
+// removes leads whose ID matches the demo pattern (p1, p2, ... p99).
+function _flushDemoLeads(reason) {
+  if (!window._isDemoMode) return; // already flushed — no-op
+  const demoBefore = PROSPECTS.filter(p => /^p\d+$/.test(p.id)).length;
+  // Splice out all demo leads (IDs matching /^p\d+$/)
+  for (let i = PROSPECTS.length - 1; i >= 0; i--) {
+    if (/^p\d+$/.test(PROSPECTS[i].id)) PROSPECTS.splice(i, 1);
+  }
+  window._isDemoMode = false;
+  console.info(`[auth.js] Demo data flushed (C35-2): removed ${demoBefore} demo leads. Reason: ${reason}`);
+}
+
 // Central reset — safe to call at any time
 function _resetAuthButtons() {
   const submitBtn = document.getElementById('auth-submit-btn');
@@ -119,6 +133,11 @@ auth.onAuthStateChanged(async (user) => {
       const data = await bootstrapUserData(user.uid);
       if (typeof initWithUserData === 'function') initWithUserData(data);
 
+      // C35-2: Flush demo leads the moment real Firestore pipeline leads arrive
+      if (data.assignedLeads && data.assignedLeads.length > 0) {
+        _flushDemoLeads('bootstrapUserData — ' + data.assignedLeads.length + ' assigned leads loaded');
+      }
+
       // Load booking link from Firestore → hydrate ICP_CONFIG + localStorage
       if (typeof loadBookingLink === 'function') {
         loadBookingLink(user.uid).then(link => {
@@ -173,7 +192,9 @@ auth.onAuthStateChanged(async (user) => {
     if (typeof loadProspectsFromFirestore === 'function') {
       loadProspectsFromFirestore().then(firestoreProspects => {
         if (!firestoreProspects.length) return;
-        // Deduplicate by id — Firestore docs use alfred_* IDs, demo uses p1/p2 etc.
+        // C35-2: Flush demo data before injecting real Firestore prospects
+        _flushDemoLeads('loadProspectsFromFirestore — ' + firestoreProspects.length + ' prospects loaded');
+        // Deduplicate by id — ensures no double-adds on re-auth
         const existingIds = new Set(PROSPECTS.map(p => p.id));
         const newOnes = firestoreProspects.filter(p => !existingIds.has(p.id));
         if (newOnes.length) {

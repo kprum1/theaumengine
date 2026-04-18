@@ -56,7 +56,7 @@ async function main() {
     activeLeadCap:      500,
     currentLeadCount:   0,
     nicheIds:           [
-      'physicians', 'dentists', 'business-owners', 'real-estate-developers',
+      'physicians', 'dentists', 'business-owners', 're-developers',
       'law-partners', 'charity-board-members', 'aircraft-owners',
       'ai-displaced-executives', 'yacht-owners', 'real-estate-investors',
     ],

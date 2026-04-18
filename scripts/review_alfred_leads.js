@@ -45,7 +45,8 @@ const VALID_NICHES = new Set([
   'aircraft-owners', 'business-owners', 'charity-boards',
   'charity-board-members', 'physicians', 'ai-displaced-executives',
   'henrys', 'inheritance-recipients', 'high-earning-tradesman',
-  'real-estate-developers', 'law-partners', 'dentists-specialists',
+  're-developers', 'real-estate-developers',  // canonical + legacy alias
+  'law-partners', 'dentists-specialists',
   'c-suite-executives', 'yacht-owners'
 ]);
 
@@ -68,7 +69,8 @@ const NICHE_MAP = {
   'law partners':            'law-partners',
   'c-suite executives':      'c-suite-executives',
   'yacht owners':            'yacht-owners',
-  'yacht owner':             'yacht-owners',
+  'real estate developers':  're-developers',
+  'real-estate developers':  're-developers',
   'large watercraft':        'yacht-owners',
   'uscg vessel owner':       'yacht-owners',
   'documented vessel owner': 'yacht-owners',

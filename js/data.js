@@ -45,7 +45,13 @@ const NICHES = [
 // ===== VALID STATUSES (stage labels only — no temperature labels) =====
 // New | Contacted | Engaged | Nurture | Meeting Requested | Booked | Dead
 
-// ===== PROSPECTS (28 — expanded demo dataset) =====
+// ===== DEMO DATA GATE (C35-2) =====
+// _isDemoMode = true means these 28 hardcoded leads are the only data.
+// auth.js flushes them from PROSPECTS as soon as real Firestore leads load.
+// Do NOT remove — this prevents demo pollution in production pipelines.
+window._isDemoMode = true;
+
+// ===== PROSPECTS (28 — demo dataset, flushed when Firestore leads load) =====
 const PROSPECTS = [
   // ── AIRCRAFT OWNERS ──────────────────────────────────────────
   {
@@ -435,6 +441,7 @@ const PROSPECTS = [
     ]
   },
 ];
+// End of demo data — auth.js calls _flushDemoLeads() after loading real Firestore leads
 
 // ===== TEAM REPS =====
 const TEAM_REPS = [
