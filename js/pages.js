@@ -103,14 +103,19 @@ function pageCommandCenter() {
         ${pending.map(s => {
           const name = s.fullName || [s.firstName, s.lastName].filter(Boolean).join(' ') || 'Client';
           const score = s.situationScore || s.opportunityScore || 0;
-          const band = PlanningAgent.getBand(score);
+          const band  = (typeof PlanningAgent !== 'undefined' && PlanningAgent.getBand)
+            ? PlanningAgent.getBand(score)
+            : { emoji: '🔵', label: 'Priority', color: 'var(--blue)' };
+          const wealthLabel = (typeof PlanningAgent !== 'undefined' && PlanningAgent.WEALTH_LABELS)
+            ? (PlanningAgent.WEALTH_LABELS[s.wealthTier] || s.wealthTier || '—')
+            : (s.wealthTier || '—');
           const date = s.savedAt?.toDate ? s.savedAt.toDate().toLocaleDateString('en-US',{month:'short',day:'numeric'}) : 'Today';
           return `
           <div class="card" style="padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:14px">
             <div style="font-size:22px;font-weight:900;color:${band.color};min-width:36px;text-align:center">${score}</div>
             <div style="flex:1">
               <div style="font-size:13px;font-weight:700;color:var(--text-primary)">${name}</div>
-              <div style="font-size:11px;color:var(--text-muted)">${(s.lifeStage||'').replace(/_/g,' ')} · ${PlanningAgent.WEALTH_LABELS[s.wealthTier]||s.wealthTier||'—'} · ${date}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${(s.lifeStage||'').replace(/_/g,' ')} · ${wealthLabel} · ${date}</div>
             </div>
             <button class="btn btn-primary" onclick="alGenerateBrief('${s.id || s._firestoreId}')"
               style="background:var(--color-ed);border-color:var(--color-ed);font-size:11px;padding:6px 14px">
@@ -130,7 +135,9 @@ function pageCommandCenter() {
         </div>
         ${approved.map(a => {
           const brief = a.brief || {};
-          const band = brief.band || PlanningAgent.getBand(brief.score || 0);
+          const band = brief.band || ((typeof PlanningAgent !== 'undefined' && PlanningAgent.getBand)
+            ? PlanningAgent.getBand(brief.score || 0)
+            : { emoji: '🔵', label: 'Priority', color: 'var(--blue)' });
           const date = a.acceptedAt ? new Date(a.acceptedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
           return `
           <div class="card" style="padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;opacity:0.85">
@@ -1431,7 +1438,11 @@ window.edToggleConsentBtn = function(checkbox) {
 };
 
 window.edGrantConsentAndStart = async function(refUid) {
+  // Clear any stale draft — prevents out-of-bounds currentIdx from a prior session
+  try { localStorage.removeItem('edIntakeDraft'); } catch(e) {}
   if (!window._edIntakeInitialized) { EdIntakeEngine.init('lite'); window._edIntakeInitialized = true; }
+  // If already initialized from a previous session that completed, reset for a fresh run
+  if (EdIntakeEngine.isComplete) { EdIntakeEngine.init('lite'); }
   const sessionId = EdIntakeEngine._sessionId || `consent_${Date.now()}`;
   const consentRecord = {
     situationId:          sessionId,

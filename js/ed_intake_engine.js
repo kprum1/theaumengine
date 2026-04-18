@@ -389,10 +389,12 @@ const EdIntakeEngine = {
         const draft = JSON.parse(saved);
         if ((draft.mode || 'lite') === this._mode) {
           this._answers    = draft.answers    || {};
-          this._currentIdx = draft.currentIdx || 0;
-          this._phase      = draft.phase      || 1;
-          this._sessionId            = draft.sessionId            || this._sessionId;
           this._referringAdvisorUid  = draft.referringAdvisorUid  || this._referringAdvisorUid;
+          this._sessionId            = draft.sessionId            || this._sessionId;
+          // Clamp currentIdx — a stale draft can have an out-of-bounds value
+          const savedIdx = parseInt(draft.currentIdx) || 0;
+          this._currentIdx = (savedIdx >= 0 && savedIdx < this._activeQuestions.length) ? savedIdx : 0;
+          this._phase      = this.currentQ?.phase || 1;
         }
       }
     } catch(e) {}
