@@ -264,10 +264,16 @@ function pageCommandCenter() {
     <div class="section-header"><div class="section-title"><div class="section-title-dot"></div>Niche Performance</div></div>
     <div class="grid-3">
       ${NM.slice(0,3).map(n=>`
-      <div class="card" style="cursor:pointer" onclick="navigate('lead-scoreboard')">
+      <div class="card" style="cursor:pointer;transition:all .15s"
+        onclick="openNicheDrawer('${n.id}')"
+        onmouseover="this.style.borderColor='${n.color}';this.style.boxShadow='0 0 0 1px ${n.color}33'"
+        onmouseout="this.style.borderColor='';this.style.boxShadow=''">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
           <span style="font-size:20px">${n.icon}</span>
-          <span class="tag" style="color:${n.color}">${n.total} prospects</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span class="tag" style="color:${n.color}">${n.total} prospects</span>
+            ${n.booked ? `<span class="tag" style="color:var(--emerald)">${n.booked} booked</span>` : ''}
+          </div>
         </div>
         <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:4px">${n.name}</div>
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">${n.desc}</div>
@@ -277,6 +283,7 @@ function pageCommandCenter() {
             <div class="perf-bar-track"><div class="perf-bar-fill" style="width:${Math.min(n.convPct*1.5,100)}%;background:${n.color}"></div></div>
           </div>
         </div>
+        <div style="margin-top:8px;font-size:10px;color:var(--text-muted);font-weight:600">View prospects →</div>
       </div>`).join('')}
     </div>
   </div>
