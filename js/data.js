@@ -688,6 +688,16 @@ function getDisplayName(p) {
   if (!p) return 'Unnamed Lead';
   const first = (p.firstName || '').trim();
   const last  = (p.lastName  || '').trim();
+  // CIK guard: raw SEC CIK identifiers (e.g. "Former: Hp Inc (Hpq) (Cik 0000047217)")
+  // should never appear as a display name — show clean fallback until name is resolved.
+  if (first && /\(Cik\s*\d+\)/i.test(first + ' ' + last)) {
+    const co = (p.company || first)
+      .replace(/\s*\(Cik\s*\d+\)/gi, '')   // strip CIK token
+      .replace(/\s*\([A-Z]{1,5}\)/g, '')    // strip ticker e.g. (Hpq)
+      .replace(/^Former:\s*/i, '')           // strip "Former:" prefix
+      .trim();
+    return co || 'Executive (Name Pending)';
+  }
   if (first || last) return `${first} ${last}`.trim();
   return (p.company || '').trim() || 'Unnamed Lead';
 }

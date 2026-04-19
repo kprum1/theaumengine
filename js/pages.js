@@ -1441,6 +1441,25 @@ window._edIntakeInitialized = false;
 
 // ===== CLIENT INTAKE INBOX =====
 function pageClientIntake() {
+  // ── ROLE GATE: Operator-only (same pattern as pageSentinelDashboard) ──
+  const _ciEmail = window._currentUser?.email || '';
+  const _ciIsOp  = _ciEmail === 'kosal@fin-tegration.com'
+                || window._advisorProfile?.role === 'operator'
+                || window._advisorProfile?.isOperator === true;
+  if (!_ciIsOp) {
+    return `
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="page-title">🧠 Client Intake — ED</div>
+        <div class="page-subtitle">Submissions inbox</div>
+      </div>
+    </div>
+    <div class="empty-state" style="margin-top:40px">
+      <div class="empty-state-icon">🔒</div>
+      <div class="empty-state-title">Operator Access Required</div>
+      <div class="empty-state-sub">Client Intake submissions are managed by your platform operator.<br>Contact kosal@fin-tegration.com for access.</div>
+    </div>`;
+  }
   const situations  = window._edSituations  || [];
   const uid         = (typeof currentUID !== 'undefined' && currentUID) ? currentUID : '';
   const intakeLink  = uid ? `${window.location.origin}/#ed-disclosure?ref=${uid}` : null;
