@@ -170,7 +170,32 @@ function pageAdminDashboard() {
     </div>
   </div>
 
-  <!-- Master Leads Pool -->
+  <!-- Advisor Management Panel -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header" style="justify-content:space-between">
+      <div>
+        <div class="card-title">👥 Advisor Management</div>
+        <div style="font-size:10px;color:var(--text-muted)" id="admin-advisors-meta">Loading advisors…</div>
+      </div>
+      <button class="btn btn-secondary" style="font-size:11px;padding:5px 14px" onclick="renderAdvisorManagement()">↻ Refresh</button>
+    </div>
+    <div id="admin-advisor-panel">
+      <div class="agent-thinking"><div class="agent-dots"><span>●</span><span>●</span><span>●</span></div>Loading advisors…</div>
+    </div>
+  </div>
+
+  <!-- Edit Advisor Modal (hidden until triggered) -->
+  <div id="admin-edit-advisor-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center">
+    <div style="background:var(--bg-card);border:1px solid var(--border-default);border-radius:16px;padding:28px;width:min(540px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div style="font-size:15px;font-weight:800;color:var(--text-primary)" id="admin-edit-advisor-name">Edit Advisor</div>
+        <button onclick="closeAdvisorModal()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1">✕</button>
+      </div>
+      <div id="admin-edit-advisor-form"></div>
+    </div>
+  </div>
+
+
   <div class="card" style="margin-bottom:20px">
     <div class="card-header" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
@@ -312,12 +337,233 @@ async function renderAdminDashboard() {
     }
   }, 30_000);
 
-  // Load funnel + outcomes + master leads + governance flags in parallel
+  // Load funnel + outcomes + master leads + governance flags + advisors in parallel
   renderAdminKPIs();
   renderAdminOutcomes();
   renderMasterLeadsPool();
   renderGovernanceFlags();
+  renderAdvisorManagement();
 }
+
+// ── Advisor Management Panel ───────────────────────────────────────────────
+const _NICHE_DEFS = [
+  { id:'aircraft-owners',        icon:'✈️',  name:'Aircraft Owners' },
+  { id:'yacht-owners',           icon:'⛵',  name:'Yacht Owners' },
+  { id:'business-owners',        icon:'🏢',  name:'Business Owners' },
+  { id:'charity-board-members',  icon:'🎗️',  name:'Charity Boards' },
+  { id:'inheritance',            icon:'💰',  name:'Inheritance' },
+  { id:'physicians',             icon:'👩‍⚕️', name:'Physicians' },
+  { id:'henrys',                 icon:'🚀',  name:'HENRYs' },
+  { id:'ai-displaced-executives',icon:'🤖',  name:'AI-Displaced Execs' },
+  { id:'law-partners',           icon:'⚖️',  name:'Law Partners' },
+  { id:'c-suite-executives',     icon:'👔',  name:'C-Suite' },
+  { id:'dentists',               icon:'🦷',  name:'Dentists' },
+  { id:'high-earning-tradesman', icon:'🔧',  name:'Tradesman' },
+  { id:'re-developers',          icon:'🏗️',  name:'RE Developers' },
+  { id:'pro-athletes',           icon:'🏆',  name:'Pro Athletes' },
+];
+
+let _advisorPoolCache = null;
+
+async function renderAdvisorManagement() {
+  const panel   = document.getElementById('admin-advisor-panel');
+  const metaEl  = document.getElementById('admin-advisors-meta');
+  if (!panel) return;
+
+  panel.innerHTML = '<div class="agent-thinking"><div class="agent-dots"><span>●</span><span>●</span><span>●</span></div>Loading advisors…</div>';
+
+  try {
+    const db = window.firebase?.firestore ? window.firebase.firestore() : null;
+    if (!db) { panel.innerHTML = '<div class="empty-state"><div class="empty-state-title">DB not ready</div></div>'; return; }
+
+    // Load advisor_pool + presence in parallel
+    const [poolSnap, presSnap] = await Promise.all([
+      db.collection('advisor_pool').get(),
+      db.collection('operator_presence').get(),
+    ]);
+
+    // Build presence map uid → displayName, email, currentPage
+    const presMap = {};
+    presSnap.docs.forEach(d => { presMap[d.id] = d.data(); });
+
+    _advisorPoolCache = poolSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+
+    if (metaEl) metaEl.textContent = `${_advisorPoolCache.length} advisors · Updated ${new Date().toLocaleTimeString()}`;
+
+    if (_advisorPoolCache.length === 0) {
+      panel.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👥</div><div class="empty-state-title">No advisors in pool</div></div>';
+      return;
+    }
+
+    const rows = _advisorPoolCache.map(a => {
+      const pres       = presMap[a.uid] || {};
+      const name       = pres.displayName || pres.name || a.name || a.firmName || a.uid.slice(0,8);
+      const email      = pres.email || a.email || '—';
+      const cap        = a.activeLeadCap || a.leadCapacity || 200;
+      const current    = a.currentLeadCount || 0;
+      const capPct     = Math.min(Math.round(current / cap * 100), 100);
+      const capColor   = capPct >= 90 ? 'var(--rose)' : capPct >= 70 ? 'var(--amber)' : 'var(--emerald)';
+      const eligible   = a.eligibleForRouting !== false;
+      const niches     = a.nicheIds || [];
+      const isOp       = a.isOperator || a.role === 'operator';
+      const page       = pres.currentPage || null;
+      const online     = pres.status === 'online';
+
+      const nicheChips = niches.slice(0, 5).map(id => {
+        const n = _NICHE_DEFS.find(x => x.id === id);
+        return `<span style="font-size:9.5px;background:var(--bg-elevated);color:var(--text-secondary);padding:2px 7px;border-radius:10px;white-space:nowrap">${n ? n.icon + ' ' + n.name : id}</span>`;
+      }).join('') + (niches.length > 5 ? `<span style="font-size:9.5px;color:var(--text-muted)">+${niches.length - 5} more</span>` : '');
+
+      return `
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--border-subtle);flex-wrap:wrap" data-advisor-uid="${a.uid}">
+        <!-- Avatar -->
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0">
+          ${name.charAt(0).toUpperCase()}
+        </div>
+        <!-- Identity -->
+        <div style="flex:1;min-width:160px">
+          <div style="font-size:13px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:6px">
+            ${name}
+            ${online ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--emerald);display:inline-block"></span>' : ''}
+            ${isOp ? '<span style="font-size:9px;background:var(--amber);color:#000;padding:1px 6px;border-radius:8px;font-weight:700">OPERATOR</span>' : ''}
+          </div>
+          <div style="font-size:10.5px;color:var(--text-muted);margin-top:1px">${email}</div>
+          ${page ? `<div style="font-size:9.5px;color:var(--blue);margin-top:2px">📍 ${page}</div>` : ''}
+        </div>
+        <!-- Lead Cap -->
+        <div style="min-width:120px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px;display:flex;justify-content:space-between">
+            <span>Lead Cap</span><span style="font-weight:700;color:${capColor}">${current}/${cap}</span>
+          </div>
+          <div style="height:4px;background:var(--bg-elevated);border-radius:2px;overflow:hidden">
+            <div style="width:${capPct}%;height:100%;background:${capColor};border-radius:2px;transition:width .3s"></div>
+          </div>
+          <div style="font-size:9px;color:var(--text-muted);margin-top:2px">${capPct}% of cap used</div>
+        </div>
+        <!-- Routing Status -->
+        <div style="min-width:90px;text-align:center">
+          <div style="font-size:9.5px;font-weight:700;padding:3px 10px;border-radius:12px;background:${eligible ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)'};color:${eligible ? 'var(--emerald)' : 'var(--rose)'};white-space:nowrap">
+            ${eligible ? '✅ Routing ON' : '⏸ Routing OFF'}
+          </div>
+        </div>
+        <!-- Niches -->
+        <div style="flex:2;min-width:180px;display:flex;flex-wrap:wrap;gap:4px">${nicheChips}</div>
+        <!-- Edit button -->
+        <div style="flex-shrink:0">
+          <button class="btn btn-ghost" style="font-size:11px;padding:5px 14px" onclick="openAdvisorEdit('${a.uid}')">
+            ✏️ Edit
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+
+    panel.innerHTML = `<div style="border-radius:10px;overflow:hidden">${rows}</div>`;
+  } catch(e) {
+    console.error('[renderAdvisorManagement]', e);
+    panel.innerHTML = `<div class="empty-state"><div class="empty-state-title">Error loading advisors</div><div class="empty-state-sub">${e.message}</div></div>`;
+  }
+}
+
+// ── Open the Edit Advisor modal ────────────────────────────────────────────
+window.openAdvisorEdit = function(uid) {
+  if (!_advisorPoolCache) return;
+  const advisor  = _advisorPoolCache.find(a => a.uid === uid);
+  if (!advisor) { showToast('Advisor not found', '⚠️'); return; }
+
+  const pres     = {}; // presence cached in cells
+  const name     = advisor.name || advisor.firmName || uid.slice(0,8);
+  const cap      = advisor.activeLeadCap || advisor.leadCapacity || 200;
+  const eligible = advisor.eligibleForRouting !== false;
+  const niches   = advisor.nicheIds || [];
+
+  document.getElementById('admin-edit-advisor-name').textContent = `Edit — ${name}`;
+
+  const nicheCheckboxes = _NICHE_DEFS.map(n => `
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;transition:background .1s"
+      onmouseover="this.style.background='var(--bg-elevated)'" onmouseout="this.style.background=''">
+      <input type="checkbox" id="niche-cb-${n.id}" ${niches.includes(n.id) ? 'checked' : ''}
+        style="width:14px;height:14px;accent-color:var(--blue);cursor:pointer">
+      <span style="font-size:12px">${n.icon} ${n.name}</span>
+    </label>`).join('');
+
+  document.getElementById('admin-edit-advisor-form').innerHTML = `
+    <div style="margin-bottom:18px">
+      <label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em">Lead Cap</label>
+      <input type="number" id="admin-edit-lead-cap" value="${cap}" min="0" max="2000" step="25"
+        style="display:block;width:100%;margin-top:6px;padding:10px 14px;background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:8px;color:var(--text-primary);font-size:13px">
+      <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Current: ${advisor.currentLeadCount || 0} assigned</div>
+    </div>
+    <div style="margin-bottom:18px">
+      <label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em">Routing</label>
+      <div style="margin-top:8px;display:flex;gap:10px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="radio" name="admin-routing" value="true" ${eligible ? 'checked' : ''} style="accent-color:var(--emerald)"> Enabled
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="radio" name="admin-routing" value="false" ${!eligible ? 'checked' : ''} style="accent-color:var(--rose)"> Paused
+        </label>
+      </div>
+    </div>
+    <div style="margin-bottom:24px">
+      <label style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.07em">Niches (${niches.length} assigned)</label>
+      <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:2px;max-height:280px;overflow-y:auto;padding:4px;border:1px solid var(--border-subtle);border-radius:8px">${nicheCheckboxes}</div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeAdvisorModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAdvisorChanges('${uid}')" style="background:var(--blue);border-color:var(--blue)">💾 Save Changes</button>
+    </div>`;
+
+  const modal = document.getElementById('admin-edit-advisor-modal');
+  modal.style.display = 'flex';
+};
+
+// ── Save advisor changes to Firestore ─────────────────────────────────────
+window.saveAdvisorChanges = async function(uid) {
+  try {
+    const db = window.firebase?.firestore ? window.firebase.firestore() : null;
+    if (!db) { showToast('DB not ready', '⚠️'); return; }
+
+    const cap      = parseInt(document.getElementById('admin-edit-lead-cap')?.value || '200', 10);
+    const routing  = document.querySelector('input[name="admin-routing"]:checked')?.value === 'true';
+    const niches   = _NICHE_DEFS
+      .filter(n => document.getElementById(`niche-cb-${n.id}`)?.checked)
+      .map(n => n.id);
+
+    if (niches.length === 0) { showToast('Select at least 1 niche', '⚠️'); return; }
+    if (isNaN(cap) || cap < 0) { showToast('Invalid lead cap', '⚠️'); return; }
+
+    await db.collection('advisor_pool').doc(uid).update({
+      activeLeadCap:      cap,
+      eligibleForRouting: routing,
+      nicheIds:           niches,
+      updatedAt:          new Date().toISOString(),
+      updatedBy:          'operator-admin-ui',
+    });
+
+    // Update local cache so re-render is instant
+    if (_advisorPoolCache) {
+      const idx = _advisorPoolCache.findIndex(a => a.uid === uid);
+      if (idx !== -1) {
+        _advisorPoolCache[idx].activeLeadCap      = cap;
+        _advisorPoolCache[idx].eligibleForRouting = routing;
+        _advisorPoolCache[idx].nicheIds           = niches;
+      }
+    }
+
+    closeAdvisorModal();
+    showToast('Advisor updated successfully', '✅');
+    renderAdvisorManagement(); // re-render panel with new data
+  } catch(e) {
+    console.error('[saveAdvisorChanges]', e);
+    showToast(`Save failed: ${e.message}`, '❌');
+  }
+};
+
+// ── Close modal ────────────────────────────────────────────────────────────
+window.closeAdvisorModal = function() {
+  const modal = document.getElementById('admin-edit-advisor-modal');
+  if (modal) modal.style.display = 'none';
+};
 
 // ── Phase C2: Pilot Funnel Dashboard ───────────────────────────────────────
 async function renderAdminKPIs() {

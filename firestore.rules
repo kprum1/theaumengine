@@ -118,9 +118,16 @@ service cloud.firestore {
     // ================================================================
     // ADVISOR POOL (routing engine eligibility)
     // Each advisor writes their own doc; operator can read all.
+    // Operator can also update management fields (cap, niches, eligibility).
     // ================================================================
     match /advisor_pool/{uid} {
+      // Advisor writes own doc (self-provision)
       allow write: if request.auth != null && request.auth.uid == uid;
+      // Operator can update any advisor doc — restricted to management fields only
+      allow update: if isOperator()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['activeLeadCap', 'nicheIds', 'eligibleForRouting',
+                                   'updatedAt', 'updatedBy', 'capPolicy', 'capWarningPct']);
       allow read:  if request.auth != null
                    && (request.auth.uid == uid
                        || request.auth.token.email == 'kosal@fin-tegration.com');
