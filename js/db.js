@@ -294,8 +294,8 @@ async function fetchAdvisorLeadCount(uid) {
     const isOp = window._currentUser && window._currentUser.email === _OPERATOR_EMAIL;
 
     const count = isOp
-      ? (meta.totalLeads || 0)                        // operator → global total
-      : (meta.leadsByAdvisor?.[uid] || 0);            // advisor  → their own total
+      ? (meta.totalMasterLeads || meta.totalLeads || 0)  // operator → unique prospects (master_leads)
+      : (meta.leadsByAdvisor?.[uid] || 0);               // advisor  → their own assignments
 
     window._firestoreLeadTotal     = count;
     // Cache per-niche breakdown for Recent Cohorts in Prospect Mine
