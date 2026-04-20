@@ -11,6 +11,12 @@ scripts/serviceAccountKey.json
 serviceAccountKey.json
 *firebase-adminsdk*.json
 
+# API keys — NEVER commit
+scripts/config/pdl.json
+scripts/config/apollo.json
+scripts/config/rocketreach.json
+scripts/config/cognism.json
+
 # Function environment variables — API keys, NEVER commit
 functions/.env
 functions/.env.*
