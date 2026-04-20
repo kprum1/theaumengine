@@ -20,8 +20,11 @@ service cloud.firestore {
       allow write: if false;
     }
     match /master_leads/{id} {
-      // Clients may read master_lead docs referenced by their assignments
-      allow read: if request.auth != null;
+      // C41 Phase 2: direct client reads CLOSED.
+      // All master_lead data is served via the getLeadsByIds Cloud Function,
+      // which enforces per-doc assignment ownership before returning data.
+      // Admin SDK (routing CF, ingest scripts) bypasses rules as usual.
+      allow read: if false;
       allow write: if false;  // writes: service account only
     }
     match /lead_assignments/{id} {
@@ -147,7 +150,9 @@ service cloud.firestore {
     // Writes only from Admin SDK (import script) — not from browser.
     // ================================================================
     match /prospects/{docId} {
-      allow read:  if request.auth != null;
+      // Operator-only read. Advisors never query the raw prospects pool directly.
+      // All advisor lead access goes through lead_assignments → master_leads path.
+      allow read:  if isOperator();
       allow write: if false;   // Admin SDK only (bypasses rules)
     }
 

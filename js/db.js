@@ -118,7 +118,9 @@ async function syncNicheToAdvisorPool(uid, nicheIds, nicheProfile) {
 }
 
 // Reads from the global lead_assignments collection (Layer 1) filtered to
-// this advisor's UID, then maps to the PROSPECTS schema the cockpit uses.
+// this advisor's UID, then fetches master_lead data via the getLeadsByIds
+// Cloud Function (C41 gateway — enforces per-doc assignment ownership).
+// Direct master_leads reads are no longer permitted by Firestore rules.
 
 async function loadAssignedLeadsFromFirestore(uid) {
   if (!uid) return [];
@@ -126,7 +128,7 @@ async function loadAssignedLeadsFromFirestore(uid) {
     const db   = _getDB();
     if (!db) return [];
 
-    // Pull all active assignments for this advisor (limit 500 — covers large pipelines)
+    // Step 1: Pull all active assignments for this advisor
     const snap = await db.collection('lead_assignments')
       .where('ownerUid', '==', uid)
       .where('ownershipStatus', 'in', ['active', 'pending'])
@@ -135,80 +137,100 @@ async function loadAssignedLeadsFromFirestore(uid) {
 
     if (snap.empty) return [];
 
-    // For each assignment, pull the master_lead doc to get full data
-    const leadFetches = snap.docs.map(async (aDoc) => {
+    // Build a map: masterLeadId → assignment doc data
+    const assignmentMap = {};
+    snap.docs.forEach(aDoc => {
       const a = aDoc.data();
-      try {
-        const leadSnap = await db.collection('master_leads').doc(a.masterLeadId).get();
-        if (!leadSnap.exists) return null;
-        const lead = leadSnap.data();
-
-        // Map lead_assignment + master_lead → PROSPECTS schema
-        // For person-level leads (physicians, dentists, etc.): use firstName + lastName
-        // For org-level leads (SBA business, HUD project, law firm): use company as display name
-        const personFirst = (lead.firstName || '').trim();
-        const personLast  = (lead.lastName  || '').trim();
-        const personName  = (lead.fullName  || (personFirst + ' ' + personLast).trim());
-        const orgName     = (lead.company   || lead.firmName || '').trim();
-        const isOrgLead   = !personFirst && !personName && !!orgName;
-
-        const displayName = personName || orgName || 'Unknown Lead';
-        const first = isOrgLead ? orgName  : (personFirst || displayName.split(' ')[0] || 'Unknown');
-        const last  = isOrgLead ? ''       : (personLast  || displayName.split(' ').slice(1).join(' ') || '');
-
-        return {
-          // Identity
-          id:            'fs_' + aDoc.id,     // prefix avoids collision with demo p1..p25
-          assignmentId:  aDoc.id,             // Firestore doc ID for write-back
-          masterLeadId:  a.masterLeadId,
-
-          // Name fields pages.js expects
-          firstName:     first,
-          lastName:      last,
-          name:          displayName,
-
-          // Role / company
-          title:         lead.title    || lead.jobTitle    || (isOrgLead ? lead.firmTierLabel || '' : ''),
-          company:       lead.company  || lead.firmName    || lead.employer || '',
-          city:          lead.city     || '',
-          state:         lead.state    || '',
-          location:      [lead.city, lead.state].filter(Boolean).join(', '),
-
-          // Scores (from assignment doc if present, else defaults)
-          fitScore:      Math.round((a.finalScore   || 0) * 100) || 72,
-          timingScore:   Math.round((a.timingScore  || 0) * 100) || 65,
-          priorityScore: Math.round((a.finalScore   || 0) * 100) || 70,
-
-          // Classification
-          niche:         lead.niche            || 'Assigned Lead',
-          nicheId:       lead.nicheId          || 'n0',
-          assets:        lead.estimatedAUM     || lead.assets   || '$1M+',
-
-          // Pipeline state
-          status:        a.advisorStatus       || 'New',
-          assignedRep:   'You',
-          lastActivity:  a.assignedAt
-                           ? new Date(a.assignedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})
-                           : 'Today',
-
-          // Source badge
-          source:        lead.source           || a.source || 'AUM Engine',
-          tags:          ['🔵 Assigned'],    // visual indicator it's a live lead
-
-          // Signals passthrough
-          signals:       lead.signals          || [],
-          enrichment:    lead.enrichment       || {},
-
-          // Metadata for write-back
-          _fromFirestore: true,
-        };
-      } catch (innerErr) {
-        console.warn('[db.js] Could not hydrate lead:', a.masterLeadId, innerErr);
-        return null;
+      if (a.masterLeadId) {
+        assignmentMap[a.masterLeadId] = { assignmentId: aDoc.id, ...a };
       }
     });
 
-    const results = await Promise.all(leadFetches);
+    const masterLeadIds = Object.keys(assignmentMap);
+    if (!masterLeadIds.length) return [];
+
+    // Step 2: Fetch master_leads via CF gateway (getLeadsByIds)
+    // This replaces the previous direct Firestore reads (C41 Phase 2 security).
+    let masterLeadsById = {};
+    try {
+      const fn = firebase.functions().httpsCallable('getLeadsByIds');
+      const result = await fn({ ids: masterLeadIds });
+      const leads = result.data?.leads || [];
+      leads.forEach(lead => {
+        if (lead.id) masterLeadsById[lead.id] = lead;
+      });
+    } catch (cfErr) {
+      console.warn('[db.js] getLeadsByIds CF failed — cockpit may show partial data:', cfErr.message);
+      // Fail gracefully: return empty rather than crashing cockpit
+      return [];
+    }
+
+    // Step 3: Map assignment + master_lead → PROSPECTS schema
+    const results = snap.docs.map(aDoc => {
+      const a    = aDoc.data();
+      const lead = masterLeadsById[a.masterLeadId];
+      if (!lead) return null;
+
+      // For person-level leads (physicians, dentists, etc.): use firstName + lastName
+      // For org-level leads (SBA business, HUD project, law firm): use company as display name
+      const personFirst = (lead.firstName || '').trim();
+      const personLast  = (lead.lastName  || '').trim();
+      const personName  = (lead.fullName  || (personFirst + ' ' + personLast).trim());
+      const orgName     = (lead.company   || lead.firmName || '').trim();
+      const isOrgLead   = !personFirst && !personName && !!orgName;
+
+      const displayName = personName || orgName || 'Unknown Lead';
+      const first = isOrgLead ? orgName  : (personFirst || displayName.split(' ')[0] || 'Unknown');
+      const last  = isOrgLead ? ''       : (personLast  || displayName.split(' ').slice(1).join(' ') || '');
+
+      return {
+        // Identity
+        id:            'fs_' + aDoc.id,     // prefix avoids collision with demo p1..p25
+        assignmentId:  aDoc.id,             // Firestore doc ID for write-back
+        masterLeadId:  a.masterLeadId,
+
+        // Name fields pages.js expects
+        firstName:     first,
+        lastName:      last,
+        name:          displayName,
+
+        // Role / company
+        title:         lead.title    || lead.jobTitle    || (isOrgLead ? lead.firmTierLabel || '' : ''),
+        company:       lead.company  || lead.firmName    || lead.employer || '',
+        city:          lead.city     || '',
+        state:         lead.state    || '',
+        location:      [lead.city, lead.state].filter(Boolean).join(', '),
+
+        // Scores (from assignment doc if present, else defaults)
+        fitScore:      Math.round((a.finalScore   || 0) * 100) || 72,
+        timingScore:   Math.round((a.timingScore  || 0) * 100) || 65,
+        priorityScore: Math.round((a.finalScore   || 0) * 100) || 70,
+
+        // Classification
+        niche:         lead.niche            || 'Assigned Lead',
+        nicheId:       lead.nicheId          || 'n0',
+        assets:        lead.estimatedAUM     || lead.assets   || '$1M+',
+
+        // Pipeline state
+        status:        a.advisorStatus       || 'New',
+        assignedRep:   'You',
+        lastActivity:  a.assignedAt
+                         ? new Date(a.assignedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})
+                         : 'Today',
+
+        // Source badge
+        source:        lead.source           || a.source || 'AUM Engine',
+        tags:          ['🔵 Assigned'],    // visual indicator it's a live lead
+
+        // Signals passthrough
+        signals:       lead.signals          || [],
+        enrichment:    lead.enrichment       || {},
+
+        // Metadata for write-back
+        _fromFirestore: true,
+      };
+    });
+
     return results.filter(Boolean);
 
   } catch(e) {
@@ -216,6 +238,7 @@ async function loadAssignedLeadsFromFirestore(uid) {
     return [];
   }
 }
+
 
 // Write lead status change back to Firestore — lead_assignments (Layer 1 / legacy)
 async function updateLeadStatusInFirestore(assignmentId, newStatus) {

@@ -61,6 +61,13 @@ function fetchJson(url) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// C41 Track 3: Filter out raw CIK identifiers from EDGAR entity_name
+// EDGAR sometimes returns '0001234567' instead of a resolved company name.
+// Pattern: 7-10 digit numeric string (CIK format).
+const CIK_RE = /^\d{7,10}$/;
+function isCIKName(name) { return CIK_RE.test((name||'').trim()); }
+
+
 // ── EDGAR full-text search ────────────────────────────────────
 async function edgarSearch(formType, query, startDt, limit = 20) {
   const qs = new URLSearchParams({
@@ -123,6 +130,11 @@ async function runForm4Mode() {
       const accNum     = hit._id || '';
 
       if (!entityName) continue;
+      // C41: skip raw CIK identifiers — not a real person name
+      if (isCIKName(entityName)) {
+        console.log(`  [Form4] Skipping raw CIK entity_name: ${entityName}`);
+        continue;
+      }
 
       // Parse name from entity — Form 4 entity_name is the reporting person
       const nameParts = entityName.trim().split(/\s+/);
@@ -215,6 +227,11 @@ async function run8KMode() {
       const accNum      = (hit._id || '').replace(/-/g, '');
 
       if (!companyName) continue;
+      // C41: skip raw CIK identifiers in company names
+      if (isCIKName(companyName)) {
+        console.log(`  [8-K] Skipping raw CIK entity_name: ${companyName}`);
+        continue;
+      }
 
       // 8-K: entity_name is the COMPANY, not the executive.
       // The executive name is in the filing text — we surface it as a research lead:
@@ -306,6 +323,11 @@ async function runProxyMode() {
       const fileDate    = src.file_date || '';
 
       if (!companyName) continue;
+      // C41: skip raw CIK identifiers in proxy filing names
+      if (isCIKName(companyName)) {
+        console.log(`  [Proxy] Skipping raw CIK entity_name: ${companyName}`);
+        continue;
+      }
 
       const viewUrl = `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${encodeURIComponent(companyName)}&type=DEF+14A&dateb=&owner=include&count=5`;
 

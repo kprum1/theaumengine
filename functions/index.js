@@ -35,6 +35,20 @@ const normalize = {
 
 const crypto = require('crypto');
 
+// ── CIK sanitizer (Track 3 — C41) ──────────────────────────
+// Detects raw SEC CIK identifiers in name fields (e.g. "0001234567")
+// and replaces them with empty string + flags needsNameResolution.
+// CIK pattern: 7–10 digit numeric string, optionally zero-padded.
+const CIK_PATTERN = /^\d{7,10}$/;
+function sanitizeCIK(firstName, lastName) {
+  const first = (firstName || '').trim();
+  const last  = (lastName  || '').trim();
+  const isCIK = CIK_PATTERN.test(first) || CIK_PATTERN.test(last) ||
+                CIK_PATTERN.test(`${first}${last}`.replace(/\s+/g, ''));
+  if (!isCIK) return { firstName: first, lastName: last, cikFlagged: false };
+  return { firstName: '', lastName: '', cikFlagged: true };
+}
+
 function computeIdempotencyKey(lead) {
   const parts = [
     normalize.name(lead.firstName),
@@ -97,10 +111,13 @@ exports.onLeadIngested = onRequest({ cors: true }, async (req, res) => {
 
     // Write master_lead
     const now = new Date().toISOString();
+    // C41 Track 3: sanitize CIK identifiers before writing to master_leads
+    const sanitized = sanitizeCIK(lead.firstName, lead.lastName);
     const masterLead = {
       idempotencyKey,
-      firstName:    (lead.firstName||'').trim(),
-      lastName:     (lead.lastName||'').trim(),
+      firstName:    sanitized.firstName,
+      lastName:     sanitized.lastName,
+      ...(sanitized.cikFlagged ? { needsNameResolution: true, _cikFlagged: true } : {}),
       email:        normalize.email(lead.email||''),
       phone:        normalize.phone(lead.phone||''),
       title:        (lead.title||'').trim(),
@@ -635,10 +652,13 @@ exports.alfredIngest = onRequest({ cors: false }, async (req, res) => {
       }
 
       const now      = new Date().toISOString();
+      // C41 Track 3: sanitize CIK identifiers
+      const sanitized = sanitizeCIK(lead.firstName, lead.lastName);
       const masterRef = await db.collection('master_leads').add({
         idempotencyKey: key,
-        firstName: (lead.firstName||'').trim(),
-        lastName:  (lead.lastName||'').trim(),
+        firstName: sanitized.firstName,
+        lastName:  sanitized.lastName,
+        ...(sanitized.cikFlagged ? { needsNameResolution: true, _cikFlagged: true } : {}),
         email:     normalize.email(lead.email||''),
         phone:     normalize.phone(lead.phone||''),
         title:     (lead.title||'').trim(),
@@ -908,4 +928,89 @@ exports.sendDailyDigest = onSchedule('0 12 * * *', async (event) => {
   });
 
   console.info(`[DigestCron] 🏁 Done — Sent: ${sent} | Failed: ${failed}`);
+});
+
+
+// ============================================================
+// AGENT 6: getLeadsByIds — Batched master_leads gateway (C41)
+// onCall (authenticated callable) — replaces direct client
+// Firestore reads of master_leads collection.
+//
+// CLIENT USAGE (db.js):
+//   const fn = firebase.functions().httpsCallable('getLeadsByIds');
+//   const { data } = await fn({ ids: ['abc123', 'def456', ...] });
+//   // data.leads = array of master_lead objects (only owned ones)
+//
+// SECURITY MODEL:
+//   1. Caller must be authenticated (Firebase Auth enforced by onCall)
+//   2. For each masterLeadId, verify active lead_assignment exists
+//      where ownerUid == caller.uid  (or caller is operator)
+//   3. Return only verified leads — no data for unowned IDs
+//   4. Firestore rule for master_leads is now: allow read: if false
+//      (all reads go through this function)
+//
+// OPERATOR BYPASS:
+//   kosal@fin-tegration.com skips assignment check — gets all docs.
+// ============================================================
+const { onCall } = require('firebase-functions/v2/https');
+
+exports.getLeadsByIds = onCall({ enforceAppCheck: true }, async (req) => {
+  // Auth guard — onCall enforces this, but be explicit
+  if (!req.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Authentication required.');
+  }
+
+  const callerUid   = req.auth.uid;
+  const callerEmail = req.auth.token.email || '';
+  const isOperator  = callerEmail === 'kosal@fin-tegration.com';
+
+  const { ids } = req.data;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { leads: [] };
+  }
+
+  // Cap batch size — prevents abuse / runaway reads
+  const MAX_IDS = 200;
+  const safeIds = ids.slice(0, MAX_IDS);
+
+  // ── Operator fast path ──────────────────────────────────────
+  // Operator gets all requested docs without assignment check.
+  if (isOperator) {
+    const fetches = safeIds.map(id =>
+      db.collection('master_leads').doc(id).get()
+        .then(snap => snap.exists ? { id: snap.id, ...snap.data() } : null)
+        .catch(() => null)
+    );
+    const results = await Promise.all(fetches);
+    return { leads: results.filter(Boolean), operator: true };
+  }
+
+  // ── Advisor path ────────────────────────────────────────────
+  // Build set of masterLeadIds this advisor is authorized to see.
+  // We query lead_assignments once (up to 500 active), then filter.
+  const assignSnap = await db.collection('lead_assignments')
+    .where('ownerUid', '==', callerUid)
+    .where('ownershipStatus', 'in', ['active', 'pending'])
+    .limit(500)
+    .get();
+
+  const authorizedIds = new Set(
+    assignSnap.docs.map(d => d.data().masterLeadId).filter(Boolean)
+  );
+
+  // Only fetch IDs the advisor is authorized for
+  const authorizedRequested = safeIds.filter(id => authorizedIds.has(id));
+
+  if (authorizedRequested.length === 0) {
+    return { leads: [] };
+  }
+
+  const fetches = authorizedRequested.map(id =>
+    db.collection('master_leads').doc(id).get()
+      .then(snap => snap.exists ? { id: snap.id, ...snap.data() } : null)
+      .catch(() => null)
+  );
+
+  const results = await Promise.all(fetches);
+  return { leads: results.filter(Boolean) };
 });

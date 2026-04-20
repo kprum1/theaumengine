@@ -62,6 +62,23 @@ const firebaseConfig = {
 
 // ===== INIT =====
 firebase.initializeApp(firebaseConfig);
+
+// C40 Security: Firebase App Check — reCAPTCHA Enterprise
+// Must init AFTER initializeApp() and BEFORE auth/firestore are used.
+// Silently attaches attestation tokens to every Firebase SDK call.
+// Bots without a valid token are rejected at the project level.
+(function _initAppCheck() {
+  try {
+    firebase.appCheck().activate(
+      new firebase.appCheck.ReCaptchaEnterpriseProvider('6Le9WsEsAAAAABii_nc74tKOWwykKaZALKLCDfYM'),
+      true // isTokenAutoRefreshEnabled
+    );
+    console.info('[AppCheck] Initialized — reCAPTCHA Enterprise enforced');
+  } catch(e) {
+    console.warn('[AppCheck] Init failed (non-blocking):', e.message);
+  }
+})();
+
 const auth = firebase.auth();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
 
@@ -122,8 +139,39 @@ let currentUID = null; // global — used by db.js helpers throughout the app
 auth.onAuthStateChanged(async (user) => {
   if (user) {
     currentUID = user.uid;
-    window._currentUser = user; // ← shared with admin.js + outreach_controller.js
-    // ✅ Authenticated — show cockpit immediately, then hydrate from Firestore
+    window._currentUser = user;
+
+    // ── C40 INVITE-ONLY GATE ──────────────────────────────────────────────
+    // Operator always passes. Everyone else must exist in advisor_pool.
+    // This runs before showing the app shell — unauthorized users never see
+    // the cockpit, just a clean "not provisioned yet" message.
+    const isOp = user.email === 'kosal@fin-tegration.com';
+    if (!isOp) {
+      try {
+        const poolDoc = await firebase.firestore()
+          .collection('advisor_pool').doc(user.uid).get();
+        if (!poolDoc.exists) {
+          // Not provisioned — sign out cleanly
+          await auth.signOut();
+          showPublicShell();
+          // Show a friendly message on the login modal
+          setTimeout(() => {
+            window.openAuthModal();
+            setAuthError(
+              '🔒 Your account hasn\'t been provisioned yet. ' +
+              'Email kosal@fin-tegration.com to get access.'
+            );
+          }, 150);
+          console.info('[auth.js] Gate: user not in advisor_pool — access denied:', user.email);
+          return; // stop all further bootstrap
+        }
+      } catch (gateErr) {
+        // If Firestore is unreachable, fail open (don't lock out real advisors)
+        console.warn('[auth.js] Gate check failed (fail-open):', gateErr.message);
+      }
+    }
+    // ── END GATE ──────────────────────────────────────────────────────────
+
     showAppShell();
     updateUserDisplay(user);
     if (typeof syncThemeButton === 'function') syncThemeButton();
@@ -136,7 +184,7 @@ auth.onAuthStateChanged(async (user) => {
       // C35-2: Flush demo leads the moment real Firestore pipeline leads arrive
       if (data.assignedLeads && data.assignedLeads.length > 0) {
         _flushDemoLeads('bootstrapUserData — ' + data.assignedLeads.length + ' assigned leads loaded');
-        if (typeof refreshAlerts === 'function') refreshAlerts(); // recompute alerts from live data
+        if (typeof refreshAlerts === 'function') refreshAlerts();
       }
 
       // Load booking link from Firestore → hydrate ICP_CONFIG + localStorage
@@ -157,18 +205,14 @@ auth.onAuthStateChanged(async (user) => {
     // Show admin nav item if operator
     const adminNavItem    = document.getElementById('nav-admin-dashboard');
     const adminNavSection = document.getElementById('admin-nav-section');
-    const isOp = user.email === 'kosal@fin-tegration.com';
     if (adminNavItem)    adminNavItem.style.display    = isOp ? 'flex'  : 'none';
     if (adminNavSection) adminNavSection.style.display = isOp ? 'block' : 'none';
 
-    // C18-1: Manager Console — operator only (advisors should not see team-level data)
+    // C18-1: Manager Console — operator only
     const managerNavItem = document.getElementById('nav-manager-console');
     if (managerNavItem) managerNavItem.style.display = isOp ? 'flex' : 'none';
 
-    // Security Sentinel nav — revealed only if sentinel_enabled flag is true
-    // AND the current user is the operator (M4 fix: role-gate Security Sentinel).
-    // loadSentinelConfig() (called from initWithUserData in app.js) sets
-    // window.SENTINEL_ENABLED asynchronously; we check after a short delay.
+    // Security Sentinel nav — operator only + sentinel_enabled flag
     const sentinelNavItem    = document.getElementById('nav-security-sentinel');
     const sentinelNavSection = document.getElementById('sentinel-nav-section');
     setTimeout(() => {
@@ -184,28 +228,21 @@ auth.onAuthStateChanged(async (user) => {
     // Show first-run onboarding wizard for new advisors (onboarding.js)
     if (typeof checkAndShowOnboarding === 'function') checkAndShowOnboarding();
 
-    // ── SLA Breach Banner (C21) ────────────────────────────────────────────
-    // Non-blocking: query lead_assignments for this advisor's stale new leads.
-    // If any are >7 days old with no outreach, inject a dismissible red banner.
+    // SLA Breach Banner (C21)
     _checkAndShowSlaBanner(user.uid).catch(() => {});
 
     // Load Alfred's Firestore prospects and merge into the live PROSPECTS array
     if (typeof loadProspectsFromFirestore === 'function') {
       loadProspectsFromFirestore().then(firestoreProspects => {
         if (!firestoreProspects.length) return;
-        // C35-2: Flush demo data before injecting real Firestore prospects
         _flushDemoLeads('loadProspectsFromFirestore — ' + firestoreProspects.length + ' prospects loaded');
-        // Deduplicate by id — ensures no double-adds on re-auth
         const existingIds = new Set(PROSPECTS.map(p => p.id));
         const newOnes = firestoreProspects.filter(p => !existingIds.has(p.id));
         if (newOnes.length) {
           PROSPECTS.push(...newOnes);
-          // Re-sort by priority score descending
           PROSPECTS.sort((a, b) => (b.priorityScore || 0) - (a.priorityScore || 0));
           console.info(`[auth.js] Loaded ${newOnes.length} Firestore prospects (total: ${PROSPECTS.length})`);
-          // Recompute live alerts from updated pipeline
           if (typeof refreshAlerts === 'function') refreshAlerts();
-          // Refresh the current page so the scoreboard shows new leads
           if (typeof navigate === 'function') {
             const currentPage = document.querySelector('.nav-item.active')?.dataset?.page || 'command-center';
             navigate(currentPage);
@@ -217,11 +254,11 @@ auth.onAuthStateChanged(async (user) => {
   } else {
     currentUID = null;
     window._currentUser = null;
-    // ❌ Not authenticated — show public landing page
-    _resetAuthButtons(); // ← guarantee clean modal state on every signout
+    _resetAuthButtons();
     showPublicShell();
   }
 });
+
 
 // ===== LOGIN FORM =====
 document.addEventListener('DOMContentLoaded', () => {
