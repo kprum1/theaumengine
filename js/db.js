@@ -180,10 +180,16 @@ async function loadAssignedLeadsFromFirestore(uid) {
       const personFirst = (a.firstName || lead.firstName || '').trim();
       const personLast  = (a.lastName  || lead.lastName  || '').trim();
       const personName  = (a.fullName  || lead.fullName  || (personFirst + ' ' + personLast).trim());
-      const orgName     = (lead.company   || lead.firmName || '').trim();
+      const orgName     = (lead.company   || lead.firmName || a.firmName || '').trim();
       const isOrgLead   = !personFirst && !personName && !!orgName;
 
-      const displayName = personName || orgName || 'Unknown Lead';
+      const displayName = personName || orgName || '';
+
+      // Skip leads with no resolvable name — these are old routing-engine assignment docs
+      // whose master_lead couldn't be fetched by the CF. They show as 'Unknown Lead'
+      // and clog the top of the scoreboard. Skip them gracefully.
+      if (!displayName) return null;
+
       const first = isOrgLead ? orgName  : (personFirst || displayName.split(' ')[0] || 'Unknown');
       const last  = isOrgLead ? ''       : (personLast  || displayName.split(' ').slice(1).join(' ') || '');
 
@@ -206,11 +212,12 @@ async function loadAssignedLeadsFromFirestore(uid) {
         zip:           a.zip      || lead.zip      || '',
         location:      [a.city || lead.city, a.state || lead.state].filter(Boolean).join(', '),
 
-        // Scores — check integer fitScore from our routing script first (0-100 scale),
-        // then fall back to finalScore (0.0-1.0 float from old routing engine × 100)
-        fitScore:      a.fitScore      || Math.round((a.finalScore   || 0) * 100) || 72,
-        timingScore:   a.timingScore   || Math.round((a.timingScore  || 0) * 100) || 65,
-        priorityScore: a.priorityScore || a.fitScore || Math.round((a.finalScore || 0) * 100) || 70,
+        // Scores — normalize: old routing engine stored 0.0-1.0 floats; new scripts use integers.
+        // Detection: if raw value is a number between 0 and 2, multiply by 100 to get 0-100 scale.
+        // Otherwise use the value directly (already an integer like 72, 88, 96).
+        fitScore:      (() => { const s = a.fitScore || a.finalScore || 0; return s > 0 && s <= 1 ? Math.round(s * 100) : (s || 72); })(),
+        timingScore:   (() => { const s = a.timingScore || 0; return s > 0 && s <= 1 ? Math.round(s * 100) : (s || 65); })(),
+        priorityScore: (() => { const s = a.priorityScore || a.fitScore || a.finalScore || 0; return s > 0 && s <= 1 ? Math.round(s * 100) : (s || 70); })(),
 
         // Classification — prefer assignment doc (always written by routing script)
         niche:         a.niche    || lead.niche    || 'Assigned Lead',
