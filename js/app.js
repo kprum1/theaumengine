@@ -1736,6 +1736,66 @@ function openDrawer(id) {
     <div class="drawer-section-title">Why This Lead Fits</div>
     <div>${reasonCodes.map(r=>`<span class="reason-tag">${r}</span>`).join('')}</div>
   </div>` : ''}
+  ${(() => {
+    // Pull contact from prospect fields first, then fall back to enrichment layer
+    const enr       = getEnrichment(p.id) || {};
+    const email     = p.email     || enr.personalEmail || '';
+    const phone     = p.phone     || enr.personalPhone || '';
+    const linkedin  = p.linkedInUrl || p.linkedin || '';
+    const hasAny    = email || phone || linkedin;
+    if (!hasAny) return `
+  <div class="drawer-section">
+    <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between">
+      Contact Info
+      <span style="font-size:10px;font-weight:500;color:var(--text-muted);font-style:italic">Awaiting enrichment</span>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);padding:4px 0">
+      Email, phone, and LinkedIn will appear here once the lead is enriched via Apollo or PDL.
+    </div>
+  </div>`;
+    return `
+  <div class="drawer-section">
+    <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between">
+      Contact Info
+      ${enr.contactConfidence ? `<span class="enrich-badge enrich-conf-${enr.contactConfidence}" style="font-size:10px">${enr.contactConfidence} confidence</span>` : ''}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      ${email ? `
+      <div style="display:flex;align-items:center;gap:8px;background:var(--bg-elevated);border-radius:8px;padding:8px 10px">
+        <span style="font-size:13px;flex-shrink:0">📧</span>
+        <span style="font-size:11.5px;font-family:'JetBrains Mono',monospace;color:var(--text-secondary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${email}</span>
+        <button onclick="navigator.clipboard?.writeText('${email.replace(/'/g,"\\'")}').then(()=>showToast('Email copied','📋'))"
+          style="background:none;border:1px solid var(--border-default);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--text-muted);cursor:pointer;flex-shrink:0;font-family:inherit">
+          Copy
+        </button>
+        <a href="mailto:${email}" style="background:none;border:1px solid var(--blue);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--blue);cursor:pointer;flex-shrink:0;text-decoration:none">
+          Open
+        </a>
+      </div>` : ''}
+      ${phone ? `
+      <div style="display:flex;align-items:center;gap:8px;background:var(--bg-elevated);border-radius:8px;padding:8px 10px">
+        <span style="font-size:13px;flex-shrink:0">📞</span>
+        <span style="font-size:11.5px;font-family:'JetBrains Mono',monospace;color:var(--text-secondary);flex:1">${phone}</span>
+        <button onclick="navigator.clipboard?.writeText('${phone.replace(/'/g,"\\'")}').then(()=>showToast('Phone copied','📋'))"
+          style="background:none;border:1px solid var(--border-default);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--text-muted);cursor:pointer;flex-shrink:0;font-family:inherit">
+          Copy
+        </button>
+        <a href="tel:${phone.replace(/\s/g,'')}" style="background:none;border:1px solid var(--blue);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--blue);cursor:pointer;flex-shrink:0;text-decoration:none">
+          Call
+        </a>
+      </div>` : ''}
+      ${linkedin ? `
+      <div style="display:flex;align-items:center;gap:8px;background:var(--bg-elevated);border-radius:8px;padding:8px 10px">
+        <span style="font-size:13px;flex-shrink:0">💼</span>
+        <span style="font-size:11.5px;color:var(--text-secondary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${linkedin}</span>
+        <a href="${linkedin}" target="_blank" rel="noopener"
+          style="background:none;border:1px solid var(--blue);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--blue);cursor:pointer;flex-shrink:0;text-decoration:none">
+          View
+        </a>
+      </div>` : ''}
+    </div>
+  </div>`;
+  })()}
   <div class="drawer-section" style="padding-bottom:0">
     <div class="drawer-section-title">Enterprise Intelligence
       <span style="font-size:9px;font-weight:600;letter-spacing:0.07em;padding:2px 7px;border-radius:8px;background:rgba(96,165,250,0.12);color:var(--blue);margin-left:6px;text-transform:uppercase">NEW</span>
