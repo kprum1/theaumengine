@@ -89,7 +89,12 @@ const hasFlag      = (f) => args.includes(f);
 const getArg       = (f) => { const i = args.indexOf(f); return i !== -1 ? args[i + 1] : null; };
 const DRY_RUN      = hasFlag('--dry-run');
 const FORCE        = hasFlag('--force');
+const NO_CONTACT_ONLY = hasFlag('--no-contact-only'); // skip leads that already have email OR phone
 const NICHE_FILTER = getArg('--niche');
+const STATE_FILTER = getArg('--state');               // e.g. --state MN
+const CITIES_FILTER = getArg('--cities')              // e.g. --cities "Wayzata,Minnetonka"
+  ? getArg('--cities').split(',').map(c => c.trim()).filter(Boolean)
+  : null;
 const LIMIT        = parseInt(getArg('--limit') || '20', 10);
 const DELAY_MS     = parseInt(getArg('--delay') || '500', 10);
 
@@ -297,6 +302,9 @@ async function main() {
 
   console.log(`Mode:          ${DRY_RUN ? '🔍 DRY RUN' : '✍️  LIVE — writing to Firestore'}`);
   console.log(`Niche:         ${NICHE_FILTER || 'all niches'}`);
+  console.log(`State:         ${STATE_FILTER || 'all states'}`);
+  console.log(`Cities:        ${CITIES_FILTER ? CITIES_FILTER.join(', ') : 'all cities'}`);
+  console.log(`No-contact-only: ${NO_CONTACT_ONLY}`);
   console.log(`Limit:         ${LIMIT} leads`);
   console.log(`Force:         ${FORCE}`);
   console.log(`PDL API key:   ✅ Configured`);
@@ -305,16 +313,26 @@ async function main() {
   // ── Load leads from Firestore ──────────────────────────────────────
   console.log('Loading leads from Firestore...');
   let query = db.collection('master_leads');
-  if (NICHE_FILTER) query = query.where('nicheId', '==', NICHE_FILTER);
+  if (NICHE_FILTER)  query = query.where('nicheId', '==', NICHE_FILTER);
+  if (STATE_FILTER)  query = query.where('state',   '==', STATE_FILTER);
 
   const snap = await query.get();
   const allLeads = [];
   snap.forEach(doc => allLeads.push({ id: doc.id, ...doc.data() }));
-  console.log(`Loaded: ${allLeads.length} leads`);
+
+  // City filter in-memory
+  const filteredLeads = CITIES_FILTER
+    ? allLeads.filter(l => CITIES_FILTER.includes(l.city))
+    : allLeads;
+  console.log(`Loaded: ${allLeads.length} leads${CITIES_FILTER ? ` (${filteredLeads.length} in target cities)` : ''}`);
 
   // ── Filter candidates ─────────────────────────────────────────────
-  const candidates = allLeads.filter(l => {
-    if (!FORCE && l.enrichmentStatus === 'enriched') return false;
+  const candidates = filteredLeads.filter(l => {
+    if (!FORCE && l.enrichmentStatus === 'enriched') {
+      // --no-contact-only: re-process enriched leads that got no usable contact data
+      if (NO_CONTACT_ONLY && !l.email && !l.phone) return true;
+      return false;
+    }
     const hasName = (hasValue(l.firstName) && hasValue(l.lastName));
     return hasName; // need at least a name to search PDL
   });

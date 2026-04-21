@@ -53,6 +53,10 @@ const getArg      = (f) => { const i = args.indexOf(f); return i !== -1 ? args[i
 const DRY_RUN     = hasFlag('--dry-run');
 const FORCE       = hasFlag('--force');        // re-enrich even if already enriched
 const NICHE_FILTER = getArg('--niche');
+const STATE_FILTER = getArg('--state');        // e.g. --state MN
+const CITIES_FILTER = getArg('--cities')      // e.g. --cities "Wayzata,Minnetonka,Plymouth"
+  ? getArg('--cities').split(',').map(c => c.trim()).filter(Boolean)
+  : null;
 const LIMIT       = parseInt(getArg('--limit') || '50', 10);
 const DELAY_MS    = parseInt(getArg('--delay') || '1300', 10);
 
@@ -249,6 +253,8 @@ async function main() {
 
   console.log(`Mode:          ${DRY_RUN ? '🔍 DRY RUN' : '✍️  LIVE — will write to Firestore'}`);
   console.log(`Niche filter:  ${NICHE_FILTER || 'all niches'}`);
+  console.log(`State filter:  ${STATE_FILTER || 'all states'}`);
+  console.log(`Cities filter: ${CITIES_FILTER ? CITIES_FILTER.join(', ') : 'all cities'}`);
   console.log(`Limit:         ${LIMIT} leads`);
   console.log(`Force re-enrich: ${FORCE}`);
   console.log(`API key:       ✅ Configured`);
@@ -257,18 +263,23 @@ async function main() {
   // ── Load leads from Firestore ──────────────────────────────────────
   console.log('Loading leads from Firestore...');
   let query = db.collection('master_leads');
-  if (NICHE_FILTER) query = query.where('nicheId', '==', NICHE_FILTER);
+  if (NICHE_FILTER)  query = query.where('nicheId', '==', NICHE_FILTER);
+  if (STATE_FILTER)  query = query.where('state',   '==', STATE_FILTER);
 
   const snap = await query.get();
   const allLeads = [];
   snap.forEach(doc => allLeads.push({ id: doc.id, ...doc.data() }));
+  // Apply city filter in-memory (Firestore doesn't support array-based IN easily with other filters)
+  const filteredLeads = CITIES_FILTER
+    ? allLeads.filter(l => CITIES_FILTER.includes(l.city))
+    : allLeads;
   console.log(`Loaded: ${allLeads.length} leads`);
 
   // ── Filter to enrichment candidates ───────────────────────────────
   // Skip: already enriched (unless --force), missing name (can't search), niche is bad for Apollo
   const SKIP_NICHES = ['pro-athletes', 'inheritance'];
 
-  const candidates = allLeads.filter(l => {
+  const candidates = filteredLeads.filter(l => {
     if (SKIP_NICHES.includes(l.nicheId)) return false;
     if (!FORCE && l.enrichmentStatus === 'enriched') return false;
     const hasName = (l.firstName && l.firstName.trim()) || (l.lastName && l.lastName.trim());
