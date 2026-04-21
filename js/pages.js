@@ -422,9 +422,16 @@ function pageProspectMine() {
 function pageLeadScoreboard() {
   let list = [...PROSPECTS];
   const isFiltered = activeFilters.status !== 'all' || activeFilters.niche !== 'all';
-  if (activeFilters.status !== 'all') list = list.filter(p=>p.status===activeFilters.status);
-  if (activeFilters.niche  !== 'all') list = list.filter(p=>p.nicheId===activeFilters.niche);
-  list.sort((a,b)=>b.priorityScore-a.priorityScore);
+  if (activeFilters.status === 'enriched') {
+    // Enriched = has phone (from NPI or PDL) — contact-ready leads
+    list = list.filter(p => p.phone && p.phone.trim());
+  } else if (activeFilters.status !== 'all') {
+    list = list.filter(p => p.status === activeFilters.status);
+  }
+  if (activeFilters.niche !== 'all') list = list.filter(p => p.nicheId === activeFilters.niche);
+  list.sort((a,b) => b.priorityScore - a.priorityScore);
+
+  const enrichedCount = PROSPECTS.filter(p => p.phone && p.phone.trim()).length;
 
   const dbTotal = window._firestoreLeadTotal || PROSPECTS.length;
   // When no filter: show full DB total. When filtered: show list.length of dbTotal.
@@ -451,6 +458,9 @@ function pageLeadScoreboard() {
       <input class="search-input" placeholder="Search prospects…" id="search-prospects" oninput="filterProspects(this.value)">
     </div>
     <div class="filter-chip ${activeFilters.status==='all'?'active':''}" onclick="setFilter('status','all');navigate('lead-scoreboard')">All (${window._firestoreLeadTotal || PROSPECTS.length})</div>
+    <div class="filter-chip" onclick="setFilter('status','enriched');navigate('lead-scoreboard')" style="${activeFilters.status==='enriched' ? 'background:rgba(52,211,153,0.15);border-color:var(--emerald);color:var(--emerald)' : ''}" title="Leads with verified phone number (NPI crossref or PDL enrichment)">
+      ${activeFilters.status==='enriched' ? '✅' : '📞'} Enriched (${enrichedCount})
+    </div>
     ${statuses.map(s=>{
       const c=PROSPECTS.filter(p=>p.status===s).length;
       return `<div class="filter-chip ${activeFilters.status===s?'active':''}" onclick="setFilter('status','${s}');navigate('lead-scoreboard')">${s} ${c>0?`(${c})`:''}</div>`;
@@ -487,6 +497,7 @@ function pageLeadScoreboard() {
                 <span class="esig-dot-sm ${sigs.contact   ? 'esig-contact'   : 'esig-empty'}" title="📧 Personal Contact"></span>
                 <span class="esig-dot-sm ${sigs.court     ? 'esig-court'     : 'esig-empty'}" title="⚖️ Court Signal"></span>
               </div>
+              ${p.phone ? `<span style="font-size:9px;font-weight:700;color:var(--emerald);background:rgba(52,211,153,0.12);border-radius:4px;padding:1px 5px;margin-top:3px;display:inline-block;letter-spacing:0.02em" title="NPI/PDL verified phone: ${p.phone}">📞 NPI</span>` : ''}
             </td>
             <td>${getScoreBar(p.fitScore,'#60a5fa')}</td>
             <td>${getScoreBar(p.timingScore,'#a78bfa')}</td>
