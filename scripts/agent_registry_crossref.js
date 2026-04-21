@@ -245,7 +245,11 @@ async function loadCandidates() {
   leads = leads.filter(l => l.firstName && l.firstName.trim() && l.lastName && l.lastName.trim());
 
   // Filter to leads that haven't already been registry-matched
-  leads = leads.filter(l => l.enrichmentStatus !== 'registry-matched');
+  // Skip any lead already processed by the registry crossref pipeline
+  const ALREADY_PROCESSED = new Set([
+    'registry-matched', 'production-ready', 'soft-hold', 'reverted',
+  ]);
+  leads = leads.filter(l => !ALREADY_PROCESSED.has(l.enrichmentStatus));
 
   // City filter
   if (CITY_FILTER) {
