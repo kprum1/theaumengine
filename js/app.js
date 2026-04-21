@@ -942,7 +942,7 @@ function applyProfileToSettings() {
 }
 
 // ===== LEAD SCOREBOARD =====
-function setFilter(key,val) { activeFilters[key]=val; }
+function setFilter(key,val) { activeFilters[key]=val; window._scoreboardPage = 1; }
 
 // Load a niche cohort: filter Scoreboard to that nicheId and navigate
 window.loadCohort = function(nicheId) {

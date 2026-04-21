@@ -150,20 +150,25 @@ async function loadAssignedLeadsFromFirestore(uid) {
     if (!masterLeadIds.length) return [];
 
     // Step 2: Fetch master_leads via CF gateway (getLeadsByIds).
-    // On CF failure (AppCheck, timeout, network), we continue with masterLeadsById={}
-    // and let the assignment doc fallback (Step 3) populate all leads from 'a' directly.
-    // route_production_to_master.js writes all fields to lead_assignments, so this is safe.
+    // Batch into chunks of 200 (CF's max) and run all chunks in parallel.
+    // On CF failure, masterLeadsById stays empty and Step 3 uses 'a' as fallback.
     let masterLeadsById = {};
     try {
-      const fn = firebase.functions().httpsCallable('getLeadsByIds');
-      const result = await fn({ ids: masterLeadIds });
-      const leads = result.data?.leads || [];
-      leads.forEach(lead => {
+      const fn        = firebase.functions().httpsCallable('getLeadsByIds');
+      const CHUNK     = 200;
+      const chunks    = [];
+      for (let i = 0; i < masterLeadIds.length; i += CHUNK) {
+        chunks.push(masterLeadIds.slice(i, i + CHUNK));
+      }
+      const batchResults = await Promise.all(
+        chunks.map(chunk => fn({ ids: chunk }).then(r => r.data?.leads || []).catch(() => []))
+      );
+      batchResults.flat().forEach(lead => {
         if (lead.id) masterLeadsById[lead.id] = lead;
       });
+      console.info(`[db.js] CF fetched ${Object.keys(masterLeadsById).length}/${masterLeadIds.length} master_leads in ${chunks.length} batch(es)`);
     } catch (cfErr) {
-      // DO NOT return [] — continue with empty masterLeadsById so Step 3 can use 'a' as fallback.
-      // This ensures NPI-routed leads always load even when the CF gateway is unavailable.
+      // DO NOT return [] — Step 3 will load all leads from 'a' (assignment doc) directly.
       console.warn('[db.js] getLeadsByIds CF unavailable — loading from assignment docs directly:', cfErr.message);
     }
 

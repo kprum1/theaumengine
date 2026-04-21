@@ -419,6 +419,12 @@ function pageProspectMine() {
   </div>`;
 }
 
+// Scoreboard pagination state — persists across filter changes
+if (typeof window._scoreboardPage === 'undefined') window._scoreboardPage = 1;
+const SB_PAGE_SIZE = 200;
+
+function sbGotoPage(n) { window._scoreboardPage = n; navigate('lead-scoreboard'); }
+
 function pageLeadScoreboard() {
   let list = [...PROSPECTS];
   const isFiltered = activeFilters.status !== 'all' || activeFilters.niche !== 'all';
@@ -431,6 +437,15 @@ function pageLeadScoreboard() {
   if (activeFilters.niche !== 'all') list = list.filter(p => p.nicheId === activeFilters.niche);
   list.sort((a,b) => b.priorityScore - a.priorityScore);
 
+  // Pagination — reset to page 1 when filter changes
+  const totalFiltered = list.length;
+  const totalPages    = Math.max(1, Math.ceil(totalFiltered / SB_PAGE_SIZE));
+  if (window._scoreboardPage > totalPages) window._scoreboardPage = 1;
+  const page     = window._scoreboardPage;
+  const pageStart = (page - 1) * SB_PAGE_SIZE;
+  const pagEnd   = Math.min(pageStart + SB_PAGE_SIZE, totalFiltered);
+  const pageList = list.slice(pageStart, pagEnd);
+
   const enrichedCount = PROSPECTS.filter(p => p.phone && p.phone.trim()).length;
 
   const dbTotal = window._firestoreLeadTotal || PROSPECTS.length;
@@ -442,7 +457,7 @@ function pageLeadScoreboard() {
   <div class="page-header">
     <div class="page-header-left">
       <div class="page-title">Lead Scoreboard</div>
-      <div class="page-subtitle">${showingCount} of ${dbTotal} prospects ranked by AI fit + timing score</div>
+      <div class="page-subtitle">${isFiltered ? totalFiltered : dbTotal} prospects · Page ${page} of ${totalPages} · showing ${pageStart+1}–${pagEnd}</div>
     </div>
     <div class="page-actions">
       <button class="btn btn-secondary" onclick="triggerCSVImport()">⬆ Import CSV</button>
@@ -478,12 +493,12 @@ function pageLeadScoreboard() {
       <table class="data-table">
         <thead><tr><th>Rank</th><th>Prospect</th><th>Niche</th><th>Signals</th><th>Fit</th><th>Timing</th><th>Priority</th><th>Status</th><th style="min-width:120px">Rep / Activity</th><th style="min-width:72px">Rate</th><th style="min-width:60px">Action</th></tr></thead>
         <tbody id="scoreboard-body">
-          ${list.map((p,i)=>{
+          ${pageList.map((p,i)=>{
             const e    = getEnrichment(p.id);
             const sigs = getEnrichmentSignals(e);
             return `
           <tr onclick="openDrawer('${p.id}')">
-            <td><span style="font-family:'JetBrains Mono',monospace;font-weight:800;color:var(--text-muted)">#${i+1}</span></td>
+            <td><span style="font-family:'JetBrains Mono',monospace;font-weight:800;color:var(--text-muted)">#${pageStart+i+1}</span></td>
             <td><div style="display:flex;align-items:center;gap:8px">
               <div class="queue-avatar ${getAvatarClass(p.lastName || p.company || '')}" style="width:28px;height:28px;font-size:10px;border-radius:6px">${getInitials(p.firstName,p.lastName,p.company)}</div>
               <div><div style="font-weight:600;color:var(--text-primary);font-size:12.5px">${getDisplayName(p)}</div>
@@ -521,6 +536,22 @@ function pageLeadScoreboard() {
         </tbody>
       </table>
     </div>`}
+    ${totalPages > 1 ? `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding:12px 16px;background:var(--bg-card);border:1px solid var(--border-default);border-radius:12px">
+      <button onclick="sbGotoPage(${page-1})" ${page<=1?'disabled':''}
+        style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:8px;padding:6px 16px;font-size:12px;font-weight:600;color:${page<=1?'var(--text-muted)':'var(--text-primary)'};cursor:${page<=1?'not-allowed':'pointer'};font-family:inherit">
+        ← Prev
+      </button>
+      <div style="font-size:12px;color:var(--text-muted);text-align:center">
+        <span style="font-weight:700;color:var(--text-primary)">${page}</span> of <span style="font-weight:700;color:var(--text-primary)">${totalPages}</span>
+        &nbsp;·&nbsp; ${pageStart+1}–${pagEnd} of ${totalFiltered} leads
+        ${totalFiltered > SB_PAGE_SIZE ? `<div style="margin-top:3px;font-size:10px">Tip: use the Enriched filter to see only NPI-verified leads</div>` : ''}
+      </div>
+      <button onclick="sbGotoPage(${page+1})" ${page>=totalPages?'disabled':''}
+        style="background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:8px;padding:6px 16px;font-size:12px;font-weight:600;color:${page>=totalPages?'var(--text-muted)':'var(--text-primary)'};cursor:${page>=totalPages?'not-allowed':'pointer'};font-family:inherit">
+        Next →
+      </button>
+    </div>` : ''}
   </div>`;
 }
 
