@@ -149,8 +149,10 @@ async function loadAssignedLeadsFromFirestore(uid) {
     const masterLeadIds = Object.keys(assignmentMap);
     if (!masterLeadIds.length) return [];
 
-    // Step 2: Fetch master_leads via CF gateway (getLeadsByIds)
-    // This replaces the previous direct Firestore reads (C41 Phase 2 security).
+    // Step 2: Fetch master_leads via CF gateway (getLeadsByIds).
+    // On CF failure (AppCheck, timeout, network), we continue with masterLeadsById={}
+    // and let the assignment doc fallback (Step 3) populate all leads from 'a' directly.
+    // route_production_to_master.js writes all fields to lead_assignments, so this is safe.
     let masterLeadsById = {};
     try {
       const fn = firebase.functions().httpsCallable('getLeadsByIds');
@@ -160,9 +162,9 @@ async function loadAssignedLeadsFromFirestore(uid) {
         if (lead.id) masterLeadsById[lead.id] = lead;
       });
     } catch (cfErr) {
-      console.warn('[db.js] getLeadsByIds CF failed — cockpit may show partial data:', cfErr.message);
-      // Fail gracefully: return empty rather than crashing cockpit
-      return [];
+      // DO NOT return [] — continue with empty masterLeadsById so Step 3 can use 'a' as fallback.
+      // This ensures NPI-routed leads always load even when the CF gateway is unavailable.
+      console.warn('[db.js] getLeadsByIds CF unavailable — loading from assignment docs directly:', cfErr.message);
     }
 
     // Step 3: Map assignment + master_lead → PROSPECTS schema
