@@ -132,7 +132,7 @@ async function loadAssignedLeadsFromFirestore(uid) {
     const snap = await db.collection('lead_assignments')
       .where('ownerUid', '==', uid)
       .where('ownershipStatus', 'in', ['active', 'pending'])
-      .limit(500)
+      .limit(1000)
       .get();
 
     if (snap.empty) return [];
@@ -201,10 +201,11 @@ async function loadAssignedLeadsFromFirestore(uid) {
         state:         lead.state    || '',
         location:      [lead.city, lead.state].filter(Boolean).join(', '),
 
-        // Scores (from assignment doc if present, else defaults)
-        fitScore:      Math.round((a.finalScore   || 0) * 100) || 72,
-        timingScore:   Math.round((a.timingScore  || 0) * 100) || 65,
-        priorityScore: Math.round((a.finalScore   || 0) * 100) || 70,
+        // Scores — check integer fitScore from our routing script first (0-100 scale),
+        // then fall back to finalScore (0.0-1.0 float from old routing engine × 100)
+        fitScore:      a.fitScore      || Math.round((a.finalScore   || 0) * 100) || 72,
+        timingScore:   a.timingScore   || Math.round((a.timingScore  || 0) * 100) || 65,
+        priorityScore: a.priorityScore || a.fitScore || Math.round((a.finalScore || 0) * 100) || 70,
 
         // Classification
         niche:         lead.niche            || 'Assigned Lead',
