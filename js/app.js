@@ -1736,6 +1736,45 @@ function openDrawer(id) {
     <div class="drawer-section-title">Why This Lead Fits</div>
     <div>${reasonCodes.map(r=>`<span class="reason-tag">${r}</span>`).join('')}</div>
   </div>` : ''}
+  ${(p.propertyAddress || p.homeValue) ? `
+  <div class="drawer-section">
+    <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between">
+      Property
+      ${p.homeValue ? `<span style="font-size:11px;font-weight:700;color:#34d399;background:rgba(52,211,153,0.12);padding:2px 8px;border-radius:20px">$${(p.homeValue/1e6).toFixed(1)}M Home</span>` : ''}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${p.propertyAddress ? `
+      <div style="display:flex;align-items:center;gap:8px;background:var(--bg-elevated);border-radius:8px;padding:8px 10px">
+        <span style="font-size:13px;flex-shrink:0">🏡</span>
+        <span style="font-size:11.5px;color:var(--text-secondary);flex:1">${p.propertyAddress}${p.city ? ', ' + p.city : ''}${p.state ? ', ' + p.state : ''}${p.zip ? ' ' + p.zip : ''}</span>
+        <button onclick="navigator.clipboard?.writeText('${(p.propertyAddress + ' ' + (p.city||'') + ' ' + (p.state||'')).trim().replace(/'/g,"\\'")}').then(()=>showToast('Address copied','📋'))"
+          style="background:none;border:1px solid var(--border-default);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--text-muted);cursor:pointer;flex-shrink:0;font-family:inherit">
+          Copy
+        </button>
+      </div>` : ''}
+    </div>
+  </div>` : ''}
+  ${(p.specialty || p.credential || p.npiNumber) ? `
+  <div class="drawer-section">
+    <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between">
+      Professional Info
+      ${p.credential ? `<span style="font-size:10px;font-weight:700;color:#60a5fa;background:rgba(96,165,250,0.12);padding:2px 8px;border-radius:20px">${p.credential}</span>` : ''}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${p.specialty ? `
+      <div style="display:flex;align-items:center;gap:8px;background:var(--bg-elevated);border-radius:8px;padding:8px 10px">
+        <span style="font-size:13px;flex-shrink:0">🏥</span>
+        <div style="flex:1">
+          <div style="font-size:11.5px;color:var(--text-secondary)">${p.specialty}</div>
+          ${p.npiNumber ? `<div style="font-size:10px;color:var(--text-muted);margin-top:2px;font-family:'JetBrains Mono',monospace">NPI: ${p.npiNumber}</div>` : ''}
+        </div>
+        ${p.npiNumber ? `<button onclick="navigator.clipboard?.writeText('${p.npiNumber}').then(()=>showToast('NPI copied','📋'))"
+          style="background:none;border:1px solid var(--border-default);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--text-muted);cursor:pointer;flex-shrink:0;font-family:inherit">
+          Copy NPI
+        </button>` : ''}
+      </div>` : ''}
+    </div>
+  </div>` : ''}
   ${(() => {
     // Pull contact from prospect fields first, then fall back to enrichment layer
     const enr       = getEnrichment(p.id) || {};
@@ -1743,6 +1782,7 @@ function openDrawer(id) {
     const phone     = p.phone     || enr.personalPhone || '';
     const linkedin  = p.linkedInUrl || p.linkedin || '';
     const hasAny    = email || phone || linkedin;
+
     if (!hasAny) return `
   <div class="drawer-section">
     <div class="drawer-section-title" style="display:flex;align-items:center;justify-content:space-between">

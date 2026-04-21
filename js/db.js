@@ -229,6 +229,16 @@ async function loadAssignedLeadsFromFirestore(uid) {
         phone:         lead.phone         || lead.personalPhone || '',
         linkedInUrl:   lead.linkedInUrl   || lead.linkedin_url  || lead.linkedin || '',
 
+        // NPI / professional identity (from registry crossref)
+        npiNumber:     lead.npiNumber     || '',
+        credential:    lead.credential    || '',
+        specialty:     lead.specialty     || '',
+
+        // Homestead / property (from county GIS)
+        propertyAddress: lead.propertyAddress || '',
+        homeValue:     lead.homeValue     || 0,
+        zip:           lead.zip           || '',
+
         // Signals passthrough
         signals:       lead.signals          || [],
 
