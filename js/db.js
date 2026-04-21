@@ -168,14 +168,16 @@ async function loadAssignedLeadsFromFirestore(uid) {
     // Step 3: Map assignment + master_lead → PROSPECTS schema
     const results = snap.docs.map(aDoc => {
       const a    = aDoc.data();
-      const lead = masterLeadsById[a.masterLeadId];
-      if (!lead) return null;
+      // Use master_lead from CF when available; fall back to the assignment doc itself.
+      // route_production_to_master.js writes ALL lead fields to lead_assignments,
+      // so 'a' is a complete fallback when the CF's 200-doc cap excludes this ID.
+      const lead = masterLeadsById[a.masterLeadId] || a;
 
       // For person-level leads (physicians, dentists, etc.): use firstName + lastName
       // For org-level leads (SBA business, HUD project, law firm): use company as display name
-      const personFirst = (lead.firstName || '').trim();
-      const personLast  = (lead.lastName  || '').trim();
-      const personName  = (lead.fullName  || (personFirst + ' ' + personLast).trim());
+      const personFirst = (a.firstName || lead.firstName || '').trim();
+      const personLast  = (a.lastName  || lead.lastName  || '').trim();
+      const personName  = (a.fullName  || lead.fullName  || (personFirst + ' ' + personLast).trim());
       const orgName     = (lead.company   || lead.firmName || '').trim();
       const isOrgLead   = !personFirst && !personName && !!orgName;
 
@@ -194,12 +196,13 @@ async function loadAssignedLeadsFromFirestore(uid) {
         lastName:      last,
         name:          displayName,
 
-        // Role / company
-        title:         lead.title    || lead.jobTitle    || (isOrgLead ? lead.firmTierLabel || '' : ''),
-        company:       lead.company  || lead.firmName    || lead.employer || '',
-        city:          lead.city     || '',
-        state:         lead.state    || '',
-        location:      [lead.city, lead.state].filter(Boolean).join(', '),
+        // Role / company — assignment doc has these when it was written by routing script
+        title:         a.title    || lead.title    || lead.jobTitle    || (isOrgLead ? lead.firmTierLabel || '' : ''),
+        company:       a.company  || lead.company  || lead.firmName    || lead.employer || '',
+        city:          a.city     || lead.city     || '',
+        state:         a.state    || lead.state    || '',
+        zip:           a.zip      || lead.zip      || '',
+        location:      [a.city || lead.city, a.state || lead.state].filter(Boolean).join(', '),
 
         // Scores — check integer fitScore from our routing script first (0-100 scale),
         // then fall back to finalScore (0.0-1.0 float from old routing engine × 100)
@@ -207,10 +210,10 @@ async function loadAssignedLeadsFromFirestore(uid) {
         timingScore:   a.timingScore   || Math.round((a.timingScore  || 0) * 100) || 65,
         priorityScore: a.priorityScore || a.fitScore || Math.round((a.finalScore || 0) * 100) || 70,
 
-        // Classification
-        niche:         lead.niche            || 'Assigned Lead',
-        nicheId:       lead.nicheId          || 'n0',
-        assets:        lead.estimatedAUM     || lead.assets   || '$1M+',
+        // Classification — prefer assignment doc (always written by routing script)
+        niche:         a.niche    || lead.niche    || 'Assigned Lead',
+        nicheId:       a.nicheId  || lead.nicheId  || 'n0',
+        assets:        a.assets   || lead.estimatedAUM || lead.assets || '$1M+',
 
         // Pipeline state
         status:        a.advisorStatus       || 'New',
@@ -220,28 +223,26 @@ async function loadAssignedLeadsFromFirestore(uid) {
                          : 'Today',
 
         // Source badge
-        source:        lead.source           || a.source || 'AUM Engine',
+        source:        a.source || lead.source || 'AUM Engine',
         tags:          ['🔵 Assigned'],    // visual indicator it's a live lead
 
-        // Contact info — populated by Apollo/PDL enrichment pipeline
-        // These fields live on the master_lead root doc after enrichment runs.
-        // Fallback chain: root field → personalEmail/Phone aliases → blank
-        email:         lead.email         || lead.personalEmail || '',
-        phone:         lead.phone         || lead.personalPhone || '',
-        linkedInUrl:   lead.linkedInUrl   || lead.linkedin_url  || lead.linkedin || '',
+        // Contact info — assignment doc always has these fields (written by route_production_to_master.js)
+        // Fallback chain: assignment doc → master_lead root → enrichment aliases → blank
+        email:         a.email         || lead.email         || lead.personalEmail || '',
+        phone:         a.phone         || lead.phone         || lead.personalPhone || '',
+        linkedInUrl:   a.linkedInUrl   || lead.linkedInUrl   || lead.linkedin_url  || lead.linkedin || '',
 
-        // NPI / professional identity (from registry crossref)
-        npiNumber:     lead.npiNumber     || '',
-        credential:    lead.credential    || '',
-        specialty:     lead.specialty     || '',
+        // NPI / professional identity — always on assignment doc for NPI-sourced leads
+        npiNumber:     a.npiNumber     || lead.npiNumber     || '',
+        credential:    a.credential    || lead.credential    || '',
+        specialty:     a.specialty     || lead.specialty     || '',
 
-        // Homestead / property (from county GIS)
-        propertyAddress: lead.propertyAddress || '',
-        homeValue:     lead.homeValue     || 0,
-        zip:           lead.zip           || '',
+        // Homestead / property — always on assignment doc for homestead-sourced leads
+        propertyAddress: a.propertyAddress || lead.propertyAddress || '',
+        homeValue:     a.homeValue     || lead.homeValue     || 0,
 
         // Signals passthrough
-        signals:       lead.signals          || [],
+        signals:       lead.signals    || a.signals          || [],
 
         // Metadata for write-back
         _fromFirestore: true,
