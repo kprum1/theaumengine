@@ -183,7 +183,7 @@ async function loadAssignedLeadsFromFirestore(uid) {
       const first = isOrgLead ? orgName  : (personFirst || displayName.split(' ')[0] || 'Unknown');
       const last  = isOrgLead ? ''       : (personLast  || displayName.split(' ').slice(1).join(' ') || '');
 
-      return {
+      const mapped = {
         // Identity
         id:            'fs_' + aDoc.id,     // prefix avoids collision with demo p1..p25
         assignmentId:  aDoc.id,             // Firestore doc ID for write-back
@@ -222,14 +222,46 @@ async function loadAssignedLeadsFromFirestore(uid) {
         source:        lead.source           || a.source || 'AUM Engine',
         tags:          ['🔵 Assigned'],    // visual indicator it's a live lead
 
+        // Contact info — populated by Apollo/PDL enrichment pipeline
+        // These fields live on the master_lead root doc after enrichment runs.
+        // Fallback chain: root field → personalEmail/Phone aliases → blank
+        email:         lead.email         || lead.personalEmail || '',
+        phone:         lead.phone         || lead.personalPhone || '',
+        linkedInUrl:   lead.linkedInUrl   || lead.linkedin_url  || lead.linkedin || '',
+
         // Signals passthrough
         signals:       lead.signals          || [],
-        enrichment:    lead.enrichment       || {},
 
         // Metadata for write-back
         _fromFirestore: true,
       };
-    });
+
+      // Seed ENRICHMENT_STORE from Firestore enrichment sub-object so getEnrichment()
+      // returns live data for the Enterprise Intelligence panel without a CSV import.
+      const enrData = lead.enrichment || {};
+      if (Object.keys(enrData).length && typeof ENRICHMENT_STORE !== 'undefined') {
+        const key = mapped.id;   // 'fs_' + aDoc.id — matches what getEnrichment() is called with
+        if (!ENRICHMENT_STORE[key]) {
+          ENRICHMENT_STORE[key] = {
+            wealthScore:        enrData.wealthScore        || null,
+            estimatedNetWorth:  enrData.estimatedNetWorth  || null,
+            liquidityEvent:     enrData.liquidityEvent     || null,
+            liquidityEventType: enrData.liquidityEventType || null,
+            liquidityEventDate: enrData.liquidityEventDate || null,
+            personalEmail:      mapped.email               || enrData.personalEmail || null,
+            personalPhone:      mapped.phone               || enrData.personalPhone || null,
+            contactConfidence:  enrData.contactConfidence  || null,
+            courtSignal:        enrData.courtSignal        || null,
+            courtSignalType:    enrData.courtSignalType    || null,
+            courtSignalDate:    enrData.courtSignalDate    || null,
+            enrichedAt:         enrData.enrichedAt         || '',
+            enrichmentSources:  enrData.enrichmentSources  || [],
+          };
+        }
+      }
+
+      return mapped;
+    });  // end snap.docs.map()
 
     return results.filter(Boolean);
 
