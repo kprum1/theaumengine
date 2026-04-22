@@ -560,29 +560,45 @@ const PIPELINE_COLUMNS = ['New','Contacted','Engaged','Nurture','Meeting Request
 // Falls back to PROSPECTS.length during initial hydration.
 function computeMetrics() {
   const total     = window._firestoreLeadTotal || PROSPECTS.length;
+  // assigned = what's loaded in the cockpit (advisor's actual pipeline)
+  const assigned  = PROSPECTS.length;
   const booked    = PROSPECTS.filter(p => p.status === 'Booked').length;
   const contacted = PROSPECTS.filter(p => !['New','Dead'].includes(p.status)).length;
   const engaged   = PROSPECTS.filter(p => ['Engaged','Meeting Requested','Booked'].includes(p.status)).length;
   const dead      = PROSPECTS.filter(p => p.status === 'Dead').length;
 
-  // "New this week" = leads assigned in last 7 days (based on lastActivity date or enrolled)
+  // Action-ready = name + phone + address all present
+  const readyCount     = PROSPECTS.filter(p =>
+    !!(p.firstName && p.lastName && p.phone && p.phone.trim() && p.propertyAddress)
+  ).length;
+  // Enriched = has verified phone (NPI/PDL)
+  const enrichedCount  = PROSPECTS.filter(p => p.phone && p.phone.trim()).length;
+  // Needs Data = assigned but not yet ready
+  const needsDataCount = assigned - readyCount;
+
+  // New this week = leads assigned in last 7 days
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const newThisWeek = PROSPECTS.filter(p => {
-    const d = p.enrolled ? new Date(p.enrolled).getTime() :
-              p.ingestedAt ? new Date(p.ingestedAt).getTime() : 0;
+    const d = p.enrolled   ? new Date(p.enrolled).getTime()   :
+              p.ingestedAt ? new Date(p.ingestedAt).getTime() :
+              p.assignedAt ? new Date(p.assignedAt).getTime() : 0;
     return d > weekAgo;
   }).length;
 
   return {
     total,
+    assigned,
+    readyCount,
+    enrichedCount,
+    needsDataCount,
     booked,
     contacted,
     engaged,
     dead,
     newThisWeek,
-    contactRate: Math.round(contacted / Math.max(total, 1) * 100),
-    replyRate:   Math.round(engaged   / Math.max(contacted, 1) * 100),
-    convRate:    Math.round(booked    / Math.max(contacted, 1) * 100),
+    contactRate: Math.round(contacted / Math.max(assigned,   1) * 100),
+    replyRate:   Math.round(engaged   / Math.max(contacted,  1) * 100),
+    convRate:    Math.round(booked    / Math.max(contacted,  1) * 100),
   };
 }
 
