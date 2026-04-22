@@ -456,14 +456,18 @@ function pageLeadScoreboard() {
   const isFiltered = activeFilters.status !== 'all' || activeFilters.niche !== 'all';
 
   if (isCohortView) {
-    // Cohort browse: show every lead in this niche — no ready gate
-    // Status sub-filter still applies if explicitly set
+    // Cohort browse: show every lead in this niche — no ready gate by default.
+    // Special sub-filters still work as expected within the niche.
     if (activeFilters.status === 'needs-data') {
       list = list.filter(p => !isReady(p));
+    } else if (activeFilters.status === 'enriched') {
+      // 'enriched' = phone-verified — treat same as normal mode but niche-scoped
+      list = list.filter(p => p.phone && p.phone.trim());
     } else if (activeFilters.status !== 'all') {
+      // Pipeline status sub-filter (New, Contacted, etc.)
       list = list.filter(p => p.status === activeFilters.status);
     }
-    // (status === 'all' in cohort mode — show everything in the niche)
+    // (status === 'all' in cohort mode — show every lead in the niche)
   } else if (activeFilters.status === 'needs-data') {
     // Show ONLY leads missing at least one required field
     list = list.filter(p => !isReady(p));
@@ -500,10 +504,13 @@ function pageLeadScoreboard() {
     }
   });
 
-  // Counts for tab chips
-  const readyCount      = PROSPECTS.filter(isReady).length;
-  const enrichedCount   = PROSPECTS.filter(p => p.phone && p.phone.trim()).length;
-  const needsDataCount  = PROSPECTS.filter(p => !isReady(p)).length;
+  // Counts for tab chips — scoped to niche pool in cohort view so numbers are meaningful
+  const chipPool        = isCohortView
+    ? PROSPECTS.filter(p => p.nicheId === activeFilters.niche)
+    : PROSPECTS;
+  const readyCount      = chipPool.filter(isReady).length;
+  const enrichedCount   = chipPool.filter(p => p.phone && p.phone.trim()).length;
+  const needsDataCount  = chipPool.filter(p => !isReady(p)).length;
 
   // Pagination
   const totalFiltered = list.length;
@@ -547,17 +554,17 @@ function pageLeadScoreboard() {
       <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L13 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
       <input class="search-input" placeholder="Search prospects…" id="search-prospects" oninput="filterProspects(this.value)">
     </div>
-    <div class="filter-chip ${activeFilters.status==='all'?'active':''}" onclick="setFilter('status','all');navigate('lead-scoreboard')" title="Action-ready leads: name + phone + address verified">
-      ✅ Ready (${readyCount})
+    <div class="filter-chip ${activeFilters.status==='all'?'active':''}" onclick="setFilter('status','all');navigate('lead-scoreboard')" title="${isCohortView ? 'All leads in this cohort' : 'Action-ready leads: name + phone + address verified'}">
+      ${isCohortView ? '📋' : '✅'} ${isCohortView ? 'All' : 'Ready'} (${isCohortView ? (chipPool.length) : readyCount})
     </div>
     <div class="filter-chip" onclick="setFilter('status','enriched');navigate('lead-scoreboard')" style="${activeFilters.status==='enriched' ? 'background:rgba(52,211,153,0.15);border-color:var(--emerald);color:var(--emerald)' : ''}" title="NPI/PDL verified phone number confirmed">
       📞 NPI Verified (${enrichedCount})
     </div>
     ${statuses.map(s=>{
-      const c = PROSPECTS.filter(p => isReady(p) && p.status===s).length;
+      const c = chipPool.filter(p => (isCohortView ? true : isReady(p)) && p.status===s).length;
       return `<div class="filter-chip ${activeFilters.status===s?'active':''}" onclick="setFilter('status','${s}');navigate('lead-scoreboard')">${s} ${c>0?`(${c})`:''}</div>`;
     }).join('')}
-    <div class="filter-chip" onclick="setFilter('status','needs-data');navigate('lead-scoreboard')" style="${activeFilters.status==='needs-data' ? 'background:rgba(251,191,36,0.12);border-color:var(--amber);color:var(--amber)' : 'opacity:0.6'}" title="Leads missing phone, address, or name — hidden until enriched">
+    <div class="filter-chip" onclick="setFilter('status','needs-data');navigate('lead-scoreboard')" style="${activeFilters.status==='needs-data' ? 'background:rgba(251,191,36,0.12);border-color:var(--amber);color:var(--amber)' : 'opacity:0.6'}" title="Leads missing phone, address, or name">
       ⏳ Needs Data (${needsDataCount})
     </div>
   </div>
