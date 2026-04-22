@@ -942,17 +942,26 @@ function applyProfileToSettings() {
 }
 
 // ===== LEAD SCOREBOARD =====
-function setFilter(key,val) { activeFilters[key]=val; window._scoreboardPage = 1; }
+function setFilter(key, val) {
+  activeFilters[key] = val;
+  window._scoreboardPage = 1;
+  // Clear cohort browse mode if niche filter is reset — reverts to normal ready-leads view
+  if (key === 'niche' && val === 'all') window._cohortView = false;
+}
 
-// Load a niche cohort: filter Scoreboard to that nicheId and navigate
+// Load a niche cohort: filter Scoreboard to that nicheId and navigate.
+// Sets _cohortView = true so the scoreboard shows ALL leads in the niche
+// (not just isReady leads). Many niches — C-Suite, HENRYs, law-partners, etc.
+// don't have propertyAddress so they'd be invisible with the default ready gate.
 window.loadCohort = function(nicheId) {
   activeFilters.niche  = nicheId;
   activeFilters.status = 'all';
+  window._cohortView   = true;   // bypass isReady gate — show entire niche cohort
+  window._scoreboardPage = 1;
   navigate('lead-scoreboard');
-  // Find niche display name for the toast
   const niche = (typeof NICHES !== 'undefined' ? NICHES : []).find(n => n.id === nicheId);
   const label = niche ? niche.name : nicheId;
-  showToast(`Showing ${label} cohort`, niche?.icon || '💎');
+  showToast(`Showing ${(niche?.total || '').toLocaleString() || ''} ${label} leads`, niche?.icon || '💎');
 };
 
 // Scroll main-content to a named section after navigate()

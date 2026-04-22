@@ -447,10 +447,24 @@ function pageLeadScoreboard() {
   // Incomplete leads sit in 'Needs Data' until enrichment fills the gaps.
   const isReady = p => !!(p.firstName && p.lastName && p.phone && p.phone.trim() && p.propertyAddress);
 
+  // _cohortView = true when navigating from Prospect Mine "Load →" button.
+  // In cohort mode we show ALL leads in the niche so advisors can see their
+  // full C-Suite / HENRY / other non-NPI cohorts (which lack propertyAddress).
+  const isCohortView = !!window._cohortView && activeFilters.niche !== 'all';
+
   let list = [...PROSPECTS];
   const isFiltered = activeFilters.status !== 'all' || activeFilters.niche !== 'all';
 
-  if (activeFilters.status === 'needs-data') {
+  if (isCohortView) {
+    // Cohort browse: show every lead in this niche — no ready gate
+    // Status sub-filter still applies if explicitly set
+    if (activeFilters.status === 'needs-data') {
+      list = list.filter(p => !isReady(p));
+    } else if (activeFilters.status !== 'all') {
+      list = list.filter(p => p.status === activeFilters.status);
+    }
+    // (status === 'all' in cohort mode — show everything in the niche)
+  } else if (activeFilters.status === 'needs-data') {
     // Show ONLY leads missing at least one required field
     list = list.filter(p => !isReady(p));
   } else if (activeFilters.status === 'enriched') {
@@ -503,14 +517,20 @@ function pageLeadScoreboard() {
   const dbTotal = window._firestoreLeadTotal || PROSPECTS.length;
 
   const statuses = ['New','Contacted','Engaged','Nurture','Meeting Requested','Booked','Dead'];
+  // Niche name for cohort banner
+  const cohortNiche = isCohortView
+    ? (typeof NICHES !== 'undefined' ? NICHES : []).find(n => n.id === activeFilters.niche)
+    : null;
   return `
   <div class="page-header">
     <div class="page-header-left">
-      <div class="page-title">Lead Scoreboard</div>
+      <div class="page-title">Lead Scoreboard${isCohortView && cohortNiche ? ` <span style="font-size:14px;font-weight:500;color:var(--text-muted)">— ${cohortNiche.icon} ${cohortNiche.name}</span>` : ''}</div>
       <div class="page-subtitle">
-        ${activeFilters.status === 'needs-data'
-          ? `${needsDataCount} leads awaiting enrichment`
-          : `${readyCount} action-ready leads · Page ${page} of ${totalPages} · showing ${pageStart+1}–${Math.min(pagEnd,readyCount)}`
+        ${isCohortView
+          ? `${totalFiltered.toLocaleString()} leads in cohort · Page ${page} of ${totalPages} · <span style="color:var(--amber);font-weight:600">Cohort View</span> <span style="opacity:0.6;font-size:10px">— <a href="#" onclick="window._cohortView=false;setFilter('niche','all');navigate('lead-scoreboard');return false" style="color:var(--text-muted);text-decoration:underline">Exit to All Ready</a></span>`
+          : activeFilters.status === 'needs-data'
+            ? `${needsDataCount} leads awaiting enrichment`
+            : `${readyCount} action-ready leads · Page ${page} of ${totalPages} · showing ${pageStart+1}–${Math.min(pagEnd,readyCount)}`
         }
       </div>
     </div>
