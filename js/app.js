@@ -38,7 +38,7 @@ function _syncAllThemeButtons(theme) {
 let currentPage          = 'command-center';
 let drawerProspect       = null;
 let activeNiche          = null;
-let activeFilters        = { status:'all', niche:'all' };
+let activeFilters        = { status:'all', niche:'all', enrichment:'all' };
 let activeOutreachType   = 'email';
 let activeOutreachProspectId = PROSPECTS[0].id;   // ← Phase 1.2: real prospect switching
 let activeMeetingProspect   = null;
@@ -954,10 +954,11 @@ function setFilter(key, val) {
 // (not just isReady leads). Many niches — C-Suite, HENRYs, law-partners, etc.
 // don't have propertyAddress so they'd be invisible with the default ready gate.
 window.loadCohort = function(nicheId) {
-  activeFilters.niche  = nicheId;
-  activeFilters.status = 'all';
-  window._cohortView   = true;   // bypass isReady gate — show entire niche cohort
-  window._scoreboardPage = 1;
+  activeFilters.niche      = nicheId;
+  activeFilters.status     = 'all';
+  activeFilters.enrichment = 'all';   // reset enrichment segment on fresh cohort load
+  window._cohortView       = true;    // bypass isReady gate — show entire niche cohort
+  window._scoreboardPage   = 1;
   navigate('lead-scoreboard');
   const niche = (typeof NICHES !== 'undefined' ? NICHES : []).find(n => n.id === nicheId);
   const label = niche ? niche.name : nicheId;

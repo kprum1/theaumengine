@@ -483,6 +483,25 @@ function pageLeadScoreboard() {
   }
   if (activeFilters.niche !== 'all') list = list.filter(p => p.nicheId === activeFilters.niche);
 
+  // ── Enrichment segment filter (AND'd on top of niche + status) ────────────
+  // Filters by which data fields are actually populated on each lead.
+  const _hasPhone   = p => !!(p.phone    && p.phone.trim());
+  const _hasEmail   = p => !!(p.email    && p.email.trim());
+  const _hasLinkedIn= p => !!(p.linkedInUrl || p.linkedin);
+  const _hasAddress = p => !!(p.propertyAddress && p.propertyAddress.trim());
+  const _hasHome    = p => !!(p.homeValue && p.homeValue > 0);
+  const _fullContact= p => _hasEmail(p) && _hasPhone(p);  // fully contactable = email + phone
+
+  switch (activeFilters.enrichment) {
+    case 'has-phone':       list = list.filter(_hasPhone);    break;
+    case 'has-email':       list = list.filter(_hasEmail);    break;
+    case 'has-linkedin':    list = list.filter(_hasLinkedIn); break;
+    case 'has-address':     list = list.filter(_hasAddress);  break;
+    case 'has-home':        list = list.filter(_hasHome);     break;
+    case 'fully-contactable': list = list.filter(_fullContact); break;
+    // 'all' — no additional filter
+  }
+
   // Apply column sort
   const { col, dir } = window._sbSort;
   const sign = dir === 'desc' ? -1 : 1;
@@ -568,6 +587,41 @@ function pageLeadScoreboard() {
       ⏳ Needs Data (${needsDataCount})
     </div>
   </div>
+  ${(() => {
+    // ── Enrichment Segment Bar — always shown, counts from current niche pool ─
+    const segPool = isCohortView
+      ? PROSPECTS.filter(p => p.nicheId === activeFilters.niche)
+      : PROSPECTS;
+    const segHasPhone    = segPool.filter(p => p.phone     && p.phone.trim()).length;
+    const segHasEmail    = segPool.filter(p => p.email     && p.email.trim()).length;
+    const segHasLinkedIn = segPool.filter(p => p.linkedInUrl || p.linkedin).length;
+    const segHasAddress  = segPool.filter(p => p.propertyAddress && p.propertyAddress.trim()).length;
+    const segHasHome     = segPool.filter(p => p.homeValue && p.homeValue > 0).length;
+    const segFullContact = segPool.filter(p => (p.email && p.email.trim()) && (p.phone && p.phone.trim())).length;
+    const ae = activeFilters.enrichment;
+    const seg = (id, icon, label, count, color) => count > 0 ? `
+      <div class="filter-chip" style="${
+        ae===id
+          ? `background:${color}22;border-color:${color};color:${color};font-weight:700`
+          : 'opacity:0.75'
+      }" onclick="setFilter('enrichment','${ae===id?'all':id}');navigate('lead-scoreboard')" title="Show only leads with ${label}">
+        ${icon} ${label} <span style="font-size:10px;font-weight:${ae===id?800:600};margin-left:3px">(${count})</span>
+        ${ae===id ? '<span style="margin-left:4px;opacity:0.7;font-size:9px">×</span>' : ''}
+      </div>` : '';
+    return `
+    <div style="display:flex;align-items:center;gap:6px;padding:8px 0 6px;flex-wrap:wrap;border-top:1px solid var(--border-subtle);margin-top:2px">
+      <span style="font-size:9.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.07em;white-space:nowrap">Data</span>
+      ${seg('fully-contactable','⚡','Fully Contactable', segFullContact, 'var(--emerald)')}
+      ${seg('has-phone',  '📞','Has Phone',   segHasPhone,    'var(--blue)')}
+      ${seg('has-email',  '📧','Has Email',   segHasEmail,    'var(--violet)')}
+      ${seg('has-linkedin','💼','Has LinkedIn', segHasLinkedIn, '#0A66C2')}
+      ${seg('has-address','🏠','Has Address', segHasAddress,  'var(--amber)')}
+      ${seg('has-home',   '💰','Has Home Value', segHasHome,  'var(--rose)')}
+      ${!segFullContact && !segHasPhone && !segHasEmail && !segHasLinkedIn && !segHasAddress && !segHasHome
+        ? '<span style="font-size:11px;color:var(--text-muted);padding-left:4px">No enrichment data yet — run Apollo or import enrichment CSV</span>'
+        : ''}
+    </div>`;
+  })()}
   <div class="section">
     ${list.length===0?`
     <div class="empty-state">
