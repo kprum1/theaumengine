@@ -3,7 +3,9 @@
 // =====================================
 
 function pageCommandCenter() {
-  const top = [...PROSPECTS].sort((a,b)=>b.priorityScore-a.priorityScore).slice(0,8);
+  // Top-8 uses only action-ready leads for the advisor queue
+  const isReady = p => !!(p.firstName && p.lastName && p.phone && p.phone.trim() && p.propertyAddress);
+  const top = [...PROSPECTS].filter(isReady).sort((a,b)=>b.priorityScore-a.priorityScore).slice(0,8);
   const M = computeMetrics();
   const NM = computeNicheMetrics();
 
@@ -168,11 +170,18 @@ function pageCommandCenter() {
   </div>
   <div class="kpi-strip">
     <div class="kpi-card" style="--kpi-color:linear-gradient(90deg,#60a5fa,#818cf8);cursor:pointer;transition:transform .15s,box-shadow .15s"
-      onclick="navigate('lead-scoreboard')" title="View all prospects"
+      onclick="navigate('lead-scoreboard')" title="All assigned leads in your pipeline"
       onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(96,165,250,0.2)'"
       onmouseout="this.style.transform='';this.style.boxShadow=''">
-      <div class="kpi-label">Total Prospects</div><div class="kpi-value">${M.total}</div>
+      <div class="kpi-label">Total Assigned</div><div class="kpi-value">${M.assigned.toLocaleString()}</div>
       <div class="kpi-delta up">↑ ${M.newThisWeek || 0} new this week</div><div class="kpi-icon">💎</div>
+    </div>
+    <div class="kpi-card" style="--kpi-color:linear-gradient(90deg,#34d399,#10b981);cursor:pointer;transition:transform .15s,box-shadow .15s"
+      onclick="setFilter('status','all');navigate('lead-scoreboard')" title="Action-ready leads: name + phone + address"
+      onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(52,211,153,0.2)'"
+      onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div class="kpi-label">✅ Action Ready</div><div class="kpi-value">${M.readyCount.toLocaleString()}</div>
+      <div class="kpi-delta up">📞 ${M.enrichedCount} NPI verified</div><div class="kpi-icon">🎯</div>
     </div>
     <div class="kpi-card" style="--kpi-color:linear-gradient(90deg,#fb7185,#f43f5e);cursor:pointer;transition:transform .15s,box-shadow .15s"
       onclick="navigate('nurture-booking')" title="View pipeline board"
@@ -181,19 +190,12 @@ function pageCommandCenter() {
       <div class="kpi-label">In Pipeline</div><div class="kpi-value">${M.contacted}</div>
       <div class="kpi-delta up">↑ Active stage</div><div class="kpi-icon">🔥</div>
     </div>
-    <div class="kpi-card" style="--kpi-color:linear-gradient(90deg,#34d399,#10b981);cursor:pointer;transition:transform .15s,box-shadow .15s"
-      onclick="navigate('meeting-prep')" title="Go to Meeting Prep"
-      onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(52,211,153,0.2)'"
-      onmouseout="this.style.transform='';this.style.boxShadow=''">
-      <div class="kpi-label">Meetings Booked</div><div class="kpi-value">${M.booked}</div>
-      <div class="kpi-delta up">↑ +2 this week</div><div class="kpi-icon">📅</div>
-    </div>
     <div class="kpi-card" style="--kpi-color:linear-gradient(90deg,#fbbf24,#f59e0b);cursor:pointer;transition:transform .15s,box-shadow .15s"
       onclick="navigate('outreach-studio')" title="Go to Outreach Studio"
       onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 24px rgba(251,191,36,0.2)'"
       onmouseout="this.style.transform='';this.style.boxShadow=''">
       <div class="kpi-label">Contact Rate</div><div class="kpi-value">${M.contactRate}%</div>
-      <div class="kpi-delta up">↑ +4% vs last mo.</div><div class="kpi-icon">✉️</div>
+      <div class="kpi-delta ${M.needsDataCount > 0 ? 'neutral' : 'up'}">⏳ ${M.needsDataCount} need data</div><div class="kpi-icon">✉️</div>
     </div>
     <div class="kpi-card" style="--kpi-color:linear-gradient(90deg,#a78bfa,#7c3aed);cursor:pointer;transition:transform .15s,box-shadow .15s"
       onclick="navigate('nurture-booking')" title="Go to Nurture &amp; Booking"
