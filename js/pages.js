@@ -426,38 +426,57 @@ const SB_PAGE_SIZE = 200;
 function sbGotoPage(n) { window._scoreboardPage = n; navigate('lead-scoreboard'); }
 
 function pageLeadScoreboard() {
+  // A lead is 'ready' when it has at minimum: name + phone + address.
+  // Email is excluded from the gate since NPI leads don't have emails yet.
+  // Incomplete leads sit in 'Needs Data' until enrichment fills the gaps.
+  const isReady = p => !!(p.firstName && p.lastName && p.phone && p.phone.trim() && p.propertyAddress);
+
   let list = [...PROSPECTS];
   const isFiltered = activeFilters.status !== 'all' || activeFilters.niche !== 'all';
-  if (activeFilters.status === 'enriched') {
-    // Enriched = has phone (from NPI or PDL) — contact-ready leads
+
+  if (activeFilters.status === 'needs-data') {
+    // Show ONLY leads missing at least one required field
+    list = list.filter(p => !isReady(p));
+  } else if (activeFilters.status === 'enriched') {
+    // NPI/PDL phone-verified leads — a subset of ready leads
     list = list.filter(p => p.phone && p.phone.trim());
-  } else if (activeFilters.status !== 'all') {
-    list = list.filter(p => p.status === activeFilters.status);
+  } else if (activeFilters.status === 'all') {
+    // Default view: ONLY action-ready leads (hide incomplete until enriched)
+    list = list.filter(isReady);
+  } else {
+    // Pipeline status filter (New, Contacted, Booked, etc.) — ready leads only
+    list = list.filter(p => isReady(p) && p.status === activeFilters.status);
   }
   if (activeFilters.niche !== 'all') list = list.filter(p => p.nicheId === activeFilters.niche);
   list.sort((a,b) => b.priorityScore - a.priorityScore);
 
-  // Pagination — reset to page 1 when filter changes
+  // Counts for tab chips
+  const readyCount      = PROSPECTS.filter(isReady).length;
+  const enrichedCount   = PROSPECTS.filter(p => p.phone && p.phone.trim()).length;
+  const needsDataCount  = PROSPECTS.filter(p => !isReady(p)).length;
+
+  // Pagination
   const totalFiltered = list.length;
   const totalPages    = Math.max(1, Math.ceil(totalFiltered / SB_PAGE_SIZE));
   if (window._scoreboardPage > totalPages) window._scoreboardPage = 1;
-  const page     = window._scoreboardPage;
+  const page      = window._scoreboardPage;
   const pageStart = (page - 1) * SB_PAGE_SIZE;
-  const pagEnd   = Math.min(pageStart + SB_PAGE_SIZE, totalFiltered);
-  const pageList = list.slice(pageStart, pagEnd);
-
-  const enrichedCount = PROSPECTS.filter(p => p.phone && p.phone.trim()).length;
+  const pagEnd    = Math.min(pageStart + SB_PAGE_SIZE, totalFiltered);
+  const pageList  = list.slice(pageStart, pagEnd);
 
   const dbTotal = window._firestoreLeadTotal || PROSPECTS.length;
-  // When no filter: show full DB total. When filtered: show list.length of dbTotal.
-  const showingCount = isFiltered ? list.length : dbTotal;
 
   const statuses = ['New','Contacted','Engaged','Nurture','Meeting Requested','Booked','Dead'];
   return `
   <div class="page-header">
     <div class="page-header-left">
       <div class="page-title">Lead Scoreboard</div>
-      <div class="page-subtitle">${isFiltered ? totalFiltered : dbTotal} prospects · Page ${page} of ${totalPages} · showing ${pageStart+1}–${pagEnd}</div>
+      <div class="page-subtitle">
+        ${activeFilters.status === 'needs-data'
+          ? `${needsDataCount} leads awaiting enrichment`
+          : `${readyCount} action-ready leads · Page ${page} of ${totalPages} · showing ${pageStart+1}–${Math.min(pagEnd,readyCount)}`
+        }
+      </div>
     </div>
     <div class="page-actions">
       <button class="btn btn-secondary" onclick="triggerCSVImport()">⬆ Import CSV</button>
@@ -472,14 +491,19 @@ function pageLeadScoreboard() {
       <svg viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 10.5L13 13" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
       <input class="search-input" placeholder="Search prospects…" id="search-prospects" oninput="filterProspects(this.value)">
     </div>
-    <div class="filter-chip ${activeFilters.status==='all'?'active':''}" onclick="setFilter('status','all');navigate('lead-scoreboard')">All (${window._firestoreLeadTotal || PROSPECTS.length})</div>
-    <div class="filter-chip" onclick="setFilter('status','enriched');navigate('lead-scoreboard')" style="${activeFilters.status==='enriched' ? 'background:rgba(52,211,153,0.15);border-color:var(--emerald);color:var(--emerald)' : ''}" title="Leads with verified phone number (NPI crossref or PDL enrichment)">
-      ${activeFilters.status==='enriched' ? '✅' : '📞'} Enriched (${enrichedCount})
+    <div class="filter-chip ${activeFilters.status==='all'?'active':''}" onclick="setFilter('status','all');navigate('lead-scoreboard')" title="Action-ready leads: name + phone + address verified">
+      ✅ Ready (${readyCount})
+    </div>
+    <div class="filter-chip" onclick="setFilter('status','enriched');navigate('lead-scoreboard')" style="${activeFilters.status==='enriched' ? 'background:rgba(52,211,153,0.15);border-color:var(--emerald);color:var(--emerald)' : ''}" title="NPI/PDL verified phone number confirmed">
+      📞 NPI Verified (${enrichedCount})
     </div>
     ${statuses.map(s=>{
-      const c=PROSPECTS.filter(p=>p.status===s).length;
+      const c = PROSPECTS.filter(p => isReady(p) && p.status===s).length;
       return `<div class="filter-chip ${activeFilters.status===s?'active':''}" onclick="setFilter('status','${s}');navigate('lead-scoreboard')">${s} ${c>0?`(${c})`:''}</div>`;
     }).join('')}
+    <div class="filter-chip" onclick="setFilter('status','needs-data');navigate('lead-scoreboard')" style="${activeFilters.status==='needs-data' ? 'background:rgba(251,191,36,0.12);border-color:var(--amber);color:var(--amber)' : 'opacity:0.6'}" title="Leads missing phone, address, or name — hidden until enriched">
+      ⏳ Needs Data (${needsDataCount})
+    </div>
   </div>
   <div class="section">
     ${list.length===0?`
