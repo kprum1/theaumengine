@@ -101,11 +101,25 @@ function apolloPeopleSearch(lead) {
     const city   = lead.city  || '';
     const state  = lead.state || '';
 
+    // Title signal — boosts match confidence when company is blank (common on NPI leads)
+    const NICHE_TITLE_HINT = {
+      'physicians': 'Physician', 'dentists': 'Dentist',
+      'c-suite-executives': 'Executive', 'law-partners': 'Attorney',
+      'business-owners': 'Owner', 'high-earning-tradesman': 'Owner',
+    };
+    const titleSignal = lead.title?.trim()
+      || lead.specialty?.trim()
+      || NICHE_TITLE_HINT[lead.nicheId]
+      || undefined;
+
     const payload = JSON.stringify({
       first_name:              lead.firstName?.trim() || undefined,
       last_name:               lead.lastName?.trim()  || undefined,
       organization_name:       lead.company?.trim()   || undefined,
+      title:                   titleSignal,
       location:                city && state ? `${city}, ${state}` : (state || undefined),
+      // Pass known phone as a match anchor — unlocks email reveal significantly
+      phone_number:            lead.phone?.replace(/\D/g, '') || undefined,
       reveal_personal_emails:  true,
       reveal_phone_number:     false,  // phone costs extra credits — defer to PDL
     });
@@ -196,7 +210,7 @@ async function enrichLead(lead) {
       // people/match returns { person: {...} } — not { people: [...] }
       const person = pickBestMatch(resp.body, lead);
 
-      if (person && person._score >= 30) {
+      if (person && person._score >= 50) {  // raised from 30 — prevents weak cross-niche matches
         result.enriched = true;
         result.fields = {
           firstName:   lead.firstName || person.first_name  || '',
