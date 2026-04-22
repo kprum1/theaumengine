@@ -425,6 +425,20 @@ const SB_PAGE_SIZE = 200;
 
 function sbGotoPage(n) { window._scoreboardPage = n; navigate('lead-scoreboard'); }
 
+// Scoreboard sort state — default: Priority descending
+if (typeof window._sbSort === 'undefined') window._sbSort = { col: 'priority', dir: 'desc' };
+
+function sbSortBy(col) {
+  if (window._sbSort.col === col) {
+    window._sbSort.dir = window._sbSort.dir === 'desc' ? 'asc' : 'desc';
+  } else {
+    window._sbSort.col = col;
+    window._sbSort.dir = 'desc'; // new column always starts descending
+  }
+  window._scoreboardPage = 1;
+  navigate('lead-scoreboard');
+}
+
 function pageLeadScoreboard() {
   // A lead is 'ready' when it has at minimum: name + phone + address.
   // Email is excluded from the gate since NPI leads don't have emails yet.
@@ -448,7 +462,27 @@ function pageLeadScoreboard() {
     list = list.filter(p => isReady(p) && p.status === activeFilters.status);
   }
   if (activeFilters.niche !== 'all') list = list.filter(p => p.nicheId === activeFilters.niche);
-  list.sort((a,b) => b.priorityScore - a.priorityScore);
+
+  // Apply column sort
+  const { col, dir } = window._sbSort;
+  const sign = dir === 'desc' ? -1 : 1;
+  list.sort((a, b) => {
+    switch (col) {
+      case 'name':     return sign * (a.firstName + a.lastName).localeCompare(b.firstName + b.lastName);
+      case 'niche':    return sign * (a.niche || '').localeCompare(b.niche || '');
+      case 'signals': {
+        const sA = getEnrichmentSignals(getEnrichment(a.id)).count;
+        const sB = getEnrichmentSignals(getEnrichment(b.id)).count;
+        return sign * (sA - sB);
+      }
+      case 'fit':      return sign * ((a.fitScore      || 0) - (b.fitScore      || 0));
+      case 'timing':   return sign * ((a.timingScore   || 0) - (b.timingScore   || 0));
+      case 'priority': return sign * ((a.priorityScore || 0) - (b.priorityScore || 0));
+      case 'status':   return sign * (a.status || '').localeCompare(b.status || '');
+      case 'homeValue':return sign * ((a.homeValue || 0) - (b.homeValue || 0));
+      default:         return sign * ((a.priorityScore || 0) - (b.priorityScore || 0));
+    }
+  });
 
   // Counts for tab chips
   const readyCount      = PROSPECTS.filter(isReady).length;
@@ -515,7 +549,34 @@ function pageLeadScoreboard() {
     </div>`:`
     <div class="table-wrap">
       <table class="data-table">
-        <thead><tr><th>Rank</th><th>Prospect</th><th>Niche</th><th>Signals</th><th>Fit</th><th>Timing</th><th>Priority</th><th>Status</th><th style="min-width:120px">Rep / Activity</th><th style="min-width:72px">Rate</th><th style="min-width:60px">Action</th></tr></thead>
+        <thead>
+          <tr>
+            ${(()=>{
+              const S = window._sbSort;
+              const arrow = (c) => S.col === c
+                ? `<span style="color:var(--blue);margin-left:3px;font-size:10px">${S.dir==='desc'?'↓':'↑'}</span>`
+                : `<span style="color:var(--border-default);margin-left:3px;font-size:10px;opacity:0.4">↕</span>`;
+              const th = (label, col, extra='') =>
+                col
+                  ? `<th onclick="sbSortBy('${col}')" style="cursor:pointer;user-select:none;white-space:nowrap;${S.col===col?'color:var(--blue)':''}" title="Sort by ${label}" ${extra}>${label}${arrow(col)}</th>`
+                  : `<th ${extra}>${label}</th>`;
+              return [
+                th('Rank',     ''),
+                th('Prospect', 'name'),
+                th('Niche',    'niche'),
+                th('Signals',  'signals'),
+                th('Fit',      'fit'),
+                th('Timing',   'timing'),
+                th('Priority', 'priority'),
+                th('Status',   'status'),
+                th('Home Value','homeValue', 'style="min-width:90px"'),
+                th('Rep / Activity', '', 'style="min-width:120px"'),
+                th('Rate',     '', 'style="min-width:72px"'),
+                th('Action',   '', 'style="min-width:60px"'),
+              ].join('');
+            })()}
+          </tr>
+        </thead>
         <tbody id="scoreboard-body">
           ${pageList.map((p,i)=>{
             const e    = getEnrichment(p.id);
@@ -542,6 +603,11 @@ function pageLeadScoreboard() {
             <td>${getScoreBar(p.timingScore,'#a78bfa')}</td>
             <td>${getScoreBar(p.priorityScore,'#34d399')}</td>
             <td>${getStatusPill(p.status)}</td>
+            <td style="min-width:90px">
+              ${p.homeValue
+                ? `<span style="font-size:11px;font-weight:700;color:${p.homeValue>=2000000?'var(--emerald)':'var(--text-secondary)'}">$${p.homeValue>=1000000?(p.homeValue/1000000).toFixed(1)+'M':(p.homeValue/1000).toFixed(0)+'K'}</span>`
+                : `<span style="font-size:10px;color:var(--text-muted)">—</span>`}
+            </td>
             <td style="font-size:10.5px;color:var(--text-muted);min-width:120px">
               <div style="font-weight:600;color:var(--text-secondary)">${p.assignedRep}</div>
               <div style="font-size:10px;margin-top:1px">${p.lastActivity}</div>
