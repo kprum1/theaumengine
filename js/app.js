@@ -1780,7 +1780,10 @@ function openDrawer(id) {
     const enr       = getEnrichment(p.id) || {};
     const email     = p.email     || enr.personalEmail || '';
     const phone     = p.phone     || enr.personalPhone || '';
-    const linkedin  = p.linkedInUrl || p.linkedin || '';
+    // Normalize LinkedIn URL — stored values may lack the protocol prefix
+    const _liRaw    = p.linkedInUrl || p.linkedin || '';
+    const linkedin  = _liRaw ? ((/^https?:\/\//i.test(_liRaw)) ? _liRaw : 'https://' + _liRaw.replace(/^\/+/, '')) : '';
+    const linkedinDisplay = linkedin.replace(/^https?:\/\//i, '');
     const hasAny    = email || phone || linkedin;
 
     if (!hasAny) return `
@@ -1827,7 +1830,7 @@ function openDrawer(id) {
       ${linkedin ? `
       <div style="display:flex;align-items:center;gap:8px;background:var(--bg-elevated);border-radius:8px;padding:8px 10px">
         <span style="font-size:13px;flex-shrink:0">💼</span>
-        <span style="font-size:11.5px;color:var(--text-secondary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${linkedin}</span>
+        <span style="font-size:11.5px;color:var(--text-secondary);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${linkedinDisplay}</span>
         <a href="${linkedin}" target="_blank" rel="noopener"
           style="background:none;border:1px solid var(--blue);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--blue);cursor:pointer;flex-shrink:0;text-decoration:none">
           View

@@ -244,7 +244,13 @@ async function loadAssignedLeadsFromFirestore(uid) {
         // Fallback chain: assignment doc → master_lead root → enrichment aliases → blank
         email:         a.email         || lead.email         || lead.personalEmail || '',
         phone:         a.phone         || lead.phone         || lead.personalPhone || '',
-        linkedInUrl:   a.linkedInUrl   || lead.linkedInUrl   || lead.linkedin_url  || lead.linkedin || '',
+        linkedInUrl: (() => {
+          const raw = a.linkedInUrl || lead.linkedInUrl || lead.linkedin_url || lead.linkedin || '';
+          if (!raw) return '';
+          if (/^https?:\/\//i.test(raw)) return raw;
+          return 'https://' + raw.replace(/^\/+/, '');
+        })(),
+
 
         // NPI / professional identity — always on assignment doc for NPI-sourced leads
         npiNumber:     a.npiNumber     || lead.npiNumber     || '',
