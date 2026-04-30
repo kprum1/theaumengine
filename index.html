@@ -331,7 +331,7 @@
               <span><strong>A 30-day "first-meetings or we comp month two" guarantee</strong> when you engage with the system as designed.</span>
             </li>
           </ul>
-          <button class="offer-cta-btn" id="founding-cta-btn">Apply for the founding cohort</button>
+          <button class="offer-cta-btn" id="founding-cta-btn" onclick="startStripeCheckout(this)">Join the founding cohort — $500 setup</button>
 
           <!-- ── Lead Capture — HubSpot Embed ── -->
           <!-- TO ACTIVATE: swap YOUR_PORTAL_ID and YOUR_FORM_ID below -->
@@ -787,6 +787,96 @@
 // C23-1: Path-based deep link handler for /privacy and /terms
 // Firebase hosting rewrites all paths to index.html (SPA mode).
 // Detect /privacy and /terms at load time and show the correct page.
+// ── Stripe Checkout Handler ─────────────────────────────────────────────
+// Called by the founding cohort CTA button.
+// POSTs to the createCheckoutSession Cloud Function → redirects to Stripe.
+window.startStripeCheckout = async function(btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Opening checkout…';
+  }
+  try {
+    const resp = await fetch(
+      'https://us-central1-theaumengine.cloudfunctions.net/createCheckoutSession',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: '' }),  // Stripe will collect email on checkout page
+      }
+    );
+    const data = await resp.json();
+    if (data.url) {
+      window.location.href = data.url;  // Redirect to Stripe hosted checkout
+    } else {
+      if (btn) { btn.disabled = false; btn.textContent = 'Join the founding cohort — $500 setup'; }
+      alert('Could not start checkout. Please email kosal@fin-tegration.com to get access.');
+    }
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Join the founding cohort — $500 setup'; }
+    alert('Could not start checkout. Please try again or email kosal@fin-tegration.com.');
+  }
+};
+
+// ── Payment Success / Cancel URL Handler ─────────────────────────────────
+// Stripe redirects back to /?payment=success or /?payment=cancelled.
+// Show a success banner that guides the user to sign in with Gmail.
+(function _handleStripeReturn() {
+  const params  = new URLSearchParams(window.location.search);
+  const payment = params.get('payment');
+  if (!payment) return;
+
+  // Clean the URL bar immediately
+  history.replaceState(null, '', '/');
+
+  if (payment === 'success') {
+    // Show a success toast + open auth modal after a brief delay
+    document.addEventListener('DOMContentLoaded', function() {
+      // Inject a success banner above the hero
+      const banner = document.createElement('div');
+      banner.id = 'stripe-success-banner';
+      banner.innerHTML = `
+        <div style="
+          position:fixed;top:0;left:0;right:0;z-index:9999;
+          background:linear-gradient(90deg,#059669,#10b981);
+          color:#fff;padding:14px 24px;
+          display:flex;align-items:center;justify-content:space-between;
+          font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;
+          box-shadow:0 4px 24px rgba(16,185,129,0.4);
+          animation:fadeInDown 0.4s ease;
+        ">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-size:22px">🎉</span>
+            <div>
+              <div style="font-size:14px;font-weight:700">Payment confirmed — welcome to The AUM Engine!</div>
+              <div style="font-size:12px;opacity:0.9;margin-top:2px">Sign in with your Gmail to activate your account and access your cockpit.</div>
+            </div>
+          </div>
+          <button
+            onclick="window.openAuthModal();document.getElementById('stripe-success-banner').style.display='none'"
+            style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:8px 18px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit"
+          >Sign in with Gmail →</button>
+        </div>
+      `;
+      document.body.prepend(banner);
+
+      // Auto-open auth modal after 1.5s
+      setTimeout(() => {
+        if (typeof window.openAuthModal === 'function') window.openAuthModal();
+      }, 1500);
+    });
+  }
+
+  if (payment === 'cancelled') {
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(() => {
+        if (typeof showToast === 'function') {
+          showToast('Checkout cancelled — no charge made. Questions? Email kosal@fin-tegration.com', '💬', 6000);
+        }
+      }, 800);
+    });
+  }
+})();
+
 (function() {
   const path = window.location.pathname.replace(/\/$/, '').toLowerCase();
   const legalPages = { '/privacy': 'privacy', '/terms': 'terms' };

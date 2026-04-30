@@ -142,28 +142,99 @@ auth.onAuthStateChanged(async (user) => {
     window._currentUser = user;
 
     // ── C40 INVITE-ONLY GATE ──────────────────────────────────────────────
-    // Operator always passes. Everyone else must exist in advisor_pool.
+    // Operator always passes. Everyone else must exist in advisor_pool OR
+    // have a pending payment record in advisor_pool_pending (Stripe flow).
     // This runs before showing the app shell — unauthorized users never see
     // the cockpit, just a clean "not provisioned yet" message.
     const isOp = user.email === 'kosal@fin-tegration.com';
     if (!isOp) {
       try {
+        // ── Check 1: Already in advisor_pool (existing advisors) ─────────
         const poolDoc = await firebase.firestore()
           .collection('advisor_pool').doc(user.uid).get();
+
         if (!poolDoc.exists) {
-          // Not provisioned — sign out cleanly
-          await auth.signOut();
-          showPublicShell();
-          // Show a friendly message on the login modal
+          // ── Check 2: Paid via Stripe, pending Gmail activation ────────
+          const emailKey  = user.email.toLowerCase().replace('@', '_at_');
+          const pendingDoc = await firebase.firestore()
+            .collection('advisor_pool_pending').doc(emailKey).get();
+
+          if (!pendingDoc.exists) {
+            // Not provisioned at all — deny access
+            await auth.signOut();
+            showPublicShell();
+            setTimeout(() => {
+              window.openAuthModal();
+              setAuthError(
+                '🔒 Your account hasn\'t been provisioned yet. ' +
+                'Complete your founding cohort payment or email kosal@fin-tegration.com to get access.'
+              );
+            }, 150);
+            console.info('[auth.js] Gate: user not in advisor_pool or advisor_pool_pending — access denied:', user.email);
+            return;
+          }
+
+          // ── PROMOTE: pending_gmail → advisor_pool ─────────────────────
+          // They paid — now that we have their real UID, promote to full advisor_pool doc
+          const pending = pendingDoc.data();
+          const now = new Date().toISOString();
+          const db  = firebase.firestore();
+
+          // Write the full advisor_pool entry (routing engine reads this)
+          await db.collection('advisor_pool').doc(user.uid).set({
+            uid:                user.uid,
+            email:              user.email.toLowerCase(),
+            firmName:           pending.firmName || '',
+            nicheIds:           pending.nicheIds || [],
+            geography:          pending.geography || '',
+            activeLeadCap:      pending.activeLeadCap || 25,
+            calendarCapacity:   pending.calendarCapacity || 8,
+            eligibleForRouting: false,  // false until onboarding completes
+            routingTier:        pending.routingTier || 'standard',
+            cohort:             pending.cohort || 'Cohort-2-2026',
+            source:             'stripe_checkout',
+            stripeSessionId:    pending.stripeSessionId || null,
+            amountPaidCents:    pending.amountPaidCents || 50000,
+            onboardingComplete: false,
+            pilotAdvisor:       true,
+            createdAt:          pending.createdAt || now,
+            promotedAt:         now,
+            updatedAt:          now,
+          }, { merge: true });
+
+          // Mark pending doc as promoted (keep for audit trail)
+          await db.collection('advisor_pool_pending').doc(emailKey).update({
+            status:      'promoted',
+            promotedUid: user.uid,
+            promotedAt:  now,
+          });
+
+          // Also seed the user profile
+          await db.collection('users').doc(user.uid)
+            .collection('data').doc('advisorProfile')
+            .set({
+              uid:            user.uid,
+              email:          user.email.toLowerCase(),
+              firmName:       pending.firmName || '',
+              nicheIds:       pending.nicheIds || [],
+              advisorType:    'Independent RIA',
+              activeLeadCap:  pending.activeLeadCap || 25,
+              calendarCapacity: pending.calendarCapacity || 8,
+              pilotAdvisor:   true,
+              cohort:         pending.cohort || 'Cohort-2-2026',
+              onboardingComplete: false,
+              createdAt:      pending.createdAt || now,
+              updatedAt:      now,
+            }, { merge: true });
+
+          console.info('[auth.js] ✅ Stripe advisor promoted to advisor_pool:', user.email, '→ uid:', user.uid);
+
+          // Show a welcome toast
           setTimeout(() => {
-            window.openAuthModal();
-            setAuthError(
-              '🔒 Your account hasn\'t been provisioned yet. ' +
-              'Email kosal@fin-tegration.com to get access.'
-            );
-          }, 150);
-          console.info('[auth.js] Gate: user not in advisor_pool — access denied:', user.email);
-          return; // stop all further bootstrap
+            if (typeof showToast === 'function') {
+              showToast('🎉 Welcome to The AUM Engine! Let\'s get you set up.', '✅', 6000);
+            }
+          }, 1200);
         }
       } catch (gateErr) {
         // If Firestore is unreachable, fail open (don't lock out real advisors)

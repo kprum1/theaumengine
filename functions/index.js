@@ -21,6 +21,7 @@ const functions  = require('firebase-functions');
 const { onRequest }    = require('firebase-functions/v2/https');
 const { onSchedule }   = require('firebase-functions/v2/scheduler');
 const admin      = require('firebase-admin');
+const stripe     = require('stripe');  // Stripe SDK
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -1014,3 +1015,181 @@ exports.getLeadsByIds = onCall({ enforceAppCheck: true }, async (req) => {
   const results = await Promise.all(fetches);
   return { leads: results.filter(Boolean) };
 });
+
+
+// ============================================================
+// AGENT 7: createCheckoutSession — Stripe Payment Checkout
+// POST /createCheckoutSession
+// Body: { email: "advisor@firm.com" }
+//
+// Creates a Stripe Checkout session for a one-time $500 payment.
+// Returns { url } — the hosted Stripe Checkout page URL.
+// The frontend redirects the advisor to this URL.
+//
+// On success, Stripe redirects to:
+//   https://theaumengine.web.app/?payment=success&session_id={CHECKOUT_SESSION_ID}
+// The frontend then prompts Google sign-in to activate the account.
+// ============================================================
+exports.createCheckoutSession = onRequest({ cors: true }, async (req, res) => {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
+
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeKey || stripeKey === 'sk_test_REPLACE_ME') {
+    return res.status(500).json({ error: 'Stripe not configured — set STRIPE_SECRET_KEY in functions/.env' });
+  }
+
+  const stripeClient = stripe(stripeKey);
+  const { email } = req.body || {};
+
+  try {
+    const session = await stripeClient.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      customer_email: email || undefined,  // pre-fill email if provided
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            unit_amount: 50000,  // $500.00 in cents
+            product_data: {
+              name: 'The AUM Engine — Founding Cohort Access',
+              description: 'One-time setup fee. Includes onboarding, niche configuration, and your first batch of exclusive niche-qualified prospects.',
+              images: ['https://theaumengine.web.app/assets/og-image.png'],
+            },
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: 'https://theaumengine.web.app/?payment=success&session_id={CHECKOUT_SESSION_ID}',
+      cancel_url:  'https://theaumengine.web.app/?payment=cancelled',
+      // Store the customer email in metadata so the webhook can retrieve it
+      metadata: { source: 'founding_cohort', requested_email: email || '' },
+    });
+
+    console.info('[Stripe] Checkout session created:', session.id, 'for', email || 'unknown');
+    return res.status(200).json({ url: session.url, sessionId: session.id });
+
+  } catch (e) {
+    console.error('[Stripe] createCheckoutSession error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+
+// ============================================================
+// AGENT 8: stripeWebhook — Stripe Payment Event Handler
+// POST /stripeWebhook
+//
+// Stripe calls this endpoint when a payment event occurs.
+// We verify the Stripe-Signature header (HMAC) to prevent spoofing.
+//
+// On checkout.session.completed:
+//   1. Extract customer email from the session
+//   2. Check if they're already in advisor_pool (idempotent)
+//   3. Write a provisional advisor_pool doc keyed by email (pending_gmail)
+//   4. When they sign in with that Gmail, auth.js promotes them to active
+//
+// Set webhook in Stripe Dashboard → Developers → Webhooks:
+//   Endpoint URL: https://us-central1-theaumengine.cloudfunctions.net/stripeWebhook
+//   Events to listen for: checkout.session.completed
+//   Copy the "Signing secret" → paste into functions/.env as STRIPE_WEBHOOK_SECRET
+// ============================================================
+exports.stripeWebhook = onRequest({ cors: false, rawBody: true }, async (req, res) => {
+  if (req.method !== 'POST') return res.status(405).send('POST only');
+
+  const stripeKey     = process.env.STRIPE_SECRET_KEY;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!stripeKey || stripeKey === 'sk_test_REPLACE_ME') {
+    return res.status(500).send('Stripe not configured');
+  }
+
+  const stripeClient = stripe(stripeKey);
+  const sig = req.headers['stripe-signature'];
+
+  let event;
+  try {
+    // Verify the webhook signature — rejects spoofed requests
+    event = stripeClient.webhooks.constructEvent(
+      req.rawBody,   // raw Buffer — must NOT be parsed by body-parser
+      sig,
+      webhookSecret || ''
+    );
+  } catch (err) {
+    console.error('[StripeWebhook] Signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // ── Handle checkout.session.completed ────────────────────
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+
+    // Extract customer email (from session or metadata)
+    const customerEmail = (session.customer_email || session.metadata?.requested_email || '').toLowerCase().trim();
+    const sessionId     = session.id;
+    const amountPaid    = session.amount_total;  // in cents
+
+    console.info(`[StripeWebhook] Payment confirmed — ${customerEmail} — $${(amountPaid/100).toFixed(2)} — session:${sessionId}`);
+
+    if (!customerEmail) {
+      console.warn('[StripeWebhook] No customer email on session — provisioning skipped');
+      return res.status(200).send('OK (no email)');
+    }
+
+    try {
+      // Check if already provisioned by email (idempotent)
+      const existing = await db.collection('advisor_pool_pending')
+        .where('email', '==', customerEmail)
+        .limit(1).get();
+
+      if (!existing.empty) {
+        console.info('[StripeWebhook] Already in advisor_pool_pending:', customerEmail);
+        return res.status(200).send('OK (already exists)');
+      }
+
+      const now = new Date().toISOString();
+
+      // Write provisional record to advisor_pool_pending
+      // This is keyed by email (not UID) — auth.js matches on first Gmail login
+      // and promotes to advisor_pool with real UID as the doc ID
+      await db.collection('advisor_pool_pending').doc(customerEmail.replace('@', '_at_')).set({
+        email:              customerEmail,
+        status:             'pending_gmail',       // waiting for first Gmail sign-in
+        stripeSessionId:    sessionId,
+        amountPaidCents:    amountPaid,
+        source:             'stripe_checkout',
+        cohort:             'Cohort-2-2026',
+        nicheIds:           [],                    // set during onboarding wizard
+        activeLeadCap:      25,
+        calendarCapacity:   8,
+        eligibleForRouting: false,                 // true AFTER onboarding completes
+        routingTier:        'standard',
+        firmName:           '',                    // filled in onboarding
+        geography:          '',
+        createdAt:          now,
+        updatedAt:          now,
+      });
+
+      // Audit log
+      await db.collection('routing_logs').add({
+        event:       'stripe_payment_received',
+        agentId:     'stripeWebhook_v1',
+        email:       customerEmail,
+        sessionId,
+        amountPaid,
+        timestamp:   now,
+        detail:      `Founding cohort payment received — provisional access created`,
+      });
+
+      console.info('[StripeWebhook] ✅ Provisional access created for:', customerEmail);
+
+    } catch (err) {
+      console.error('[StripeWebhook] Firestore write error:', err.message);
+      // Return 200 so Stripe doesn't retry — we'll re-check logs
+      return res.status(200).send('OK (write error logged)');
+    }
+  }
+
+  return res.status(200).send('OK');
+});
+
