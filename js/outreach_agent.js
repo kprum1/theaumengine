@@ -221,64 +221,159 @@ function chooseDraftStrategy(ctx) {
 // Structured template-engine approach — assembles from known-good
 // sentence components, never invents facts, respects channel limits.
 
+// ── PERSONALIZATION HELPERS ───────────────────────────────────
+// These pull real per-lead data from ctx.prospect into copy.
+// COMPLIANCE: Oblique references only — no asset figures, no explicit
+// mention of layoffs/firings, no surveillance-sounding language.
+
+// How we found them / connection opener
+function _pOpener(ctx) {
+  const rel = ctx.prospect.signals?.relationship || '';
+  const relL = rel.toLowerCase();
+  if (relL.includes('mutual') || relL.includes('connection')) {
+    // e.g. "Mutual connection — Dr. Kim" → "a mutual connection mentioned your name"
+    const name = rel.replace(/mutual connection\s*[–—-]?\s*/i, '').trim();
+    return name ? `a mutual connection — ${name} — mentioned your name` : 'a mutual connection pointed me your way';
+  }
+  if (relL.includes('linkedin') || relL.includes('2nd')) return 'I came across your profile through LinkedIn';
+  if (relL.includes('referral') || relL.includes('referred')) return 'you came up in a conversation with someone in my network';
+  if (relL.includes('event') || relL.includes('conference') || relL.includes('meeting')) return 'our paths crossed through a recent event';
+  const rc0 = (ctx.prospect.reasonCodes || [])[0] || '';
+  if (rc0) return `I came across your background — specifically ${rc0.toLowerCase()}`;
+  const company = ctx.prospect.company;
+  if (company) return `I noticed your background at ${company}`;
+  return 'I came across your profile';
+}
+
+// Primary signal / hook (most distinctive fact)
+function _pSignal(ctx) {
+  const rc = ctx.prospect.reasonCodes || [];
+  const sig = ctx.prospect.signals || {};
+  // Prefer first reasonCode that has concrete detail
+  if (rc[0]) return rc[0];
+  if (sig.nextEvent) return `the upcoming ${sig.nextEvent}`;
+  if (sig.estimatedAssets) return 'the scale of the financial picture involved';
+  const company = ctx.prospect.company;
+  const title   = ctx.prospect.title;
+  if (company && title) return `your role as ${title} at ${company}`;
+  if (title) return `your work as ${title}`;
+  if (company) return `what you've built at ${company}`;
+  return 'your background in this space';
+}
+
+// Secondary signal (depth / second data point)
+function _pSignal2(ctx) {
+  const rc = ctx.prospect.reasonCodes || [];
+  const sig = ctx.prospect.signals || {};
+  if (rc[1]) return rc[1];
+  if (rc[0] && sig.nextEvent) return `the upcoming ${sig.nextEvent}`;
+  if (sig.nextEvent) return `the upcoming ${sig.nextEvent}`;
+  const company = ctx.prospect.company;
+  if (company) return `what you're building at ${company}`;
+  return 'the complexity that tends to come with your situation';
+}
+
+// Timing hook — upcoming event or seasonal trigger
+function _pTiming(ctx) {
+  const ev = ctx.prospect.signals?.nextEvent || ctx.prospect.nextEvent || '';
+  if (!ev) return 'the timing feels right';
+  // Pull just the event name, strip date if parenthetical: "AMA Conference (Jun 4)" → "AMA Conference (Jun 4)"
+  return `with ${ev} on the calendar`;
+}
+
+// Geo string
+function _pGeo(ctx) {
+  const { city, state } = ctx.prospect;
+  if (city && state) return `${city}, ${state}`;
+  if (city) return city;
+  if (state) return state;
+  return 'your area';
+}
+
+
 const _TEMPLATES = {
 
   // ── EMAIL TEMPLATES ─────────────────────────────────────────
   email: {
     executive_transition: (ctx, strategy, tone) => {
-      const { firstName, company, title, city } = ctx.prospect;
-      const cta = strategy.ctaMeta.full;
+      const { firstName, company, title } = ctx.prospect;
+      const cta  = strategy.ctaMeta.full;
+      const opener  = _pOpener(ctx);
+      const signal  = _pSignal(ctx);
+      const signal2 = _pSignal2(ctx);
+      const timing  = _pTiming(ctx);
       const variants = {
-        A: { id:'A', label:'Direct', subject:`Coordinating finances through your transition, ${firstName}`,
-             body:`${firstName},\n\nI work with executives who are navigating career transitions — helping them make smart decisions around retirement income, equity, deferred comp, and taxes before the window closes.\n\nGiven your background${company ? ` at ${company}` : ''}, you likely have complexity in more than one place.\n\nWorth ${cta}? Happy to keep it short.\n\n[Your Name]\n[Firm]` },
-        B: { id:'B', label:'Soft', subject:`A question about executives in transition`,
-             body:`${firstName},\n\nI've spent a lot of time working with senior executives navigating career changes — particularly around getting their finances positioned well before major decisions get made.\n\nNot a pitch — just wondering if a short conversation might be useful given where you are right now.\n\nIf this lands at the wrong moment, no worries at all.\n\n[Your Name]` },
-        C: { id:'C', label:'Insight-Led', subject:`One thing executives in transition often miss`,
-             body:`${firstName},\n\nOne pattern I see often with executives ${company ? `leaving companies like ${company}` : 'going through role transitions'}: the first 90 days set the tone for everything — pension timing, severance tax strategy, concentrated stock decisions.\n\nMost advisors address these one at a time. We coordinate all of them.\n\nHappy to ${cta} if the timing is right.\n\n[Your Name]` },
+        A: { id:'A', label:'Direct',
+             subject:`Coordinating finances through your transition, ${firstName}`,
+             body:`${firstName},\n\n${opener} — specifically ${signal}.\n\nExecutives navigating transitions like yours often find that the first 90 days set the tone for everything — pension timing, equity treatment, severance tax strategy. Most get to those decisions too late.\n\nI specialize in this window specifically${company ? ` and have worked with others coming out of situations like ${company}` : ''}. Worth ${cta}?\n\n[Your Name]\n[Firm]` },
+        B: { id:'B', label:'Soft',
+             subject:`A thought for executives in your moment`,
+             body:`${firstName},\n\n${opener}.\n\nI work with a small group of executives on the financial coordination piece during transitions — not the portfolio, but the decisions underneath it: timing, taxes, structure.\n\nGiven ${signal2}, I thought it might be worth a quick note. No pressure — happy to ${cta} only if it feels relevant.\n\n[Your Name]` },
+        C: { id:'C', label:'Insight-Led',
+             subject:`One thing executives in transition often miss`,
+             body:`${firstName},\n\nOne pattern I see with senior executives${company ? ` from ${company}` : ''} going through transitions: ${timing}, there's a narrow window to get the financial sequencing right — pension election, concentrated stock, deferred comp.\n\nMost advisors address these one at a time. The ones who get it right coordinate all of them before the window closes.\n\nHappy to ${cta}.\n\n[Your Name]` },
       };
       return variants[tone] || variants.A;
     },
 
     exit_liquidity: (ctx, strategy, tone) => {
       const { firstName, company } = ctx.prospect;
-      const cta = strategy.ctaMeta.full;
+      const cta    = strategy.ctaMeta.full;
+      const opener = _pOpener(ctx);
+      const signal = _pSignal(ctx);
+      const timing = _pTiming(ctx);
       const variants = {
-        A: { id:'A', label:'Direct', subject:`Exit planning — coordinating the financial side`,
-             body:`${firstName},\n\nBusiness exits create a narrow window to make tax-smart decisions. I specialize in working with owners who are in or approaching that window — coordinating the planning before the deal closes, not after.\n\n${company ? `Given what I know about ${company}, ` : ''}you may have more complexity than a typical exit frame handles.\n\nWould ${cta} make sense?\n\n[Your Name]` },
-        B: { id:'B', label:'Soft', subject:`Quick thought on exit planning`,
-             body:`${firstName},\n\nI work primarily with business owners navigating exits or major liquidity events. The financial coordination piece — timing, taxes, what comes next — is often the last thing that gets attention and the most important.\n\nNot sure if the timing is right for you, but happy to ${cta} if it is.\n\n[Your Name]` },
-        C: { id:'C', label:'Insight-Led', subject:`What most advisors miss on the exit`,
-             body:`${firstName},\n\nThe biggest mistake I see in business exits: owners call their financial advisor after the deal is signed. By then, a lot of the tax leverage is gone.\n\nI work with a small group of owners who want to build a financial plan around the exit — not just respond to it afterward.\n\nHappy to ${cta}.\n\n[Your Name]` },
+        A: { id:'A', label:'Direct',
+             subject:`Exit planning — coordinating the financial side${company ? `, ${company}` : ''}`,
+             body:`${firstName},\n\n${opener} — specifically ${signal}.\n\nBusiness exits create a narrow window for tax-smart decisions. I specialize in working with owners in or approaching that window — coordinating the planning before the deal closes, not after.\n\n${timing ? `${timing}, ` : ''}the decisions made in the next few months will shape the outcome more than almost anything else.\n\nWould ${cta} make sense?\n\n[Your Name]` },
+        B: { id:'B', label:'Soft',
+             subject:`A thought on the financial side of your exit`,
+             body:`${firstName},\n\nI work primarily with business owners navigating exits or major liquidity events. The financial coordination piece — timing, structure, what comes after — is often the last thing that gets attention and the most consequential.\n\nGiven ${signal}, I thought it worth a note. Not sure if the timing is right, but happy to ${cta} if it is.\n\n[Your Name]` },
+        C: { id:'C', label:'Insight-Led',
+             subject:`What most advisors miss at the exit`,
+             body:`${firstName},\n\nThe most costly mistake in business exits: the financial advisor gets called after the deal is signed. By then, most of the tax leverage is gone.\n\nI work with a small group of owners${company ? ` — including some who've come through situations like ${company} —` : ''} who want a plan built around the exit, not just a response to it afterward.\n\nHappy to ${cta}.\n\n[Your Name]` },
       };
       return variants[tone] || variants.A;
     },
 
     practice_complexity: (ctx, strategy, tone) => {
-      const { firstName, title } = ctx.prospect;
-      const cta = strategy.ctaMeta.full;
-      const isPhysician = ctx.prospect.nicheId === 'physicians';
-      const label = isPhysician ? 'physician' : 'specialist';
+      const { firstName, title, company } = ctx.prospect;
+      const cta      = strategy.ctaMeta.full;
+      const opener   = _pOpener(ctx);
+      const signal   = _pSignal(ctx);
+      const timing   = _pTiming(ctx);
+      const isPhys   = ctx.prospect.nicheId === 'physicians';
+      const label    = isPhys ? 'physician' : 'specialist';
       const variants = {
-        A: { id:'A', label:'Direct', subject:`Financial planning for ${label}s in practice`,
-             body:`${firstName},\n\nI work specifically with ${label}s — helping them navigate practice income complexity, retirement planning gaps, and the financial decisions that come with practice transitions.\n\nMost generalist advisors can manage the portfolio. Fewer understand the planning layer underneath — PSA income, disability coverage gaps, buy-in risk.\n\nWorth ${cta}?\n\n[Your Name]` },
-        B: { id:'B', label:'Soft', subject:`A thought for ${label}s on the financial planning side`,
-             body:`${firstName},\n\nI've spent years focused on financial planning for ${label}s. The complexity is real — high income, limited time, practice-level risk that most advisors don't address well.\n\nIf any of that resonates, happy to ${cta}.\n\n[Your Name]` },
-        C: { id:'C', label:'Insight-Led', subject:`The financial gap most ${label}s don't catch`,
-             body:`${firstName},\n\nHigh-income ${label}s are some of the most financially under-advised professionals I work with — not because of access, but because their planning needs are genuinely more complex.\n\nPractice income, student loan payoff timing, disability exposure, retirement structure — these all interact in ways that require someone who works in this lane.\n\nHappy to ${cta} if the timing makes sense.\n\n[Your Name]` },
+        A: { id:'A', label:'Direct',
+             subject:`Financial planning for ${label}s in practice`,
+             body:`${firstName},\n\n${opener} — specifically ${signal}.\n\nI work with ${label}s navigating practice income complexity, partnership decisions, and the retirement planning gaps that most generalist advisors miss.\n\n${timing ? `${timing} — ` : ''}these decisions compound quickly once you're inside them.\n\nWorth ${cta}?\n\n[Your Name]` },
+        B: { id:'B', label:'Soft',
+             subject:`A thought for ${label}s on the financial planning side`,
+             body:`${firstName},\n\n${opener}.\n\nI focus specifically on financial planning for ${label}s — the complexity is real and most generalist advisors aren't built for it. High income, limited time, practice-level risk, retirement structure.\n\nGiven ${signal}, I thought it worth a note. If it resonates, happy to ${cta}.\n\n[Your Name]` },
+        C: { id:'C', label:'Insight-Led',
+             subject:`The financial gap most ${label}s don't catch`,
+             body:`${firstName},\n\nHigh-income ${label}s are some of the most under-planned professionals I work with — not because of access, but because the complexity is genuinely different: ${signal}${company ? ` in a setting like ${company}` : ''} creates planning decisions that require someone who works in this lane.\n\nHappy to ${cta} if the timing makes sense.\n\n[Your Name]` },
       };
       return variants[tone] || variants.A;
     },
 
     owner_succession: (ctx, strategy, tone) => {
       const { firstName, company } = ctx.prospect;
-      const cta = strategy.ctaMeta.full;
+      const cta    = strategy.ctaMeta.full;
+      const opener = _pOpener(ctx);
+      const signal = _pSignal(ctx);
+      const timing = _pTiming(ctx);
       const variants = {
-        A: { id:'A', label:'Direct', subject:`Succession planning — getting the financial side right`,
-             body:`${firstName},\n\nI work with business owners on the financial architecture behind succession — compensation restructuring, buy-sell coordination, and building a plan that survives the transition.\n\n${company ? `Based on what I've seen with owners in ${company}'s space, ` : ''}the planning window is usually shorter than people expect.\n\nWorth ${cta}?\n\n[Your Name]` },
-        B: { id:'B', label:'Soft', subject:`Thinking about succession?`,
-             body:`${firstName},\n\nI focus on working with business owners who are building toward an exit or transition — not just managing the portfolio, but the full financial picture around it.\n\nIf that's on your radar (even loosely), happy to ${cta}.\n\n[Your Name]` },
-        C: { id:'C', label:'Insight-Led', subject:`The owner financial questions that come before the exit`,
-             body:`${firstName},\n\nMost business owners I talk to know the exit is coming — but haven't thought through how their personal financial plan integrates with it. Compensation, retained earnings, timing, taxes.\n\nThat gap usually costs more than the advisor fee.\n\nHappy to ${cta} if it's the right moment.\n\n[Your Name]` },
+        A: { id:'A', label:'Direct',
+             subject:`Succession planning — getting the financial side right${company ? `, ${company}` : ''}`,
+             body:`${firstName},\n\n${opener} — specifically ${signal}.\n\nI work with business owners on the financial architecture behind succession — compensation restructuring, buy-sell coordination, building a plan that survives the transition.\n\n${timing ? `${timing}, ` : ''}the planning window tends to be shorter than owners expect.\n\nWorth ${cta}?\n\n[Your Name]` },
+        B: { id:'B', label:'Soft',
+             subject:`Thinking about succession${company ? ` at ${company}` : ''}?`,
+             body:`${firstName},\n\n${opener}.\n\nI focus on working with business owners who are building toward an exit or transition — not just managing the portfolio, but the full financial picture around it.\n\nGiven ${signal}, I thought it worth a note. If that's on your radar (even loosely), happy to ${cta}.\n\n[Your Name]` },
+        C: { id:'C', label:'Insight-Led',
+             subject:`The owner financial questions that come before the exit`,
+             body:`${firstName},\n\nMost business owners I talk to know the transition is coming — but haven't integrated it with their personal financial picture. Compensation structure, retained earnings, timing, taxes.\n\nThat gap — ${signal} — usually costs more than the advisor fee.\n\nHappy to ${cta} if it's the right moment.\n\n[Your Name]` },
       };
       return variants[tone] || variants.A;
     },
@@ -314,14 +409,20 @@ const _TEMPLATES = {
 
     equity_complexity: (ctx, strategy, tone) => {
       const { firstName, company } = ctx.prospect;
-      const cta = strategy.ctaMeta.full;
+      const cta    = strategy.ctaMeta.full;
+      const opener = _pOpener(ctx);
+      const signal = _pSignal(ctx);
+      const timing = _pTiming(ctx);
       const variants = {
-        A: { id:'A', label:'Direct', subject:`Equity compensation planning${company ? ` — ${company}` : ''}`,
-             body:`${firstName},\n\nI work with professionals who have significant equity compensation — RSUs, options, ESPP — helping them think through vesting timelines, tax exposure, and concentration risk before they run out of time to act.\n\nHappy to ${cta}.\n\n[Your Name]` },
-        B: { id:'B', label:'Soft', subject:`A quick thought on equity and tax planning`,
-             body:`${firstName},\n\nEquity compensation is one of those areas where the decisions made in the first few months really matter for taxes and long-term wealth. I specialize in helping people navigate that.\n\nHappy to ${cta} if equity planning is on your mind.\n\n[Your Name]` },
-        C: { id:'C', label:'Insight-Led', subject:`The RSU decision most people make too late`,
-             body:`${firstName},\n\nThe most common mistake with significant RSU or stock grants: deciding what to do with them after they vest, instead of planning the strategy before.\n\nTax liability, concentration risk, timing — all of these require advance thinking.\n\nHappy to ${cta}.\n\n[Your Name]` },
+        A: { id:'A', label:'Direct',
+             subject:`Equity compensation planning${company ? ` — ${company}` : ''}`,
+             body:`${firstName},\n\n${opener} — specifically ${signal}.\n\nI work with professionals who have significant equity compensation — RSUs, options, ESPP — helping them think through vesting timelines, tax exposure, and concentration risk before the window closes.\n\n${timing ? `${timing} — ` : ''}the decisions that get made (or don't) in the next quarter tend to matter a lot.\n\nHappy to ${cta}.\n\n[Your Name]` },
+        B: { id:'B', label:'Soft',
+             subject:`A thought on equity and tax planning`,
+             body:`${firstName},\n\n${opener}.\n\nEquity comp is one of those areas where the decisions in the first few months really determine taxes and long-term wealth. Given ${signal}, I wanted to reach out.\n\nHappy to ${cta} if it's on your mind.\n\n[Your Name]` },
+        C: { id:'C', label:'Insight-Led',
+             subject:`The RSU decision most people make too late`,
+             body:`${firstName},\n\nThe most common mistake with significant RSU or stock grants: deciding what to do with them after they vest, instead of planning the strategy before.\n\nTax liability, concentration risk, timing — ${signal} sits right in that window. I specialize in helping people get ahead of it${company ? ` — including folks from ${company}` : ''}.\n\nHappy to ${cta}.\n\n[Your Name]` },
       };
       return variants[tone] || variants.A;
     },
@@ -355,7 +456,6 @@ const _TEMPLATES = {
       };
       return variants[tone] || variants.A;
     },
-  },
 
     athlete_wealth_window: (ctx, strategy, tone) => {
       const { firstName, city, state } = ctx.prospect;
@@ -376,61 +476,78 @@ const _TEMPLATES = {
   linkedin: {
     executive_transition: (ctx, s, tone) => {
       const { firstName, company } = ctx.prospect;
+      const opener = _pOpener(ctx);
+      const signal = _pSignal(ctx);
       return {
-        A: { id:'A', label:'Direct',      body:`${firstName} — I work with executives navigating transitions${company?` like what I've seen from ${company}`:''}. Complex finances, narrow windows. Happy to connect if it's relevant.` },
-        B: { id:'B', label:'Soft',        body:`${firstName} — I specialize in financial planning for executives in transition moments. No agenda — just connecting with people going through a similar chapter. Happy to see if a quick conversation is useful.` },
-        C: { id:'C', label:'Insight-Led', body:`${firstName} — a lot of the financial complexity for senior execs shows up in the first 90 days of a transition. I work specifically in that window. Happy to connect.` },
-      }[tone] || { id:'A', label:'Direct', body:`${firstName} — I specialize in financial planning for executives in transition. Happy to connect if that's where you are.` };
+        A: { id:'A', label:'Direct',      body:`${firstName} — ${opener}. Exec transitions create complex financial windows. I work specifically there${company ? ` — including from ${company}` : ''}. Worth connecting?` },
+        B: { id:'B', label:'Soft',        body:`${firstName} — ${opener}. I help executives get the financial picture right during transitions. No agenda — just thought it worth a note.` },
+        C: { id:'C', label:'Insight-Led', body:`${firstName} — first 90 days of a transition set the financial tone for years. I work in that window. ${signal ? `Especially relevant given ${signal}.` : ''} Happy to connect.` },
+      }[tone] || { id:'A', label:'Direct', body:`${firstName} — I specialize in financial planning for executives in transition. Happy to connect if relevant.` };
     },
     exit_liquidity: (ctx, s, tone) => {
-      const { firstName } = ctx.prospect;
+      const { firstName, company } = ctx.prospect;
+      const signal = _pSignal(ctx);
       return {
-        A: { id:'A', label:'Direct',      body:`${firstName} — I work with business owners coordinating the financial side of exits. Tax, timing, what comes next. Happy to connect if relevant.` },
-        B: { id:'B', label:'Soft',        body:`${firstName} — exits are complex. I help owners get the financial picture right before (and after) the deal. Happy to connect if the timing's right.` },
+        A: { id:'A', label:'Direct',      body:`${firstName} — ${signal ? `noticed ${signal}. ` : ''}I work with owners on the financial side of exits before the deal closes. Happy to connect if relevant.` },
+        B: { id:'B', label:'Soft',        body:`${firstName} — exits are complex. I help owners coordinate the financial picture before (and after) the deal. Given ${signal}, thought it worth a note.` },
         C: { id:'C', label:'Insight-Led', body:`${firstName} — most owners call the financial advisor after the deal is signed. The best ones start earlier. I work in that window. Happy to connect.` },
       }[tone] || { id:'A', label:'Direct', body:`${firstName} — I work with business owners on exit planning. Happy to connect.` };
     },
     practice_complexity: (ctx, s, tone) => {
       const { firstName } = ctx.prospect;
+      const opener = _pOpener(ctx);
+      const signal = _pSignal(ctx);
+      const isPhys = ctx.prospect.nicheId === 'physicians';
+      const label  = isPhys ? 'physicians' : 'specialists';
       return {
-        A: { id:'A', label:'Direct',      body:`${firstName} — I specialize in financial planning for physicians and specialists. Practice income, retirement, transitions. Happy to connect if relevant.` },
-        B: { id:'B', label:'Soft',        body:`${firstName} — I work exclusively with medical professionals. Not a pitch — just connecting with people whose financial lives tend to be more complex than most advisors handle well.` },
-        C: { id:'C', label:'Insight-Led', body:`${firstName} — high-income specialists are some of the most under-planned professionals I work with. Not because of access, but because the complexity is real. Happy to connect.` },
-      }[tone] || { id:'A', label:'Direct', body:`${firstName} — I specialize in financial planning for specialists. Happy to connect.` };
+        A: { id:'A', label:'Direct',      body:`${firstName} — ${opener}. Specifically ${signal}. I focus on financial planning for ${label}. Happy to connect if relevant.` },
+        B: { id:'B', label:'Soft',        body:`${firstName} — I work with ${label} on the planning complexity most advisors miss. Given ${signal}, thought it worth a note.` },
+        C: { id:'C', label:'Insight-Led', body:`${firstName} — high-income ${label} are some of the most under-planned professionals I work with. The complexity is real. Happy to connect.` },
+      }[tone] || { id:'A', label:'Direct', body:`${firstName} — I specialize in financial planning for ${label}. Happy to connect.` };
     },
     _default: (ctx, s, tone) => {
       const { firstName } = ctx.prospect;
+      const opener = _pOpener(ctx);
+      const signal = _pSignal(ctx);
       return {
-        A: { id:'A', label:'Direct',      body:`${firstName} — I specialize in financial planning for professionals in your space. Happy to connect if relevant.` },
-        B: { id:'B', label:'Soft',        body:`${firstName} — I work with a specific group of clients who tend to have complex financial situations. Happy to connect.` },
-        C: { id:'C', label:'Insight-Led', body:`${firstName} — the financial questions people in your position ask are different. I work specifically in that lane. Happy to connect.` },
+        A: { id:'A', label:'Direct',      body:`${firstName} — ${opener}. Specifically ${signal}. I work in financial planning for professionals in your space. Happy to connect.` },
+        B: { id:'B', label:'Soft',        body:`${firstName} — ${opener}. I work with a specific group whose financial situations tend to be more complex. Thought it worth a note.` },
+        C: { id:'C', label:'Insight-Led', body:`${firstName} — the financial questions people in your position ask are different. Given ${signal}, I work specifically in that lane. Happy to connect.` },
       }[tone] || { id:'A', label:'Direct', body:`${firstName} — happy to connect and see if a conversation would be useful.` };
     },
   },
+
 
   // ── CALL OPENER TEMPLATES ────────────────────────────────────
   call: {
     _default: (ctx, s, tone) => {
       const { firstName } = ctx.prospect;
+      const signal = _pSignal(ctx);
+      const persona = ctx.prospect.personaType?.replace(/_/g,' ') || 'professionals';
       return {
-        A: { id:'A', label:'Direct',      body:`"Hi ${firstName}, this is [Your Name] from [Firm]. I work with ${ctx.prospect.personaType?.replace(/_/g,' ') || 'professionals'} on complex financial planning — not a long call, just wondering if you have 20 seconds to hear why I'm reaching out?"` },
-        B: { id:'B', label:'Soft',        body:`"${firstName}, hi — [Your Name] from [Firm]. I know this is out of the blue. I specialize in financial planning for people in your situation and thought it was worth a quick hello. Do you have 30 seconds?"` },
-        C: { id:'C', label:'Insight-Led', body:`"Hi ${firstName} — [Your Name] from [Firm]. One quick thing: I've been working with a few clients going through similar situations to yours and I'd love to share one thing that's been useful. 20 seconds — worth it?"` },
-      }[tone] || { id:'A', label:'Direct', body:`"Hi ${firstName}, [Your Name] from [Firm]. I specialize in financial planning for professionals in your space — do you have 20 seconds?"` };
+        A: { id:'A', label:'Direct',      body:`"Hi ${firstName}, this is [Your Name] from [Firm]. I work with ${persona} on complex financial planning — specifically situations like ${signal}. Not a long call, just wondering if you have 20 seconds to hear why I'm reaching out?"` },
+        B: { id:'B', label:'Soft',        body:`"${firstName}, hi — [Your Name] from [Firm]. I know this is out of the blue. I specialize in financial planning for people in situations like ${signal} and thought it was worth a quick hello. Do you have 30 seconds?"` },
+        C: { id:'C', label:'Insight-Led', body:`"Hi ${firstName} — [Your Name] from [Firm]. One quick thing: ${signal} is exactly the kind of situation I work in, and there's usually one planning move most advisors miss. 20 seconds — worth it?"` },
+      }[tone] || { id:'A', label:'Direct', body:`"Hi ${firstName}, [Your Name] from [Firm]. I work with ${persona} in situations like yours — do you have 20 seconds?"` };
     },
   },
+
 
   // ── VOICEMAIL TEMPLATES ──────────────────────────────────────
   voicemail: {
     _default: (ctx, s, tone) => {
       const { firstName } = ctx.prospect;
+      const signal = _pSignal(ctx);
+      const timing = _pTiming(ctx);
+      const persona = ctx.prospect.personaType?.replace(/_/g,' ') || 'professionals';
       return {
-        A: { id:'A', label:'Direct',      body:`"${firstName}, [Your Name] at [Firm], [number]. I work specifically with ${ctx.prospect.personaType?.replace(/_/g,' ') || 'professionals'} — thought it might be worth a 15-minute conversation. No pressure — call or text back if you're curious."` },
-        B: { id:'B', label:'Soft',        body:`"Hey ${firstName}, [Your Name] from [Firm]. Leaving a quick message — I work with a handful of people in your world on financial planning and thought it was worth reaching out. If it feels relevant, I'm at [number]. No worries either way."` },
-        C: { id:'C', label:'Insight-Led', body:`"${firstName}, [Your Name] at [Firm]. Quick thought: one planning move that comes up a lot with clients in your position that most advisors don't address. Happy to share it in 10 minutes. [Number] — text or call whenever."` },
-      }[tone] || { id:'A', label:'Direct', body:`"${firstName}, [Your Name] at [Firm], [number]. I specialize in financial planning for professionals like you — happy to connect if useful."` };
+        A: { id:'A', label:'Direct',      body:`"${firstName}, [Your Name] at [Firm], [number]. I work specifically with ${persona} — reached out because ${signal} is exactly the kind of situation I specialize in. Worth a 15-minute call — no pressure, text or call back whenever."` },
+        B: { id:'B', label:'Soft',        body:`"Hey ${firstName}, [Your Name] from [Firm]. Leaving a quick message — ${signal} caught my attention and it's exactly the kind of thing I work on with clients. If it feels relevant, I'm at [number]. No worries either way."` },
+        C: { id:'C', label:'Insight-Led', body:`"${firstName}, [Your Name] at [Firm]. Quick thought: ${timing ? timing : 'the timing feels right'} — and ${signal} is exactly where the financial decisions that matter most tend to live. Happy to share one thing in 10 minutes. [Number] — text or call whenever."` },
+      }[tone] || { id:'A', label:'Direct', body:`"${firstName}, [Your Name] at [Firm], [number]. I work with ${persona} — happy to connect if useful."` };
     },
   },
+
 };
 
 // ── LAYER 4: SAFETY FILTER ────────────────────────────────────

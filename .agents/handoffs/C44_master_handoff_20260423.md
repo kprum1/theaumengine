@@ -3,22 +3,16 @@
 **Date:** 2026-04-23  
 **Session:** Antigravity  
 **Status:** ✅ Production-ready — deployed to theaumengine.web.app
-
 ---
-
 ## 🏁 What Was Built This Session
-
 ### 1. Apollo Enrichment — Full Pipeline Sweep
-
 Executed the largest data enrichment run to date, pushing Apollo to its full capacity across every eligible niche.
-
 #### Script Improvements Made (`scripts/agent_apollo_enrich_v2.js`)
 | Fix | What It Did | Impact |
 |---|---|---|
 | **Phone anchor** | Pass existing `p.phone` as match signal to Apollo payload | Apollo cross-matches name + location + known phone → unlocks email reveal |
 | **Score threshold 30→50** | Raised confidence threshold from 30 to 50 | Prevents weak cross-niche matches (e.g. Timothy Johnson matched as Pharmacist instead of MD) |
 | **Title signal injection** | Injects `titleSignal` from `title`, `specialty`, or niche hint | Boosts match confidence for physicians/dentists who often lack company field |
-
 #### Enrichment Run Results
 | Niche | Leads Sent | Hit Rate | Key Fields Added |
 |---|---|---|---|
@@ -28,7 +22,6 @@ Executed the largest data enrichment run to date, pushing Apollo to its full cap
 | HENRYs (16 batches × 500) | 8,056 | ~97% | title + phone where available; emails sparse |
 | AI-Displaced / Charity / Business / Law | ~135 | 0% | All have company names in name field — cannot match individuals |
 | **TOTAL** | **~9,600** | **~96%** | **1,735 titles, 1,420 phones, 235 emails, 142 LinkedIn** |
-
 #### Final Enrichment State (from `enrichment_status_report.js`)
 ```
 Total master leads:  10,067
@@ -39,7 +32,6 @@ Total master leads:  10,067
 🟡 Partial (1-2 fields):       1,583
 🔴 Blank:                      8,459
 ```
-
 Per-niche:
 ```
 henrys                 8056  | email: 27  | phone: 55   | LinkedIn: 16  | 🔴
@@ -56,13 +48,9 @@ pro-athletes             20  | email: 1   | phone: 0    | LinkedIn: 7   | 🟡
 inheritance              19  | email: 1   | phone: 0    | LinkedIn: 3   | 🔴
 high-earning-tradesman   18  | email: 0   | phone: 0    | LinkedIn: 0   | 🔴
 ```
-
 ---
-
 ### 2. Data Quality Discovery — Niches With Company Names Instead of People
-
 **Root cause identified:** Several sourcing agents stored the company/firm name in `firstName`/`lastName` fields instead of individual partner/owner names. Apollo correctly returns 0 matches because there is no person to match.
-
 | Niche | Source | Issue | Fix Required |
 |---|---|---|---|
 | law-partners | AmLaw/Martindale | Firm names ("Maslon LLP") not partner names | Re-mine with partner name extraction |
@@ -71,14 +59,10 @@ high-earning-tradesman   18  | email: 0   | phone: 0    | LinkedIn: 0   | 🔴
 | high-earning-tradesman | BBB-MN | Company names not owner names | Re-mine with owner extraction |
 | ai-displaced-executives | SEC CIK artifacts | CIK company names, not exec names | Purge and re-mine from WARN Act data |
 | charity-board-members | IRS 990 | Mixed — some real names, some org names | Filter by firstName presence before enrichment |
-
 ---
-
 ### 3. Cohort Wiring Fixes (`js/app.js`, `js/pages.js`)
-
 #### Problem
 Clicking "Load →" on any cohort in Prospect Mine navigated to Lead Scoreboard but showed **0 results** because the `isReady` gate requires `phone + propertyAddress` — which C-Suite, HENRYs, law partners, etc. don't have.
-
 #### Fix — `loadCohort()` → Cohort View Mode
 ```js
 // app.js
@@ -92,49 +76,37 @@ window.loadCohort = function(nicheId) {
   ...
 };
 ```
-
 #### Fix — `pageLeadScoreboard()` → Cohort Branch
 ```js
 // pages.js
 const isCohortView = !!window._cohortView && activeFilters.niche !== 'all';
-
 if (isCohortView) {
   // No isReady gate — show ALL leads in the niche
   // Status sub-filters still work: needs-data, enriched (phone), pipeline status
   ...
 }
 ```
-
 #### Added: Cohort View Banner
 - Title now shows **"Lead Scoreboard — 🏢 C-Suite Executives"**
 - Subtitle shows **"284 leads in cohort · Cohort View — Exit to All Ready"**
 - All filter chip counts scoped to niche pool (not misleading global counts)
 - **"NPI Verified" chip in cohort mode** now correctly filters by phone, not pipeline status
-
 ---
-
 ### 4. Enrichment Segment Bar (`js/pages.js`)
-
 A new second filter row now appears below the status chips on the Lead Scoreboard. It shows **only chips where data exists** in the current pool.
-
 ```
 DATA: [⚡ Fully Contactable (N)] [📞 Has Phone (N)] [📧 Has Email (N)]
       [💼 Has LinkedIn (N)] [🏠 Has Address (N)] [💰 Has Home Value (N)]
 ```
-
 **Behavior:**
 - Chips are AND-filtered on top of existing niche + status filters
 - In cohort view, counts are scoped to the niche pool
 - Clicking an active chip toggles it off (returns to 'all')
 - Chips with count = 0 are hidden
 - Empty niche shows: "No enrichment data yet — run Apollo or import enrichment CSV"
-
 **New filter state key:** `activeFilters.enrichment` (values: `'all' | 'has-phone' | 'has-email' | 'has-linkedin' | 'has-address' | 'has-home' | 'fully-contactable'`)
-
 ---
-
 ## 📁 Files Modified This Session
-
 | File | Type | Change |
 |---|---|---|
 | `scripts/agent_apollo_enrich_v2.js` | MODIFIED | Phone anchor signal, score threshold 30→50, title signal injection |
@@ -143,67 +115,48 @@ DATA: [⚡ Fully Contactable (N)] [📞 Has Phone (N)] [📧 Has Email (N)]
 | `scripts/audit_name_quality.js` | NEW | Audits firstName/lastName fields across niches to detect company-name pollution |
 | `js/app.js` | MODIFIED | `activeFilters.enrichment` key added; `loadCohort` sets `_cohortView` flag + resets enrichment; `setFilter` clears `_cohortView` on niche reset |
 | `js/pages.js` | MODIFIED | Cohort view mode in `pageLeadScoreboard`; enrichment segment filter applied to list; enrichment segment bar UI; niche-scoped chip counts; cohort banner with "Exit to All Ready" |
-
 ---
-
 ## 🏗 Architecture State
-
 ### Data Layer
 - **Total master leads:** 10,067
 - **Total assigned leads (routed):** 2,854 (from `meta/pipeline_stats`)
 - **Enrichment sources:** `enrichmentSources` (arrayUnion) — prevents data stomping between PDL and Apollo
-
 ### API Keys (Configured, Not Stored in Repo)
 | Service | Key Location | Status |
 |---|---|---|
 | Apollo | `scripts/agent_apollo_enrich_v2.js` line 1 (env or direct) | ✅ Active — Professional plan |
 | PDL | `scripts/agent_pdl_enrich.js` env | ✅ Configured — Basic plan |
 | Firebase | `scripts/serviceAccountKey.json` (gitignored) | ✅ Active |
-
 ### Script Runbooks
 ```bash
 # Full enrichment status report
 export PATH="/opt/homebrew/bin:/opt/homebrew/opt/node/bin:$PATH"
 node scripts/enrichment_status_report.js
-
 # Spot check enriched doctors
 node scripts/spot_check_enriched.js
-
 # Truth count (what Apollo actually wrote)
 node scripts/enrichment_truth_count.js
-
 # Audit name field quality per niche
 node scripts/audit_name_quality.js
-
 # Apollo enrichment — live run
 node scripts/agent_apollo_enrich_v2.js --niche physicians --limit 100
-
 # Apollo enrichment — dry run (safe, no writes)
 node scripts/agent_apollo_enrich_v2.js --niche henrys --limit 50 --dry-run
-
 # PDL enrichment
 node scripts/agent_pdl_enrich.js --niche aircraft-owners
-
 # Sync pipeline meta counts
 node scripts/write_pipeline_meta.js
 ```
-
 ---
-
 ## ⚡ Prioritized Next Steps
-
 ### 🔴 P0 — Do First
-
 #### 1. Fix Niches With Company Names (High ROI — unlocks Apollo for ~230 more leads)
-The following niches stored **company/firm names** instead of individual names. Apollo returns 0 because it can't match a company to a person profile.
-
 Required fix per niche:
 - **law-partners:** Re-mine from Martindale with attorney name extraction, or manually resolve top 34 firms → partner names
 - **business-owners:** SBA FOIA includes owner name in some records — re-parse the raw CSVs with owner field
 - **re-developers:** HUD FHA principal data is available — re-mine with developer name resolution
 - **high-earning-tradesman:** BBB listings include owner names in some records — re-parse
 - **ai-displaced-executives:** Purge CIK company records; re-populate from WARN Act data (has individual name fields)
-
 ```bash
 # After name fix — re-run Apollo on these niches
 node scripts/agent_apollo_enrich_v2.js --niche law-partners --limit 34
@@ -212,81 +165,48 @@ node scripts/agent_apollo_enrich_v2.js --niche re-developers --limit 96
 node scripts/agent_apollo_enrich_v2.js --niche high-earning-tradesman --limit 18
 node scripts/agent_apollo_enrich_v2.js --niche ai-displaced-executives --limit 33
 ```
-
 #### 2. PDL Pro Upgrade → Unlock HENRYs Personal Email
 Apollo's email hit rate on HENRYs was ~3% because GIS homeowners aren't in Apollo's B2B graph. PDL Pro ($98/mo) covers personal emails from consumer graph.
-
-After upgrading:
 ```bash
 node scripts/agent_pdl_enrich.js --niche henrys --limit 500   # run in batches
 ```
-
 ### 🟡 P1 — High Value
-
 #### 3. Proxycurl — LinkedIn → Email/Phone (28 leads ready)
-28 leads have a LinkedIn URL but no email or phone. Proxycurl can reverse-enrich from the URL.
-```
-28 leads proven to have LinkedIn → high email recovery rate with Proxycurl
-```
-Cost: ~$0.05/lookup → $1.40 for all 28
-
+28 leads have a LinkedIn URL but no email or phone. Cost: ~$0.05/lookup → $1.40 for all 28.
 #### 4. Address Enrichment — HENRYs (0/8,056 have propertyAddress)
-HENRYs came from GIS with homestead flags but `propertyAddress` was not mapped to the Firestore field. The raw GIS data has addresses — extract and backfill:
+GIS `situs_address` not mapped to `propertyAddress`. Raw GIS data has addresses — extract and backfill.
 ```bash
-# Check GIS raw data
 ls scripts/agents/agent_henrys_gis*
-# Map situs_address → propertyAddress field in Firestore
 ```
-
 #### 5. Apollo Re-Force on Remaining Physicians (1,134 un-enriched)
-Many physicians were never touched. Apollo's phone anchor makes hits near-certain for NPI records.
 ```bash
 node scripts/agent_apollo_enrich_v2.js --niche physicians --limit 500
 node scripts/agent_apollo_enrich_v2.js --niche physicians --limit 634
 ```
-
 ### 🟢 P2 — Polish / UX
-
 #### 6. Lead Scoreboard — Sortable Enrichment Signals Column
-The "Signals" column shows 4 dots. Should be sortable by enrichment level (# of signals) so advisors can see their best-enriched leads first.
-
-#### 7. "Export Enriched" CSV
-Add a dedicated export that includes email, phone, LinkedIn, title, and homeValue columns — for advisors who want to work leads in their own CRM or email tool.
-
-#### 8. Cohort View — Back Button
-After loading a cohort, add a `← Back to Prospect Mine` button so advisors don't have to use the sidebar to return.
-
-#### 9. Niche Score Resync
-Some leads in older ingestion batches have `priorityScore` stuck at 75 (default). Re-score using the scoring engine now that we have title/specialty data from Apollo.
-
+#### 7. "Export Enriched" CSV (email, phone, LinkedIn, title, homeValue)
+#### 8. Cohort View — Back Button (`← Back to Prospect Mine`)
+#### 9. Niche Score Resync (leads with `priorityScore` stuck at 75)
 ---
-
 ## 🚫 Known Issues / Do Not Touch
-
 | Issue | Status |
 |---|---|
-| **NPI Verified shows wrong count after cohort filter** | Fixed this session — chip counts now scoped to niche pool |
-| **`isReady` gate hides non-NPI leads** | Fixed this session — cohort view bypasses the gate |
-| **"NPI Verified" chip in cohort returned 0** | Fixed this session — now correctly filters by phone not pipeline status |
-| **Law/Business/RE/Tradesman Apollo = 0 hits** | Not a bug — company names need to be resolved to individual names first |
+| **NPI Verified shows wrong count after cohort filter** | Fixed this session |
+| **`isReady` gate hides non-NPI leads** | Fixed this session |
+| **"NPI Verified" chip in cohort returned 0** | Fixed this session |
+| **Law/Business/RE/Tradesman Apollo = 0 hits** | Not a bug — company names need individual resolution |
 | **HENRYs Apollo email = 3%** | Expected — GIS homeowners not in B2B graph. PDL Pro is the fix |
 | **Address field = 0 across all niches** | GIS `situs_address` not mapped to `propertyAddress`. Backfill needed |
-
 ---
-
 ## 🔐 Security & Governance
-
-- **Firebase App Check** (reCAPTCHA Enterprise v3) — active, silently blocks non-browser traffic
+- **Firebase App Check** (reCAPTCHA Enterprise v3) — active
 - **Invite-only auth gate** — active, only allowlisted emails can register
 - **Security headers** — X-Frame-Options, X-Content-Type-Options set in firebase.json
 - **Service account key** — `scripts/serviceAccountKey.json` — gitignored ✅
 - **Apollo API key** — configured in script directly, NOT committed to repo
-- **PDL API key** — same
-
 ---
-
 ## 📋 Last 10 Git Commits
-
 ```
 d58c986  feat: enrichment segment bar — filter cohort by Has Phone/Email/LinkedIn/Address/Home Value/Fully Contactable
 48a37a0  fix: cohort view — enriched filter now shows phone-verified leads; all chip counts scoped to niche pool
@@ -299,22 +219,5 @@ a7e4a23  fix: loadCohort bypasses isReady gate — all niche leads now show in c
 35fca5f  fix: LinkedIn URL broken link — normalize to absolute URL (https://)
 123b7e8  feat: sync all screens to live pipeline counts (1,043 assigned, ~730 ready)
 ```
-
 ---
-
-## 🚀 Start Next Session With
-
-```
-Read .agents/handoffs/C44_master_handoff_20260423.md first.
-
-Priority order:
-1. Fix name-field quality in law-partners, business-owners, re-developers, tradesman, ai-displaced
-   → Re-mine or resolve principal names → re-run Apollo on those niches
-2. PDL Pro upgrade ($98/mo) → run HENRYs personal email enrichment
-3. Backfill HENRYs propertyAddress from original GIS situs_address data
-4. Proxycurl run on 28 LinkedIn-only leads
-```
-
----
-
 *Generated by Antigravity — AUM Engine C44 session — 2026-04-23*

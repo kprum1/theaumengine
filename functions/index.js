@@ -955,7 +955,7 @@ exports.sendDailyDigest = onSchedule('0 12 * * *', async (event) => {
 // ============================================================
 const { onCall } = require('firebase-functions/v2/https');
 
-exports.getLeadsByIds = onCall({ enforceAppCheck: true }, async (req) => {
+exports.getLeadsByIds = onCall({ enforceAppCheck: false }, async (req) => {
   // Auth guard — onCall enforces this, but be explicit
   if (!req.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Authentication required.');

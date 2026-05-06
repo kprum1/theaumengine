@@ -242,8 +242,9 @@ async function loadAssignedLeadsFromFirestore(uid) {
 
         // Contact info — assignment doc always has these fields (written by route_production_to_master.js)
         // Fallback chain: assignment doc → master_lead root → enrichment aliases → blank
-        email:         a.email         || lead.email         || lead.personalEmail || '',
-        phone:         a.phone         || lead.phone         || lead.personalPhone || '',
+        // NOTE: PDL enrichment stores email/phone as objects {address, type} — normalize to string here.
+        email:         (() => { const v = a.email || lead.email || lead.personalEmail || ''; return typeof v === 'object' ? (v.address || '') : String(v || ''); })(),
+        phone:         (() => { const v = a.phone || lead.phone || lead.personalPhone || ''; return typeof v === 'object' ? (v.number || v.raw_number || '') : String(v || ''); })(),
         linkedInUrl: (() => {
           const raw = a.linkedInUrl || lead.linkedInUrl || lead.linkedin_url || lead.linkedin || '';
           if (!raw) return '';

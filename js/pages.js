@@ -374,17 +374,26 @@ function pageProspectMine() {
             ${window._firestoreMetaUpdatedAt ? `<span style="font-size:10px;color:var(--text-muted)">Updated ${new Date(window._firestoreMetaUpdatedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
           </div>
           ${(() => {
-            // Build cohort list from Firestore pipeline_meta + in-memory PROSPECTS
-            const breakdown = window._firestoreNicheBreakdown || null;
+            // Build cohort list from in-memory PROSPECTS (advisor's assigned leads only)
+            // IMPORTANT: We ALWAYS use PROSPECTS counts here — NOT the global pipeline_stats —
+            // because pipeline_stats holds the operator-level total across all advisors, while
+            // PROSPECTS only contains leads assigned to the current logged-in advisor.
+            // Using pipeline_stats here caused advisors to see "1,188 physicians" on the card
+            // but only 3 when they clicked Load (C48 bug fix).
+            // Exception: operators get the global breakdown since they can see all leads.
+            const isOp = window._currentUser?.email === 'kosal@fin-tegration.com';
+            const breakdown = isOp ? (window._firestoreNicheBreakdown || null) : null;
             const nicheList = typeof NICHES !== 'undefined' ? NICHES : [];
 
-            // Merge: Firestore counts (authoritative total) + PROSPECTS contact rate
             const cohorts = nicheList.map(n => {
-              const fs     = breakdown?.[n.id] || null;
-              const total  = fs?.total || PROSPECTS.filter(p => p.nicheId === n.id).length;
-              const inPipeline = PROSPECTS.filter(p => p.nicheId === n.id && !['New','Dead'].includes(p.status)).length;
-              const contactRate = total ? Math.round(inPipeline / Math.min(total, PROSPECTS.filter(p=>p.nicheId===n.id).length || 1) * 100) : 0;
-              const latestRaw  = fs?.latestIngest || null;
+              // Advisor: use their own PROSPECTS count — this is exactly what Load shows.
+              // Operator: prefer global Firestore breakdown, fall back to PROSPECTS.
+              const myLeads    = PROSPECTS.filter(p => p.nicheId === n.id);
+              const myTotal    = myLeads.length;
+              const total      = isOp ? (breakdown?.[n.id]?.total || myTotal) : myTotal;
+              const inPipeline = myLeads.filter(p => !['New','Dead'].includes(p.status)).length;
+              const contactRate = myTotal > 0 ? Math.round(inPipeline / myTotal * 100) : 0;
+              const latestRaw  = isOp ? (breakdown?.[n.id]?.latestIngest || null) : null;
               const latestDate = latestRaw
                 ? new Date(latestRaw).toLocaleDateString('en-US',{month:'short',day:'numeric'})
                 : null;
@@ -485,8 +494,8 @@ function pageLeadScoreboard() {
 
   // ── Enrichment segment filter (AND'd on top of niche + status) ────────────
   // Filters by which data fields are actually populated on each lead.
-  const _hasPhone   = p => !!(p.phone    && p.phone.trim());
-  const _hasEmail   = p => !!(p.email    && p.email.trim());
+  const _hasPhone   = p => !!(p.phone    && (typeof p.phone    === 'string' ? p.phone.trim()    : p.phone));
+  const _hasEmail   = p => !!(p.email    && (typeof p.email    === 'string' ? p.email.trim()    : p.email));
   const _hasLinkedIn= p => !!(p.linkedInUrl || p.linkedin);
   const _hasAddress = p => !!(p.propertyAddress && p.propertyAddress.trim());
   const _hasHome    = p => !!(p.homeValue && p.homeValue > 0);
@@ -592,12 +601,13 @@ function pageLeadScoreboard() {
     const segPool = isCohortView
       ? PROSPECTS.filter(p => p.nicheId === activeFilters.niche)
       : PROSPECTS;
-    const segHasPhone    = segPool.filter(p => p.phone     && p.phone.trim()).length;
-    const segHasEmail    = segPool.filter(p => p.email     && p.email.trim()).length;
+    const _safeStr  = v => typeof v === 'string' ? v : '';
+    const segHasPhone    = segPool.filter(p => p.phone     && _safeStr(p.phone).trim()).length;
+    const segHasEmail    = segPool.filter(p => p.email     && _safeStr(p.email).trim()).length;
     const segHasLinkedIn = segPool.filter(p => p.linkedInUrl || p.linkedin).length;
     const segHasAddress  = segPool.filter(p => p.propertyAddress && p.propertyAddress.trim()).length;
     const segHasHome     = segPool.filter(p => p.homeValue && p.homeValue > 0).length;
-    const segFullContact = segPool.filter(p => (p.email && p.email.trim()) && (p.phone && p.phone.trim())).length;
+    const segFullContact = segPool.filter(p => (p.email && _safeStr(p.email).trim()) && (p.phone && _safeStr(p.phone).trim())).length;
     const ae = activeFilters.enrichment;
     const seg = (id, icon, label, count, color) => count > 0 ? `
       <div class="filter-chip" style="${
@@ -738,8 +748,15 @@ function pageOutreachStudio() {
   const priority = [...PROSPECTS].sort((a,b)=>b.priorityScore-a.priorityScore).slice(0,8);
   const curStage = window._outreachState?.stage || 'first_touch';
 
-  // Auto-run agent stack after render
-  setTimeout(() => { if (typeof osRunAgentStack === 'function') osRunAgentStack(); }, 300);
+  // Auto-run agent stack after render — use osInitForProspect so the
+  // prospect ID + channel state are set before the stack fires.
+  setTimeout(() => {
+    if (typeof osInitForProspect === 'function') {
+      osInitForProspect(prospect?.id || activeOutreachProspectId);
+    } else if (typeof osRunAgentStack === 'function') {
+      osRunAgentStack();
+    }
+  }, 150);
 
   return `
   <div class="page-header">
@@ -833,7 +850,7 @@ function pageOutreachStudio() {
             <button class="editor-tool-btn" onclick="copyDraft()">\ud83d\udccb Copy</button>
             <button class="editor-tool-btn" onclick="showToast('Compliance checked \u2713','\ud83d\udd12')">\ud83d\udd12 Check</button>
           </div>
-          <div class="message-body" id="draft-body" contenteditable="true">${getDraft(prospect,activeOutreachType)}</div>
+          <div class="message-body" id="draft-body" contenteditable="true" style="color:var(--text-muted);font-style:italic">Generating draft…</div>
         </div>
         <div style="display:flex;gap:8px;margin-top:10px">
           <button class="btn btn-primary" style="flex:1" id="send-now-btn" onclick="showSendConfirmModal()">Send Now</button>

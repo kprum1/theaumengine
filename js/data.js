@@ -611,7 +611,9 @@ function computeNicheMetrics() {
     const convPct   = total ? Math.round(contacted / total * 100) : 0;
     const bookPct   = total ? Math.round(booked    / total * 100) : 0;
     return { ...n, total, contacted, booked, convPct, bookPct };
-  });
+  // Sort by advisor's actual prospect count descending — top 3 will be the
+  // most-populated niches for this specific advisor, not a hardcoded position.
+  }).sort((a, b) => b.total - a.total);
 }
 
 // ===== DRAFT GENERATOR (multi-channel) =====

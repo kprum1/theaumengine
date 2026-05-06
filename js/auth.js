@@ -64,11 +64,16 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 // C40 Security: Firebase App Check — reCAPTCHA Enterprise
-// Must init AFTER initializeApp() and BEFORE auth/firestore are used.
-// Silently attaches attestation tokens to every Firebase SDK call.
-// Bots without a valid token are rejected at the project level.
+// Skip on iOS/iPadOS — reCAPTCHA Enterprise fails silently on WebKit and
+// blocks auth token acquisition for real users on iPad/iPhone.
 (function _initAppCheck() {
   try {
+    const ua = navigator.userAgent || '';
+    const isiOS = /iP(hone|ad|od)/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (isiOS) {
+      console.info('[AppCheck] Skipped on iOS/iPadOS — reCAPTCHA Enterprise not supported on WebKit');
+      return;
+    }
     firebase.appCheck().activate(
       new firebase.appCheck.ReCaptchaEnterpriseProvider('6Le9WsEsAAAAABii_nc74tKOWwykKaZALKLCDfYM'),
       true // isTokenAutoRefreshEnabled
@@ -381,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (authForm) {
     authForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email    = document.getElementById('auth-email').value.trim();
+      const email    = document.getElementById('auth-email').value.trim().toLowerCase();
       const password = document.getElementById('auth-password').value;
       if (!email || !password) { setAuthError('Please enter your email and password.'); return; }
       setAuthLoading(true);

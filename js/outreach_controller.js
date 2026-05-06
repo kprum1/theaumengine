@@ -549,7 +549,10 @@ function _applyVariantToEditor(id) {
       ? _injectAdvisorSignature(v.body)
       : v.body;
     bodyEl.textContent = rendered;
-    bodyEl.style.opacity = '1';
+    // Clear the placeholder italic style set by pages.js initial render
+    bodyEl.style.fontStyle = '';
+    bodyEl.style.color     = '';
+    bodyEl.style.opacity   = '1';
   }, 120);
 }
 
